@@ -1,0 +1,30 @@
+//color variables
+$dark-blue: #001B35;
+$skye-green: #1EA974;
+$light-grey: #F2F2F2;
+$grey: #E5E5E5;
+$text-color: #000000;
+$white: #fff;
+$panel-header-btn-bg: $grey;
+$panel-header-btn-active-bg: $white;
+$panel-content-bg: $white;
+
+$box-shadow: 0 10px 15px #00000040;
+
+//font variables
+$line-height-120: 120%;
+$line-height-140: 140%;
+$base-font-size: 1.6rem;
+$base-font-weight: 400;
+$button-font-size: 2rem;
+$paragraph-s-size: 1.2rem;
+
+//attribute sizings
+$content-max-width: 1230px;
+$button-height: 50px;
+$button-width: 180px;
+//header
+$header-height: 114px;
+//panel
+$panel-header-height: $button-height;
+$panel-header-btn-width: $button-width;

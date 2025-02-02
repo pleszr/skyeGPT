@@ -1,0 +1,97 @@
+@use "./variables" as v;
+
+.skgpt-chatbox {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    gap: 2.5rem;
+    max-height: 660px;
+    justify-content: space-between;
+
+    .skgpt-chatMessages {
+        display: flex;
+        flex-direction: column;
+        padding: 2rem;
+        gap: 2rem;
+        flex-grow: 1;
+        overflow-y: auto; 
+        max-height: 570px;
+        scroll-behavior: smooth;
+    }
+
+    .skgpt-inputCont {
+        display: flex;
+        align-items: flex-end;
+        gap: 12px;
+        min-height: 50px;
+
+        .skgpt-input {
+            display: flex;
+            flex-grow: 1;
+            background-color: v.$grey;
+            padding: 1rem 2rem;
+            border-radius: 30px;
+            height: 50px;
+            transition: height 250ms;
+            max-height: 200px;
+            
+            textarea.skgpt-input-textarea {
+                border: none;
+                font-size: v.$base-font-size;
+                color: v.$text-color;
+                resize: none;
+                background-color: transparent;
+                padding: 0;
+                width: 100%;
+                font-family: "Poppins", serif;
+                min-height: 30px;
+
+                &:focus-visible {
+                    outline: none;
+                }
+    
+                &::placeholder {
+                    font-size: v.$base-font-size;
+                }
+            }
+
+        }
+    }
+    
+    .skgpt-userMesssage {
+        background-color: v.$skye-green; /* Light green for user messages */
+        align-self: flex-end; /* Align user messages to the right */
+        padding: 2rem;
+        border-radius: 50px 50px 0px 50px;
+        max-width: 80%; /* Limit the message width */
+        color: v.$white;
+    }
+    
+    .skgpt-botMessage {
+        background-color: v.$grey;
+        align-self: flex-start;
+        max-width: 80%;
+        padding: 2rem 2rem 2rem 3rem;
+        border-radius: 50px 50px 50px 0;
+
+        > div {
+            display: flex;
+            flex-direction: column;
+        }
+
+        ol, ul {
+            padding-left: 3rem;
+        }
+        
+        ol, ul, p {
+            &:not(:last-child) {
+                padding-bottom: 1.5rem;
+            }
+        }
+    }
+    
+    .loading {
+        text-align: center;
+        padding: 10px;
+    }
+}
