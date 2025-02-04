@@ -2,10 +2,9 @@ from ChromaSetup import (delete_collection,
                          create_collection,
                          set_chroma_client,
                          verify_if_collection_exists,
-                         add_document_to_collection,
+                         add_to_collection,
                          get_collection_by_name,
                          number_of_documents_in_collection,
-                         create_document_from_split_texts,
                          create_collection_if_needed,
                          save_settings_to_settings_store,
                          chroma_settings_store,
@@ -56,32 +55,27 @@ def test_create_collection():
     assert does_collection_exist
 
 
-@patch("ChromaSetup.get_collection_by_name")
-@patch("uuid.uuid4")
-def test_add_document_to_collection(mock_uuid4, mock_get_collection_by_name):
-    collection_name = "test_collection"
+def test_add_document_to_collection():
+
     document = "# This is a test document."
     metadata = {"key1": "value1", "key2": "value2"}
+    ids = ["test_id1"]
 
     mock_collection = MagicMock()
-    mock_get_collection_by_name.return_value = mock_collection
 
-    mock_uuid4.return_value = "test_uuid4_value"
-
-    result_uuid = add_document_to_collection(
-        collection_name,
+    add_to_collection(
+        mock_collection,
         document,
-        metadata
+        metadata,
+        ids
     )
 
-    mock_get_collection_by_name.assert_called_once_with(collection_name)
     mock_collection.add.assert_called_once_with(
         documents=document,
-        ids="test_uuid4_value",
-        metadatas=metadata
-    )
+        metadatas=metadata,
+        ids=ids
 
-    assert result_uuid == "test_uuid4_value"
+    )
 
 
 @patch("ChromaSetup.chroma_client.get_collection")
@@ -115,58 +109,6 @@ def test_number_of_documents_in_collection(mock_get_collection):
     mock_collection.count.assert_called_once_with()
     mock_get_collection.assert_called_once_with(collection_name)
     assert actual_number_of_documents == number_of_documents
-
-
-@patch("ChromaSetup.number_of_documents_in_collection")
-@patch("ChromaSetup.documentation_link_generator")
-@patch("ChromaSetup.add_document_to_collection")
-def test_create_document_from_split_texts_from_file(mock_add_document_to_collection,
-                                                    mock_documentation_link_generator,
-                                                    mock_number_of_documents_in_collection):
-    collection_name = "test_collection"
-    content_text_array = ["text_1", "text_2", "text_3", "text_4"]
-    file_name = "test_file_name"
-    documentation_source = "test_documentation_source"
-
-    documentation_link = "documentation_link"
-    mock_documentation_link_generator.return_value = documentation_link
-
-    metadata = {
-        "file_name": file_name,
-        "documentation_link": documentation_link
-    }
-
-    mock_number_of_documents_in_collection.return_value = len(content_text_array)
-
-    create_document_from_split_texts(
-        collection_name,
-        content_text_array,
-        file_name,
-        documentation_source
-    )
-
-    assert mock_add_document_to_collection.call_count == len(content_text_array)
-
-    mock_add_document_to_collection.assert_any_call(
-        collection_name,
-        content_text_array[0],
-        metadata
-    )
-    mock_add_document_to_collection.assert_any_call(
-        collection_name,
-        content_text_array[1],
-        metadata
-    )
-    mock_add_document_to_collection.assert_any_call(
-        collection_name,
-        content_text_array[2],
-        metadata
-    )
-    mock_add_document_to_collection.assert_any_call(
-        collection_name,
-        content_text_array[3],
-        metadata
-    )
 
 
 @patch("ChromaSetup.create_collection")

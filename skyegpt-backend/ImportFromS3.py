@@ -25,7 +25,11 @@ def download_files_from_s3_bucket(
     number_of_max_threads = int(os.getenv("NUMBER_OF_MAX_THREADS"))
     with ThreadPoolExecutor(max_workers=number_of_max_threads) as executor:
         for file in files:
-            executor.submit(download_file, s3_folder_prefix, local_folder, file, bucket_name)
+            executor.submit(download_file,
+                            s3_folder_prefix,
+                            local_folder,
+                            file,
+                            bucket_name)
 
 
 def list_all_files(
@@ -63,6 +67,5 @@ def download_file(
             s3_key,
             local_path
         )
-        print(f"Downloaded: {s3_key} → {local_path}")
     except (NoCredentialsError, ClientError) as e:
         raise HTTPException(status_code=400, detail=str(e))
