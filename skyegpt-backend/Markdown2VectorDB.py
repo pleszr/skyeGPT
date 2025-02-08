@@ -7,6 +7,8 @@ import os
 import time
 import multiprocessing as mp
 from ProcessWrapper import create_process, start_process, join_process
+import DocumentationLinkGenerator
+
 
 def scan_and_import_markdowns_from_folder(
         collection_name: str,
@@ -68,6 +70,7 @@ def chroma_import_producer(
                 queue
             )
 
+
 def split_markdown_by_headers(
         file_content: str,
         markdown_split_headers: List[str]
@@ -82,9 +85,10 @@ def split_markdown_by_headers(
         split_levels_list.append(("###", "Header 3"))
 
     markdown_splitter = MarkdownHeaderTextSplitter(split_levels_list, strip_headers=False)
-    documents_array = markdown_splitter.split_text(file_content)
-    string_array = [document.page_content for document in documents_array]
-    return string_array
+    documents = markdown_splitter.split_text(file_content)
+    document_contents = [document.page_content for document in documents]
+    return document_contents
+
 
 def add_text_to_queue(
         content_text_array: List[str],
@@ -98,7 +102,7 @@ def add_text_to_queue(
     ids = []
 
     for text in content_text_array:
-        documentation_link = ChromaSetup.documentation_link_generator(
+        documentation_link = DocumentationLinkGenerator.link_generator(
             file_name,
             documentation_source
         )
@@ -111,7 +115,7 @@ def add_text_to_queue(
         documents.append(text)
         metadatas.append(metadata)
 
-        if len(ids)>=batch_size:
+        if len(ids) >= batch_size:
             queue.put((documents, metadatas, ids))
             documents = []
             metadatas = []
@@ -119,6 +123,7 @@ def add_text_to_queue(
 
     if len(ids) > 0:
         queue.put((documents, metadatas, ids))
+
 
 def chroma_import_consumer(
         collection_name,

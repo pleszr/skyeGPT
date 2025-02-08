@@ -1,4 +1,4 @@
-def documentation_link_generator(
+def link_generator(
         file_name: str,
         type_of_documentation: str
 ):
