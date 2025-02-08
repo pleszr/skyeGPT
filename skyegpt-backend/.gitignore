@@ -10,6 +10,7 @@ skyegpt-backend/Tests/chroma/
 *.sqlite3
 content/
 .idea/
+.DS_Store
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
