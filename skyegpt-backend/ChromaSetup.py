@@ -132,7 +132,6 @@ def verify_if_collection_exists(
         return False
 
 
-
 def set_chroma_client(
         client
 ):
