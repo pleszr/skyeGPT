@@ -9,4 +9,6 @@ COPY . .
 
 EXPOSE 8000
 
+VOLUME [ "/chroma" ]
+
 CMD ["python", "main.py"]
