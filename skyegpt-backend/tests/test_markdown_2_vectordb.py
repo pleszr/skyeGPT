@@ -87,9 +87,9 @@ def test_scan_and_import_markdowns_from_folder(
     batch_size = 20
     monkeypatch.setenv("CHROMA_BATCH_SIZE", str(batch_size))
 
-    mock_producer = MagicMock ()
+    mock_producer = MagicMock()
     mock_consumer = MagicMock()
-    mock_create_process.side_effect = [mock_producer,mock_consumer]
+    mock_create_process.side_effect = [mock_producer, mock_consumer]
 
     scan_and_import_markdowns_from_folder(
         collection_name,
@@ -175,11 +175,12 @@ def test_chroma_import_producer(mock_rglob,
                                             any_order=True)
     assert mock_add_text_to_queue.call_count == 2
 
-@patch("ChromaSetup.documentation_link_generator", return_value = "test_docu_link")
-def test_add_test_to_queue(mock_doc_link_generator,
 
+@patch("DocumentationLinkGenerator.link_generator", return_value="test_docu_link")
+def test_add_test_to_queue(
+        mock_doc_link_generator
 ):
-    content_text_array = ["test text 1","test text 2", "test text 3", "test text 4"]
+    content_text_array = ["test text 1", "test text 2", "test text 3", "test text 4"]
     file_name = "test_file_name"
     documentation_source = "test_documentation_source"
     batch_size = 2
@@ -221,11 +222,9 @@ def test_add_test_to_queue(mock_doc_link_generator,
 @patch("ChromaSetup.add_to_collection")
 @patch("ChromaSetup.get_collection_by_name")
 def test_chroma_import_consumer(mock_get_collection_by_name,
-                                mock_add_to_collection
-
-):
-    batch1_ids = ["test_id1","test_id2"]
-    batch1_documents = ["test text 1","test text 2"]
+                                mock_add_to_collection):
+    batch1_ids = ["test_id1", "test_id2"]
+    batch1_documents = ["test text 1", "test text 2"]
     batch1_metadatas = [
         {
             "file_name": "test_file_name1",
@@ -237,8 +236,8 @@ def test_chroma_import_consumer(mock_get_collection_by_name,
         }
     ]
 
-    batch2_ids = ["test_id3","test_id4"]
-    batch2_documents = ["test text 3","test text 4"]
+    batch2_ids = ["test_id3", "test_id4"]
+    batch2_documents = ["test text 3", "test text 4"]
     batch2_metadatas = [
         {
             "file_name": "test_file_name3",
@@ -265,13 +264,9 @@ def test_chroma_import_consumer(mock_get_collection_by_name,
         queue
     )
 
-
     expected_add_to_collection_calls = [
         call(mock_collection, documents=batch1_documents, metadatas=batch1_metadatas, ids=batch1_ids),
         call(mock_collection, documents=batch2_documents, metadatas=batch2_metadatas, ids=batch2_ids)
     ]
-    mock_add_to_collection.assert_has_calls(expected_add_to_collection_calls,any_order=True
-
-    )
-
-
+    mock_add_to_collection.assert_has_calls(expected_add_to_collection_calls,
+                                            any_order=True)
