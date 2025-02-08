@@ -107,10 +107,8 @@ def test_number_of_documents_in_collection(mock_get_collection):
     assert actual_number_of_documents == number_of_documents
 
 
-@patch("ChromaSetup.create_collection")
-@patch("ChromaSetup.get_collection_by_name")
-def test_create_collection_if_needed_yes_needed(mock_get_collection_by_name,
-                                                mock_create_collection):
+@patch("ChromaSetup.chroma_client.get_or_create_collection")
+def test_create_collection_if_needed_yes_needed(mock_get_or_create_collection):
     collection_name = "test_collection"
 
     mock_collection = MagicMock()
