@@ -4,6 +4,8 @@ tests/chroma
 venv/
 skyeGpt.iml
 content/
+.idea/
+.DS_Store
 
 # Ignore version control systems
 .git
