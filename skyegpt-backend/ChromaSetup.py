@@ -74,12 +74,11 @@ def save_settings_to_settings_store(
 def create_collection_if_needed(
         collection_name: str
 ):
-    try:
-        get_collection_by_name(collection_name)
-        print(f"Collection with name {collection_name} found. Loading...")
-    except chromadb.errors.InvalidCollectionException:
-        create_collection(collection_name)
-        print(f"Collection with name {collection_name} not found. Creating...")
+    chroma_client.get_or_create_collection(collection_name,
+                                           metadata={
+                                               "description": "ChromaDB for GPT purposes",
+                                               "created": str(datetime.now())
+                                           })
 
 
 def create_document_from_split_texts(
@@ -107,12 +106,20 @@ def create_document_from_split_texts(
 
 
 def number_of_documents_in_collection(collection_name: str):
-    collection = chroma_client.get_collection(collection_name)
-    return collection.count()
+    try:
+        collection = chroma_client.get_collection(collection_name)
+        return collection.count()
+    except chromadb.errors.InvalidCollectionException:
+        print(f"Collection with name {collection_name} not found. Returning 0 as number of documents")
+        return 0
 
 
 def get_collection_by_name(collection_name: str):
-    return chroma_client.get_collection(name=collection_name)
+    try:
+        return chroma_client.get_collection(name=collection_name)
+    except chromadb.errors.InvalidCollectionException:
+        print(f"Error: Collection with name {collection_name} not found.")
+        return None
 
 
 def add_document_to_collection(
@@ -141,17 +148,17 @@ def create_collection(collection_name: str):
 
 
 def delete_collection(collection_name: str):
-    chroma_client.delete_collection(collection_name)
+    chroma_client.delete_collection(name=collection_name)
 
 
 def verify_if_collection_exists(
         collection_name: str
 ) -> bool:
-    try:
-        get_collection_by_name(collection_name)
+    if get_collection_by_name(collection_name):
         return True
-    except chromadb.errors.InvalidCollectionException:
+    else:
         return False
+
 
 
 def set_chroma_client(

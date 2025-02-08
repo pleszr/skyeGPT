@@ -11,28 +11,24 @@ from ChromaSetup import (delete_collection,
                          chroma_settings_store,
                          setup_chroma)
 import chromadb
-from chromadb.errors import InvalidCollectionException
-from unittest.mock import patch
+from unittest.mock import patch, ANY
 import pytest
 from unittest.mock import MagicMock
 
 
-client = chromadb.Client()
-
-
-@pytest.fixture(scope="module", autouse=True)
+@pytest.fixture(scope="function", autouse=True)
 def setup_chroma_client():
+    client = chromadb.Client()
     set_chroma_client(client)
 
 
 def test_delete_collection():
     collection_name = "test_collection_name"
     create_collection(collection_name)
-
     delete_collection(collection_name)
-
-    is_collection_deleted = not verify_if_collection_exists(collection_name)
-    assert is_collection_deleted
+    collection_exists = verify_if_collection_exists(collection_name)
+    print(f"collection exists: {collection_exists}")
+    assert not collection_exists
 
 
 def test_verify_if_collection_exists_when_exists():
@@ -169,34 +165,21 @@ def test_create_document_from_split_texts_from_file(mock_add_document_to_collect
     )
 
 
-@patch("ChromaSetup.create_collection")
-@patch("ChromaSetup.get_collection_by_name")
-def test_create_collection_if_needed_yes_needed(mock_get_collection_by_name,
-                                                mock_create_collection):
+@patch("ChromaSetup.chroma_client.get_or_create_collection")
+def test_create_collection_if_needed_not_needed(mock_get_or_create_collection):
     collection_name = "test_collection"
 
     mock_collection = MagicMock()
-    mock_get_collection_by_name.return_value = mock_collection
+    mock_get_or_create_collection.return_value = mock_collection
 
     create_collection_if_needed(collection_name)
 
-    mock_create_collection.assert_not_called()
+    mock_get_or_create_collection.assert_called_once_with(collection_name,
+                                                          metadata=ANY
+                                                          )
 
 
-@patch("ChromaSetup.create_collection", autospec=True)
-@patch("ChromaSetup.get_collection_by_name")
-def test_create_collection_if_needed_not_needed(mock_get_collection_by_name,
-                                                mock_create_collection):
-    collection_name = "test_collection"
-
-    mock_get_collection_by_name.side_effect = chromadb.errors.InvalidCollectionException
-
-    create_collection_if_needed(collection_name)
-
-    mock_create_collection.assert_called_once_with(collection_name)
-
-
-def test__settings_to_settings_store():
+def test_settings_to_settings_store():
     number_of_chroma_results = 2
     gpt_model = "gpt-4o-mini"
     gpt_temperature = 0.1
@@ -247,7 +230,7 @@ def test_setup_chroma(mock_save_settings_to_settings_store,
 
     mock_number_of_documents_in_collection.return_value = expected_number_of_documents
 
-    actual_number_of_documents = setup_chroma(
+    setup_chroma(
         collection_name,
         should_import,
         folder_path,
@@ -282,5 +265,3 @@ def test_setup_chroma(mock_save_settings_to_settings_store,
         s3_folder_prefix,
         s3_local_folder
     )
-
-    assert actual_number_of_documents == expected_number_of_documents

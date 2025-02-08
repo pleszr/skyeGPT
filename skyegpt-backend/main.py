@@ -3,7 +3,6 @@ import ChromaSetup
 import ChromaAsker
 import OpenAIAssistantAsker
 import OpenAIAssistantSetup
-from pydantic import BaseModel
 from openai import OpenAI
 import uuid
 from fastapi.middleware.cors import CORSMiddleware
@@ -56,30 +55,12 @@ async def setup_chroma(request: dict = Body(...)):
                 s3_folder_prefix,
                 s3_local_folder
             )
-
     return {"outcome": f"Chroma setup successful. Number of uploaded documents: {number_of_uploaded_documents}"}
 
 
 @app.delete("/deleteCollection")
 async def delete_collection(collection_name: str = Query(..., description="The name of the collection to delete")):
     ChromaSetup.delete_collection(collection_name)
-
-
-class QueryRequest(BaseModel):
-    query: str
-
-
-@app.post("/query")
-async def query(query_request: QueryRequest):
-    query_content = query_request.query
-
-    relevant_documents = ChromaAsker.find_relevant_documents_for_question(
-        "SkyeDoc",
-        query_content,
-        3
-    )
-
-    return relevant_documents
 
 
 @app.post("/playground")
@@ -135,6 +116,8 @@ async def setup_gpt_assistant(request: dict = Body(...)):
     assistant_name = request["assistant_properties"]["assistant_name"]
     assistant_instructions = request["assistant_properties"]["assistant_instructions"]
     gpt_model = request["assistant_properties"]["gpt-model"]
+    number_of_retries_for_assistant_answer = request["assistant_properties"]["number_of_retries_for_assistant_answer"]
+    temperature = request["assistant_properties"]["temperature"]
 
     new_vector_store_name = request["vector_store_properties"]["new_vector_store_name"]
     existing_vector_store_id = request["vector_store_properties"]["existing_vector_store_id"]
@@ -151,6 +134,8 @@ async def setup_gpt_assistant(request: dict = Body(...)):
         assistant_name,
         assistant_instructions,
         gpt_model,
+        number_of_retries_for_assistant_answer,
+        temperature,
         new_vector_store_name,
         existing_vector_store_id,
         folder_path,
