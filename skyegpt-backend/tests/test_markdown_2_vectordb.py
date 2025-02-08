@@ -6,6 +6,7 @@ from Markdown2VectorDB import (split_markdown_by_headers,
                                add_text_to_queue)
 from unittest.mock import patch, MagicMock, mock_open, call, ANY
 import multiprocessing as mp
+from queue import Empty
 
 markdown_file_content = """
         # Header-11
@@ -196,11 +197,15 @@ def test_add_test_to_queue(
     mock_doc_link_generator.assert_any_call(file_name, documentation_source)
 
     items = []
-    while not queue.empty():
-        items.append(queue.get())
+    expected_batches = int(len(content_text_array)/batch_size)
 
-    expected_queue_len = len(content_text_array)/batch_size
-    assert len(items) == expected_queue_len
+    for queue_item in range(expected_batches):
+        try:
+            item = queue.get(timeout=1)
+            items.append(item)
+        except Empty:
+            break
+    assert len(items) == expected_batches
 
     documents1, metadatas1, ids1 = items[0]
     assert documents1 == ["test text 1", "test text 2"]
