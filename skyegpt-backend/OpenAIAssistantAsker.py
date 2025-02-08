@@ -2,6 +2,7 @@ from openai import OpenAI
 import OpenAIAssistantSetup
 import time
 import Utils
+from OpenAIAssistantSetup import assistant_settings_store
 
 
 client = OpenAI()
@@ -23,7 +24,7 @@ def ask_question(
 
     return wait_and_extract_assistant_response(
         thread_id,
-        20
+        assistant_settings_store["number_of_retries_for_assistant_answer"]
     )
 
 
@@ -68,6 +69,3 @@ def wait_and_extract_assistant_response(
         "extra"
     )
     return answer_html
-
-
-

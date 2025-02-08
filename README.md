@@ -10,7 +10,7 @@ The application can consume documentation (currently from public confluance spac
 ### Detailed differences
 -  With Assistant, OpenAI stores your documents and does the search on it as a black box, while with Chroma you are doing the lookup yourself (therefor it can be fine-tuned for your needs, based on your documentation). 
 - With Assistant, OpenAI handles the conversation-management for you and, while remaining within a thread, keeps the context up-to-date. With Chroma, you have to do this manually with prompt-engineering.
-- Speed. Assistant is considerably a lot slower than the Chroma lookup.
+- Speed. Assistant is considerably a lot slower than the Chroma lookup. *Detailed analysis is work in progress.*
 - Readiness: assistant is in beta and is discouraged to rely on it on production. Backward compatibility is promised, but not committed. 
 - Debugging options: if the search is not performing as expected, due to the black box nature of Assistant your debugging options are limited. With Chroma, you can verify what are the relevant documents you feed to OpenAI for answer generation.
 
@@ -39,30 +39,31 @@ markdown_split_headers | The application splits the markdown files to smaller/bi
 #### Sample json
 
 ```json 
-	{
-        "chroma_parameters": 
-        {
-            "collection_name":"SkyeDoc",
-            "should_import": true,
-            "folder_path":"content",
-            "documentation_source": "skye",
-            "number_of_chroma_results": 3,
-            "markdown_split_headers": ["#"]
-        },
-        "gpt_parameters":
-        {
-            "gpt_model":"gpt-4o-mini",
-            "gpt_temperature": 0.1,
-            "gpt_developer_prompt":"You are a support person working for a product organization called Innoveo. You are providing technical support to developers who are using a no-code platform called Innoveo Skye. You have access to manual of the product in the upcoming developer prompts. Do you best to answer the user's question. Offer them to read the documentation (you can find the exact link in the metadata."
-        }
+{
+    "chroma_parameters": {
+        "collection_name": "SkyeDoc",
+        "should_import": true,
+        "folder_path": "content",
+        "documentation_source": "skye",
+        "number_of_chroma_results": 3,
+        "markdown_split_headers": ["#"]
+    },
+    "gpt_parameters": {
+        "gpt_model": "gpt-4o-mini",
+        "gpt_temperature": 0.1,
+        "gpt_developer_prompt": "You are a support person working for a product organization called Innoveo. You are providing technical support to developers who are using a no-code platform called Innoveo Skye. You have access to the manual of the product in the upcoming developer prompts. Do your best to answer the user's question. Offer them to read the documentation (you can find the exact link in the metadata)."
     }
+}
 ```
 ### Asker
 
 ## Assistant
 The Assistant mode uses OpenAI's Assistant product. There are two major functions:
 ### Key details
-- 
+- No need to implement conversation history or context management.
+- Context lookup happens via OpenAI.
+   - Pro: no need to implement it, works out of the box.
+   - Con: it works as a blackbox, no way of fine-tuning it in case the results are dissatisfactory.
 ### Technical details
 There are two major workflows, the Setup and the Asker. Setup needs to ran only 1x post deployment or can be used to change the defined parameters. Asker is where workflow for asking questions.
 #### Diagram
@@ -80,21 +81,19 @@ folder_path|the folder the application should scan for files to import.
 
 #### Sample JSON
 ```json 
-	{
-	  "assistant_properties":
-	  {
-	    "assistant_name": "SkyeGPT",
-	    "assistant_instructions": "You are a support person working for a product organization called Innoveo. You are providing technical support to developers who are using a no-code platform called Innoveo Skye. Rely on the contextual files from the vector store for answers. You should give short but precise answers. If something is not answerable based on the documentation, don't hesitate to say that it is not possible according the documentation",
-	    "gpt-model": "gpt-4o-mini"
-	  },
-	  "vector_store_properties":
-	  {
-	    "existing_vector_store_id":"vs_Uk6JClWkMHGgiwHOrCksGi4Q",
-	    "new_vector_store_name": "Skye 10 documentation",
-	    "folder_path": "content",
-	    "file_extension": "md"
-	  }
-	}
+{
+    "assistant_properties": {
+        "assistant_name": "SkyeGPT",
+        "assistant_instructions": "You are a support person working for a product organization called Innoveo. You are providing technical support to developers who are using a no-code platform called Innoveo Skye. Rely on the contextual files from the vector store for answers. You should give short but precise answers. If something is not answerable based on the documentation, don't hesitate to say that it is not possible according to the documentation.",
+        "gpt_model": "gpt-4o-mini"
+    },
+    "vector_store_properties": {
+        "existing_vector_store_id": "vs_Uk6JClWkMHGgiwHOrCksGi4Q",
+        "new_vector_store_name": "Skye 10 documentation",
+        "folder_path": "content",
+        "file_extension": "md"
+    }
+}
 ```
 
 

@@ -19,11 +19,8 @@ def ask_gpt_powered_by_chroma(
         conversation_id
     )
 
-    message_history_is_too_big = verify_if_message_history_is_too_big(
-        message_history,
-        20
-    )
-    if message_history_is_too_big:
+    if is_message_history_is_too_big(message_history,
+                                     20):
         return "Message history limit reached. Reload the page"
 
     relevant_documents = find_relevant_documents_for_question(
@@ -75,7 +72,7 @@ def load_conversation_from_store_or_generate_default(
         default_message)
 
 
-def verify_if_message_history_is_too_big(
+def is_message_history_is_too_big(
         message_history: List[Dict[str, str]],
         max_prompt_size: int
 ) -> bool:

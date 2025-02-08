@@ -10,6 +10,8 @@ def setup_openai_assistant(
     assistant_name: str,
     assistant_instructions: str,
     gpt_model: str,
+    number_of_retries_for_assistant_answer: int,
+    temperature: float,
     new_vector_store_name: str,
     existing_vector_store_id: str,
     folder_path: str,
@@ -19,11 +21,13 @@ def setup_openai_assistant(
     s3_folder_prefix: str,
     s3_local_folder: str
 ):
+    assistant_settings_store["number_of_retries_for_assistant_answer"] = number_of_retries_for_assistant_answer
 
     assistant_id = find_or_create_assistant(
         assistant_name,
         assistant_instructions,
-        gpt_model
+        gpt_model,
+        temperature
     )
 
     if documentation_selector.get("s3"):
@@ -54,7 +58,8 @@ def setup_openai_assistant(
 def find_or_create_assistant(
         assistant_name: str,
         assistant_instructions: str,
-        gpt_model: str
+        gpt_model: str,
+        temperature: float
 ):
     my_assistant = find_assistant_by_name(assistant_name)
     if my_assistant:
@@ -63,7 +68,8 @@ def find_or_create_assistant(
         my_assistant = create_assistant(
             assistant_name,
             assistant_instructions,
-            gpt_model
+            gpt_model,
+            temperature
         )
         print(my_assistant)
         print(f"No assistant with name {assistant_name} found. Creating one...")
@@ -88,14 +94,15 @@ def find_assistant_by_name(
 def create_assistant(
         assistant_name: str,
         assistant_instructions: str,
-        gpt_model: str
+        gpt_model: str,
+        temperature: float
 ):
     my_assistant = client.beta.assistants.create(
         instructions=assistant_instructions,
         name=assistant_name,
         tools=[{"type": "file_search"}],
         model=gpt_model,
-        temperature=0.1
+        temperature=temperature
     )
     return my_assistant
 
