@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { addMessage, createUserMessage, createBotMessage } from "../utils/MessageManager";
+import ReactMarkdown from 'react-markdown';
+import remarkBreaks from 'remark-breaks';
 
 export interface ChatBoxProps {
     title: string;
     askEndpoint: string;
-    messages: { sender: "user" | "bot"; text: string }[]; // Expect messages prop
-    setMessages: React.Dispatch<React.SetStateAction<{ sender: "user" | "bot"; text: string }[]>>; // Expect setMessages prop
+    messages: { sender: "user" | "bot"; text: string }[];
+    setMessages: React.Dispatch<React.SetStateAction<{ sender: "user" | "bot"; text: string }[]>>;
     className: string;
 }
 
@@ -18,14 +20,14 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
     };
 
     useEffect(() => {
-            textareaResize();
-            hitEnter();
+        textareaResize();
+        hitEnter();
     }, []);
 
     const scrollToBottom = () => {
         setTimeout(() => {
             const chatContainer = document.querySelector(".skgpt-chatMessages");
-    
+
             if(chatContainer !== null) {
                 chatContainer.scrollTop = chatContainer.scrollHeight;
                 console.log("scrolling")
@@ -72,19 +74,55 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
         }
 
         try {
+            // Create an empty bot message first
+            setMessages((prev) => addMessage(prev, createBotMessage("")));
+
             const response = await fetch(askEndpoint, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ question: input, thread_id: threadId, chroma_conversation_id: chroma_conversation_id }),
+                body: JSON.stringify({
+                    question: input,
+                    thread_id: threadId,
+                    chroma_conversation_id: chroma_conversation_id
+                }),
             });
 
-            const data = await response.json();
-            // Add bot response
-            setMessages((prev) => addMessage(prev, createBotMessage(data.answer)));
-            scrollToBottom();
+            const reader = response.body?.getReader();
+            if (!reader) throw new Error("No reader available");
+
+            let fullMessage = "";
+            let buffer = ""; // Add a buffer for incomplete chunks
+
+            while (true) {
+                const { value, done } = await reader.read();
+                if (done) break;
+
+                // Convert the chunk to text and add to buffer
+                buffer += new TextDecoder().decode(value);
+
+                // Process complete messages from buffer
+                const lines = buffer.split('\n');
+                buffer = lines.pop() || ''; // Keep the last incomplete line in buffer
+
+                for (const line of lines) {
+                    if (line.trim() === 'data: [DONE]') {
+                        return;
+                    }
+                    if (line.startsWith('data: ')) {
+                        const chunk = line.slice(6); // Remove 'data: ' prefix
+                        fullMessage += chunk;
+
+                        setMessages((prev) => {
+                            const newMessages = [...prev];
+                            newMessages[newMessages.length - 1] = createBotMessage(fullMessage);
+                            return newMessages;
+                        });
+                        scrollToBottom();
+                    }
+                }
+            }
         } catch (error) {
-            console.log(error);
-            // Add error message
+            console.error(error);
             setMessages((prev) => addMessage(prev, createBotMessage("Error: Could not get a response.")));
         } finally {
             setIsLoading(false);
@@ -113,11 +151,12 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
                         key={index}
                         className={msg.sender === "user" ? "skgpt-userMesssage" : "skgpt-botMessage"}
                     >
-                        {/* Check if the message contains HTML content, if so, use dangerouslySetInnerHTML */}
                         {msg.sender === "bot" ? (
-                            <div dangerouslySetInnerHTML={{ __html: msg.text }} />
+                            <ReactMarkdown remarkPlugins={[remarkBreaks]}>
+                                {msg.text.replace(/\\n/g, "\n")}
+                            </ReactMarkdown>
                         ) : (
-                            msg.text // Plain text for the user messages
+                            msg.text // Plain text for user messages
                         )}
                     </div>
                 ))}
