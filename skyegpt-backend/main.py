@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Query, Body
+from fastapi.responses import StreamingResponse
 import ChromaSetup
 import ChromaAsker
 import OpenAIAssistantAsker
@@ -80,13 +81,17 @@ async def ask_chroma(request: dict = Body(...)):
     conversation_id = request["chroma_conversation_id"]
     question = request["question"]
 
-    answer = ChromaAsker.ask_gpt_powered_by_chroma(
-        question,
-        conversation_id
+    def event_generator():
+        for chunk in ChromaAsker.ask_gpt_powered_by_chroma(question, conversation_id):
+            print(chunk, end="")
+            chunk = chunk.replace("\n", "\\n")
+            yield f"data: {chunk}\n\n"
+        yield "data: [DONE]\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream"
     )
-
-    return {"answer": answer}
-
 
 @app.post("/askAssistant")
 async def ask_assistant(request: dict = Body(...)):
