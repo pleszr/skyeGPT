@@ -2,10 +2,9 @@ from ChromaSetup import (delete_collection,
                          create_collection,
                          set_chroma_client,
                          verify_if_collection_exists,
-                         add_document_to_collection,
+                         add_to_collection,
                          get_collection_by_name,
                          number_of_documents_in_collection,
-                         create_document_from_split_texts,
                          create_collection_if_needed,
                          save_settings_to_settings_store,
                          chroma_settings_store,
@@ -52,32 +51,22 @@ def test_create_collection():
     assert does_collection_exist
 
 
-@patch("ChromaSetup.get_collection_by_name")
-@patch("uuid.uuid4")
-def test_add_document_to_collection(mock_uuid4, mock_get_collection_by_name):
-    collection_name = "test_collection"
+def test_add_document_to_collection():
+
     document = "# This is a test document."
     metadata = {"key1": "value1", "key2": "value2"}
+    ids = ["test_id1"]
 
     mock_collection = MagicMock()
-    mock_get_collection_by_name.return_value = mock_collection
 
-    mock_uuid4.return_value = "test_uuid4_value"
+    add_to_collection(mock_collection,
+                      document,
+                      metadata,
+                      ids)
 
-    result_uuid = add_document_to_collection(
-        collection_name,
-        document,
-        metadata
-    )
-
-    mock_get_collection_by_name.assert_called_once_with(collection_name)
-    mock_collection.add.assert_called_once_with(
-        documents=document,
-        ids="test_uuid4_value",
-        metadatas=metadata
-    )
-
-    assert result_uuid == "test_uuid4_value"
+    mock_collection.add.assert_called_once_with(documents=document,
+                                                metadatas=metadata,
+                                                ids=ids)
 
 
 @patch("ChromaSetup.chroma_client.get_collection")
@@ -113,60 +102,8 @@ def test_number_of_documents_in_collection(mock_get_collection):
     assert actual_number_of_documents == number_of_documents
 
 
-@patch("ChromaSetup.number_of_documents_in_collection")
-@patch("ChromaSetup.documentation_link_generator")
-@patch("ChromaSetup.add_document_to_collection")
-def test_create_document_from_split_texts_from_file(mock_add_document_to_collection,
-                                                    mock_documentation_link_generator,
-                                                    mock_number_of_documents_in_collection):
-    collection_name = "test_collection"
-    content_text_array = ["text_1", "text_2", "text_3", "text_4"]
-    file_name = "test_file_name"
-    documentation_source = "test_documentation_source"
-
-    documentation_link = "documentation_link"
-    mock_documentation_link_generator.return_value = documentation_link
-
-    metadata = {
-        "file_name": file_name,
-        "documentation_link": documentation_link
-    }
-
-    mock_number_of_documents_in_collection.return_value = len(content_text_array)
-
-    create_document_from_split_texts(
-        collection_name,
-        content_text_array,
-        file_name,
-        documentation_source
-    )
-
-    assert mock_add_document_to_collection.call_count == len(content_text_array)
-
-    mock_add_document_to_collection.assert_any_call(
-        collection_name,
-        content_text_array[0],
-        metadata
-    )
-    mock_add_document_to_collection.assert_any_call(
-        collection_name,
-        content_text_array[1],
-        metadata
-    )
-    mock_add_document_to_collection.assert_any_call(
-        collection_name,
-        content_text_array[2],
-        metadata
-    )
-    mock_add_document_to_collection.assert_any_call(
-        collection_name,
-        content_text_array[3],
-        metadata
-    )
-
-
 @patch("ChromaSetup.chroma_client.get_or_create_collection")
-def test_create_collection_if_needed_not_needed(mock_get_or_create_collection):
+def test_create_collection_if_needed_yes_needed(mock_get_or_create_collection):
     collection_name = "test_collection"
 
     mock_collection = MagicMock()
@@ -175,8 +112,7 @@ def test_create_collection_if_needed_not_needed(mock_get_or_create_collection):
     create_collection_if_needed(collection_name)
 
     mock_get_or_create_collection.assert_called_once_with(collection_name,
-                                                          metadata=ANY
-                                                          )
+                                                          metadata=ANY)
 
 
 def test_settings_to_settings_store():
@@ -188,12 +124,10 @@ def test_settings_to_settings_store():
     number_of_settings = len(chroma_settings_store)
     assert number_of_settings == 0
 
-    save_settings_to_settings_store(
-        number_of_chroma_results,
-        gpt_model,
-        gpt_temperature,
-        gpt_developer_prompt
-    )
+    save_settings_to_settings_store(number_of_chroma_results,
+                                    gpt_model,
+                                    gpt_temperature,
+                                    gpt_developer_prompt)
 
     number_of_settings = len(chroma_settings_store)
     assert number_of_settings == 4
@@ -230,38 +164,30 @@ def test_setup_chroma(mock_save_settings_to_settings_store,
 
     mock_number_of_documents_in_collection.return_value = expected_number_of_documents
 
-    setup_chroma(
-        collection_name,
-        should_import,
-        folder_path,
-        documentation_source,
-        number_of_chroma_results,
-        markdown_split_headers,
-        gpt_model,
-        gpt_temperature,
-        gpt_developer_prompt,
-        documentation_selector,
-        s3_bucket,
-        s3_folder_prefix,
-        s3_local_folder
-    )
+    setup_chroma(collection_name,
+                 should_import,
+                 folder_path,
+                 documentation_source,
+                 number_of_chroma_results,
+                 markdown_split_headers,
+                 gpt_model,
+                 gpt_temperature,
+                 gpt_developer_prompt,
+                 documentation_selector,
+                 s3_bucket,
+                 s3_folder_prefix,
+                 s3_local_folder)
 
-    mock_save_settings_to_settings_store.assert_called_once_with(
-        number_of_chroma_results,
-        gpt_model,
-        gpt_temperature,
-        gpt_developer_prompt
-    )
+    mock_save_settings_to_settings_store.assert_called_once_with(number_of_chroma_results,
+                                                                 gpt_model,
+                                                                 gpt_temperature,
+                                                                 gpt_developer_prompt)
     mock_create_collection_if_needed.assert_called_once_with(collection_name)
-    mock_scan_and_import_markdowns_from_folder.assert_called_once_with(
-        collection_name,
-        folder_path,
-        markdown_split_headers,
-        documentation_source
-    )
 
-    mock_download_files_from_s3_bucket.assert_called_once_with(
-        s3_bucket,
-        s3_folder_prefix,
-        s3_local_folder
-    )
+    mock_scan_and_import_markdowns_from_folder.assert_called_once_with(collection_name,
+                                                                       folder_path,
+                                                                       markdown_split_headers,
+                                                                       documentation_source)
+    mock_download_files_from_s3_bucket.assert_called_once_with(s3_bucket,
+                                                               s3_folder_prefix,
+                                                               s3_local_folder)

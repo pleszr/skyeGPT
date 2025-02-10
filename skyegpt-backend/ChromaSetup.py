@@ -1,9 +1,7 @@
 import chromadb
-import uuid
 from datetime import datetime
-from typing import Mapping, List
+from typing import List
 from chromadb.errors import InvalidCollectionException
-from DocumentationLinkGenerator import documentation_link_generator
 import ImportFromS3
 
 
@@ -81,30 +79,6 @@ def create_collection_if_needed(
                                            })
 
 
-def create_document_from_split_texts(
-    collection_name: str,
-    content_text_array: List[str],
-    file_name: str,
-    documentation_source: str
-):
-
-    for text in content_text_array:
-        documentation_link = documentation_link_generator(
-            file_name,
-            documentation_source
-        )
-        add_document_to_collection(
-            collection_name,
-            text,
-            {
-                "file_name": file_name,
-                "documentation_link": documentation_link
-            }
-        )
-    number_of_documents = number_of_documents_in_collection(collection_name)
-    print(f"Number of Documents: {number_of_documents}")
-
-
 def number_of_documents_in_collection(collection_name: str):
     try:
         collection = chroma_client.get_collection(collection_name)
@@ -122,19 +96,17 @@ def get_collection_by_name(collection_name: str):
         return None
 
 
-def add_document_to_collection(
-        collection_name: str,
-        document: str,
-        metadata: Mapping[str, str]
+def add_to_collection(
+        collection,
+        documents,
+        metadatas,
+        ids
 ):
-    collection = get_collection_by_name(collection_name)
-    document_uuid = uuid.uuid4()
     collection.add(
-        documents=document,
-        ids=str(document_uuid),
-        metadatas=metadata
+        documents=documents,
+        metadatas=metadatas,
+        ids=ids
     )
-    return document_uuid
 
 
 def create_collection(collection_name: str):
@@ -158,7 +130,6 @@ def verify_if_collection_exists(
         return True
     else:
         return False
-
 
 
 def set_chroma_client(
