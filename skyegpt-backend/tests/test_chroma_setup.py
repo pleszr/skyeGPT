@@ -59,19 +59,14 @@ def test_add_document_to_collection():
 
     mock_collection = MagicMock()
 
-    add_to_collection(
-        mock_collection,
-        document,
-        metadata,
-        ids
-    )
+    add_to_collection(mock_collection,
+                      document,
+                      metadata,
+                      ids)
 
-    mock_collection.add.assert_called_once_with(
-        documents=document,
-        metadatas=metadata,
-        ids=ids
-
-    )
+    mock_collection.add.assert_called_once_with(documents=document,
+                                                metadatas=metadata,
+                                                ids=ids)
 
 
 @patch("ChromaSetup.chroma_client.get_collection")
@@ -117,8 +112,7 @@ def test_create_collection_if_needed_yes_needed(mock_get_or_create_collection):
     create_collection_if_needed(collection_name)
 
     mock_get_or_create_collection.assert_called_once_with(collection_name,
-                                                          metadata=ANY
-                                                          )
+                                                          metadata=ANY)
 
 
 def test_settings_to_settings_store():
@@ -130,12 +124,10 @@ def test_settings_to_settings_store():
     number_of_settings = len(chroma_settings_store)
     assert number_of_settings == 0
 
-    save_settings_to_settings_store(
-        number_of_chroma_results,
-        gpt_model,
-        gpt_temperature,
-        gpt_developer_prompt
-    )
+    save_settings_to_settings_store(number_of_chroma_results,
+                                    gpt_model,
+                                    gpt_temperature,
+                                    gpt_developer_prompt)
 
     number_of_settings = len(chroma_settings_store)
     assert number_of_settings == 4
@@ -172,38 +164,30 @@ def test_setup_chroma(mock_save_settings_to_settings_store,
 
     mock_number_of_documents_in_collection.return_value = expected_number_of_documents
 
-    setup_chroma(
-        collection_name,
-        should_import,
-        folder_path,
-        documentation_source,
-        number_of_chroma_results,
-        markdown_split_headers,
-        gpt_model,
-        gpt_temperature,
-        gpt_developer_prompt,
-        documentation_selector,
-        s3_bucket,
-        s3_folder_prefix,
-        s3_local_folder
-    )
+    setup_chroma(collection_name,
+                 should_import,
+                 folder_path,
+                 documentation_source,
+                 number_of_chroma_results,
+                 markdown_split_headers,
+                 gpt_model,
+                 gpt_temperature,
+                 gpt_developer_prompt,
+                 documentation_selector,
+                 s3_bucket,
+                 s3_folder_prefix,
+                 s3_local_folder)
 
-    mock_save_settings_to_settings_store.assert_called_once_with(
-        number_of_chroma_results,
-        gpt_model,
-        gpt_temperature,
-        gpt_developer_prompt
-    )
+    mock_save_settings_to_settings_store.assert_called_once_with(number_of_chroma_results,
+                                                                 gpt_model,
+                                                                 gpt_temperature,
+                                                                 gpt_developer_prompt)
     mock_create_collection_if_needed.assert_called_once_with(collection_name)
-    mock_scan_and_import_markdowns_from_folder.assert_called_once_with(
-        collection_name,
-        folder_path,
-        markdown_split_headers,
-        documentation_source
-    )
 
-    mock_download_files_from_s3_bucket.assert_called_once_with(
-        s3_bucket,
-        s3_folder_prefix,
-        s3_local_folder
-    )
+    mock_scan_and_import_markdowns_from_folder.assert_called_once_with(collection_name,
+                                                                       folder_path,
+                                                                       markdown_split_headers,
+                                                                       documentation_source)
+    mock_download_files_from_s3_bucket.assert_called_once_with(s3_bucket,
+                                                               s3_folder_prefix,
+                                                               s3_local_folder)

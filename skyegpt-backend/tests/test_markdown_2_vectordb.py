@@ -99,7 +99,8 @@ def test_scan_and_import_markdowns_from_folder(
         documentation_source
     )
 
-    assert mock_create_process.call_count == 2
+    number_of_spawned_processes = 2
+    assert mock_create_process.call_count == number_of_spawned_processes
     mock_create_process.assert_has_calls([
         call(target=chroma_import_producer, args=(
             folder_path,
@@ -129,7 +130,7 @@ def test_scan_and_import_markdowns_from_folder(
 
 
 @patch("Markdown2VectorDB.add_text_to_queue")
-@patch("Markdown2VectorDB.split_markdown_by_headers", return_value=["mock text"])
+@patch("Markdown2VectorDB.split_markdown_by_headers")
 @patch("builtins.open")
 @patch("pathlib.Path.rglob")
 def test_chroma_import_producer(mock_rglob,
@@ -153,6 +154,8 @@ def test_chroma_import_producer(mock_rglob,
     documentation_source = "doc_source"
     batch_size = 10
     queue = "mock_queue"
+    content_of_files = "mock_text"
+    mock_split_markdown.return_value = content_of_files
 
     chroma_import_producer(folder_path,
                            markdown_split_headers,
@@ -169,8 +172,8 @@ def test_chroma_import_producer(mock_rglob,
     assert mock_split_markdown.call_count == 2
 
     expected_add_text_calls = [
-        call(["mock text"], "test_file1", documentation_source, batch_size, queue),
-        call(["mock text"], "test_file2", documentation_source, batch_size, queue)
+        call(content_of_files, "test_file1", documentation_source, batch_size, queue),
+        call(content_of_files, "test_file2", documentation_source, batch_size, queue)
     ]
     mock_add_text_to_queue.assert_has_calls(expected_add_text_calls,
                                             any_order=True)
@@ -178,7 +181,7 @@ def test_chroma_import_producer(mock_rglob,
 
 
 @patch("DocumentationLinkGenerator.link_generator", return_value="test_docu_link")
-def test_add_test_to_queue(
+def test_add_text_to_queue(
         mock_doc_link_generator
 ):
     content_text_array = ["test text 1", "test text 2", "test text 3", "test text 4"]
@@ -193,7 +196,7 @@ def test_add_test_to_queue(
                       batch_size,
                       queue)
 
-    assert mock_doc_link_generator.call_count == 4, "documentation_link_generator should be called once per text"
+    assert mock_doc_link_generator.call_count == len(content_text_array)
     mock_doc_link_generator.assert_any_call(file_name, documentation_source)
 
     items = []
@@ -207,7 +210,9 @@ def test_add_test_to_queue(
             break
     assert len(items) == expected_batches
 
-    documents1, metadatas1, ids1 = items[0]
+    documents1 = items[0]["documents"]
+    metadatas1 = items[0]["metadatas"]
+    ids1 = items[0]["ids"]
     assert documents1 == ["test text 1", "test text 2"]
     assert len(metadatas1) == 2
     for metadata in metadatas1:
@@ -215,7 +220,9 @@ def test_add_test_to_queue(
         assert metadata["documentation_link"] == "test_docu_link"
     assert len(ids1) == 2
 
-    documents2, metadatas2, ids2 = items[1]
+    documents2 = items[1]["documents"]
+    metadatas2 = items[1]["metadatas"]
+    ids2 = items[1]["ids"]
     assert documents2 == ["test text 3", "test text 4"]
     assert len(metadatas2) == 2
     for metadata in metadatas2:
@@ -260,8 +267,16 @@ def test_chroma_import_consumer(mock_get_collection_by_name,
     mock_collection = MagicMock()
     mock_get_collection_by_name.return_value = mock_collection
 
-    queue.put((batch1_documents, batch1_metadatas, batch1_ids))
-    queue.put((batch2_documents, batch2_metadatas, batch2_ids))
+    queue.put({
+        "documents": batch1_documents,
+        "metadatas": batch1_metadatas,
+        "ids": batch1_ids,
+    })
+    queue.put({
+        "documents": batch2_documents,
+        "metadatas": batch2_metadatas,
+        "ids": batch2_ids,
+    })
     queue.put(None)
 
     chroma_import_consumer(

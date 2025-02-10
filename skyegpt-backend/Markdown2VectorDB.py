@@ -116,13 +116,21 @@ def add_text_to_queue(
         metadatas.append(metadata)
 
         if len(ids) >= batch_size:
-            queue.put((documents, metadatas, ids))
+            queue.put({
+                "documents": documents,
+                "metadatas": metadatas,
+                "ids": ids
+                })
             documents = []
             metadatas = []
             ids = []
 
     if len(ids) > 0:
-        queue.put((documents, metadatas, ids))
+        queue.put({
+            "documents": documents,
+            "metadatas": metadatas,
+            "ids": ids
+        })
 
 
 def chroma_import_consumer(
@@ -133,14 +141,17 @@ def chroma_import_consumer(
     batch_number = 0
     while True:
         batch_number += 1
-        print(f"Saving batch: ${batch_number}")
+        print(f"Saving batch: {batch_number}")
         batch = queue.get()
         if batch is None:
             break
 
+        documents = batch["documents"]
+        metadatas = batch["metadatas"]
+        ids = batch["ids"]
         ChromaSetup.add_to_collection(
             collection,
-            documents=batch[0],
-            metadatas=batch[1],
-            ids=batch[2]
+            documents=documents,
+            metadatas=metadatas,
+            ids=ids
         )
