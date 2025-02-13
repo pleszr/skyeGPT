@@ -1,9 +1,7 @@
 from openai import OpenAI
 import OpenAIAssistantSetup
-import time
-import Utils
-from OpenAIAssistantSetup import assistant_settings_store
-
+from typing import Generator
+from fastapi import HTTPException
 
 client = OpenAI()
 
@@ -17,15 +15,14 @@ def ask_question(
         question
     )
 
-    run_assistant_on_thread(
+    assistant_answer = run_assistant_on_thread(
         thread_id,
         OpenAIAssistantSetup.assistant_settings_store["assistant_id"]
     )
 
-    return wait_and_extract_assistant_response(
-        thread_id,
-        assistant_settings_store["number_of_retries_for_assistant_answer"]
-    )
+    for chunk in assistant_answer:
+        if chunk is not None:
+            yield chunk
 
 
 def add_user_message_to_thread(
@@ -33,7 +30,7 @@ def add_user_message_to_thread(
         question: str
 ):
     client.beta.threads.messages.create(
-        thread_id,
+        thread_id=thread_id,
         role="user",
         content=question,
     )
@@ -42,30 +39,22 @@ def add_user_message_to_thread(
 def run_assistant_on_thread(
         thread_id: str,
         assistant_id: str
-):
-    client.beta.threads.runs.create(
-        thread_id=thread_id,
-        assistant_id=assistant_id
-    )
+) -> Generator[str, None, None]:
 
+    stream = client.beta.threads.runs.create(thread_id=thread_id,
+                                             assistant_id=assistant_id,
+                                             stream=True)
 
-def wait_and_extract_assistant_response(
-        thread_id: str,
-        max_retries: int
-):
-    answer_md = ""
-    for attempt in range(max_retries):
-        thread_messages = client.beta.threads.messages.list(thread_id)
-        role = thread_messages.data[0].role
-        content = thread_messages.data[0].content
-        if role == "assistant" and content:
-            answer_md = thread_messages.data[0].content[0].text.value
-            break
+    for chunk in stream:
+        if chunk.event == "thread.message.delta":
+            if hasattr(chunk.data.delta, 'content') and chunk.data.delta.content:
+                token = chunk.data.delta.content[0].text.value
+                if token is not None:
+                    yield token
+
+        elif chunk.event == "thread.run.failed":
+            print(f"Error while running the thread. Chunk: {chunk}")
+            raise HTTPException(status_code=500, detail="Error while running the thread")
+
         else:
-            print(f"No assistant response in {thread_id}, retrying in 1 sec")
-            time.sleep(1)
-    answer_html = Utils.convert_md_to_html(
-        answer_md,
-        "extra"
-    )
-    return answer_html
+            print(f"Event happened: {chunk.event}")

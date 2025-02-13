@@ -2,8 +2,7 @@ import chromadb
 import ChromaSetup
 from openai import OpenAI
 from typing import List, Dict
-
-import Utils
+from typing import Generator
 
 client = OpenAI()
 chroma_client = chromadb.PersistentClient()
@@ -40,21 +39,23 @@ def ask_gpt_powered_by_chroma(
         }
     )
 
-    assistant_answer = send_question_to_gpt(
-        message_history
-    )
+    assistant_answer = send_question_to_gpt(message_history)
 
-    message_history.append(
+    response_text = ""
+
+    for token in assistant_answer:
+        yield token
+        response_text += token
+
+    updated_message_history = message_history[:]
+    updated_message_history.append(
         {
             "role": "assistant",
-            "content": assistant_answer
+            "content": response_text
         }
     )
 
-    conversation_store[conversation_id] = message_history
-    return Utils.convert_md_to_html(
-        assistant_answer,
-        "extra")
+    conversation_store[conversation_id] = updated_message_history
 
 
 def load_conversation_from_store_or_generate_default(
@@ -109,7 +110,7 @@ def add_relevant_documents_to_message_history(
         updated_message_history.append(
             {
                 "role": "developer",
-                "content": str(f"This the first manual: {relevant_document} Metadata: {relevant_link}")
+                "content": str(f"Relevant manual: {relevant_document}. Documentation link: {relevant_link}")
             }
         )
     return updated_message_history
@@ -117,10 +118,14 @@ def add_relevant_documents_to_message_history(
 
 def send_question_to_gpt(
         message_history: List[Dict[str, str]]
-) -> str:
-    completion = client.chat.completions.create(
+) -> Generator[str, None, None]:
+    stream = client.chat.completions.create(
         temperature=ChromaSetup.chroma_settings_store["gpt_temperature"],
         model=ChromaSetup.chroma_settings_store["gpt_model"],
-        messages=message_history
+        messages=message_history,
+        stream=True
     )
-    return completion.choices[0].message.content
+    for chunk in stream:
+        token = chunk.choices[0].delta.content
+        if token is not None:
+            yield token

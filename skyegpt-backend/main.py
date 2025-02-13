@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Query, Body
+from fastapi.responses import StreamingResponse
 import ChromaSetup
 import ChromaAsker
 import OpenAIAssistantAsker
@@ -8,6 +9,7 @@ import uuid
 from fastapi.middleware.cors import CORSMiddleware
 import chromadb
 import ImportFromS3
+from Utils import format_to_sse
 
 app = FastAPI()
 chroma_client = chromadb.Client()
@@ -80,12 +82,12 @@ async def ask_chroma(request: dict = Body(...)):
     conversation_id = request["chroma_conversation_id"]
     question = request["question"]
 
-    answer = ChromaAsker.ask_gpt_powered_by_chroma(
-        question,
-        conversation_id
+    return StreamingResponse(
+        format_to_sse(
+            ChromaAsker.ask_gpt_powered_by_chroma(question, conversation_id)
+        ),
+        media_type="text/event-stream"
     )
-
-    return {"answer": answer}
 
 
 @app.post("/askAssistant")
@@ -93,12 +95,14 @@ async def ask_assistant(request: dict = Body(...)):
     question = request["question"]
     thread_id = request["thread_id"]
 
-    answer = OpenAIAssistantAsker.ask_question(
-        thread_id,
-        question
+    return StreamingResponse(
+        format_to_sse(
+            OpenAIAssistantAsker.ask_question(
+                thread_id, question
+            )
+        ),
+        media_type="text/event-stream"
     )
-
-    return {"answer": answer}
 
 
 @app.post("/createThread")
@@ -116,7 +120,6 @@ async def setup_gpt_assistant(request: dict = Body(...)):
     assistant_name = request["assistant_properties"]["assistant_name"]
     assistant_instructions = request["assistant_properties"]["assistant_instructions"]
     gpt_model = request["assistant_properties"]["gpt-model"]
-    number_of_retries_for_assistant_answer = request["assistant_properties"]["number_of_retries_for_assistant_answer"]
     temperature = request["assistant_properties"]["temperature"]
 
     new_vector_store_name = request["vector_store_properties"]["new_vector_store_name"]
@@ -134,7 +137,6 @@ async def setup_gpt_assistant(request: dict = Body(...)):
         assistant_name,
         assistant_instructions,
         gpt_model,
-        number_of_retries_for_assistant_answer,
         temperature,
         new_vector_store_name,
         existing_vector_store_id,
