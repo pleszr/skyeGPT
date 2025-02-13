@@ -139,4 +139,6 @@ s3_local_folder| Folder path where you want to save the files to.
 1. check the /.env.example file and generate the /.env file based on it
 2. go to root and execute docker-compose up
 
+# Roadmap
+Issues and plans can be tracked at https://github.com/users/pleszr/projects/4 
 
