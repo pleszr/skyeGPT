@@ -141,7 +141,6 @@ def chroma_import_consumer(
     batch_number = 0
     while True:
         batch_number += 1
-        print(f"Saving batch: {batch_number}")
         batch = queue.get()
         if batch is None:
             break
@@ -149,6 +148,7 @@ def chroma_import_consumer(
         documents = batch["documents"]
         metadatas = batch["metadatas"]
         ids = batch["ids"]
+        print(f"Saving batch: {batch_number} with {len(ids)} documents")
         ChromaSetup.add_to_collection(
             collection,
             documents=documents,
