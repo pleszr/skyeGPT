@@ -1,3 +1,4 @@
+
 # Purpose
 This application takes a set of documentation and creates an online chatbot which can answer based on the documentation. For demonstration and not for production purposes.
 
@@ -35,24 +36,44 @@ markdown_split_headers | The application splits the markdown files to smaller/bi
  gpt-model| Defines which ChatGPT model should be used.
  gpt_temperature| Defines ChatGPT's temperature - controls how predictable or creative the responses will be. Can be be set between 0.1 and 10, the smaller the number the less creative the response will be.
  gpt_developer_prompt|Defines what system context chatgpt will receive in every prompt. In general, prompt hierarchy is system > developer > assistant
+ documentation_selector: s3 | Defines if files should be downloaded from s3 bucket. More details in documentation_sources. Needs following environment variables: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION
+ documentation_selector: innoveo_partner_hub | Defines if the content of Innoveo partner hub should be downloaded. *Currently disabled. Track it [here](https://github.com/pleszr/skyeGPT/issues/14).*
+ s3_bucket| Name of the s3 bucket
+s3_folder_prefix| Name of the folder inside the s3 bucket
+s3_local_folder| Folder path where you want to save the files to.
+ 
 
 #### Sample json
 
 ```json 
 {
-    "chroma_parameters": {
-        "collection_name": "SkyeDoc",
-        "should_import": true,
-        "folder_path": "content",
-        "documentation_source": "skye",
-        "number_of_chroma_results": 3,
-        "markdown_split_headers": ["#"]
-    },
-    "gpt_parameters": {
-        "gpt_model": "gpt-4o-mini",
-        "gpt_temperature": 0.1,
-        "gpt_developer_prompt": "You are a support person working for a product organization called Innoveo. You are providing technical support to developers who are using a no-code platform called Innoveo Skye. You have access to the manual of the product in the upcoming developer prompts. Do your best to answer the user's question. Offer them to read the documentation (you can find the exact link in the metadata)."
-    }
+   "chroma_parameters":{
+      "collection_name":"SkyeDoc",
+      "should_import":true,
+      "folder_path":"content",
+      "documentation_source":"skye",
+      "number_of_chroma_results":4,
+      "markdown_split_headers":[
+         "#",
+         "##"
+      ]
+   },
+   "gpt_parameters":{
+      "gpt_model":"gpt-4o-mini",
+      "gpt_temperature":0.1,
+      "gpt_developer_prompt":"You are a support person working for a product organization called Innoveo. You are providing technical support to developers who are using a no-code platform called Innoveo Skye. You have access to manual of the product in the upcoming developer prompts. Your job is to help them find the relevant documentation by providing links to the documentation. If there are multiple relevant options, give multiple options. Only go above 200 tokens for an option when you are quoting the documentation. Refer everything from the lookup files, only refer to items which you are highly confident that it is accurate."
+   },
+   "documentation_selector":{
+      "s3":false,
+      "innoveo_partner_hub":false
+   },
+   "documentation_sources":{
+      "s3":{
+         "s3_bucket":"skyedoc",
+         "s3_folder_prefix":"skye-10.0.0/",
+         "s3_local_folder":"content/skyedoc"
+      }
+   }
 }
 ```
 ### Asker
@@ -78,21 +99,38 @@ existing_vector_store_id| Optional. If you want to re-use an existing vector_sto
 new_vector_store_name| Name of the vector_store if you are creating a new. 
 folder_path|the folder the application should scan for files to import.
  file_extension| The extension of the files the application should find at during scanning.
+  documentation_selector: s3 | Defines if files should be downloaded from s3 bucket. More details in documentation_sources. Needs following environment variables: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION
+ documentation_selector: innoveo_partner_hub | Defines if the content of Innoveo partner hub should be downloaded. *Currently disabled. Track it [here](https://github.com/pleszr/skyeGPT/issues/14).*
+ s3_bucket| Name of the s3 bucket
+s3_folder_prefix| Name of the folder inside the s3 bucket
+s3_local_folder| Folder path where you want to save the files to.
 
 #### Sample JSON
 ```json 
 {
-    "assistant_properties": {
-        "assistant_name": "SkyeGPT",
-        "assistant_instructions": "You are a support person working for a product organization called Innoveo. You are providing technical support to developers who are using a no-code platform called Innoveo Skye. Rely on the contextual files from the vector store for answers. You should give short but precise answers. If something is not answerable based on the documentation, don't hesitate to say that it is not possible according to the documentation.",
-        "gpt_model": "gpt-4o-mini"
-    },
-    "vector_store_properties": {
-        "existing_vector_store_id": "vs_Uk6JClWkMHGgiwHOrCksGi4Q",
-        "new_vector_store_name": "Skye 10 documentation",
-        "folder_path": "content",
-        "file_extension": "md"
-    }
+   "assistant_properties":{
+      "assistant_name":"SkyeGPT4",
+      "assistant_instructions":"You are a support person working for a product organization called Innoveo. You are providing technical support to developers who are using a no-code platform called Innoveo Skye. Rely on the contextual files from the vector store for answers. Give short answers and always link the documentation where they can learn more. Refer everything from the lookup files, only refer to items which you are highly confident that it is accurate. If something is not answerable based on the documentation, don't hesitate to say that it is not possible according the documentation",
+      "gpt-model":"gpt-4o-mini",
+      "temperature":0.1
+   },
+   "vector_store_properties":{
+      "existing_vector_store_id":"vs_Uk6JClWkMHGgiwHOrCksGi4Q",
+      "new_vector_store_name":"Skye 10 documentation",
+      "folder_path":"content",
+      "file_extension":"md"
+   },
+   "documentation_selector":{
+      "s3":false,
+      "innoveo_partner_hub":false
+   },
+   "documentation_sources":{
+      "s3":{
+         "s3_bucket":"skyedoc",
+         "s3_folder_prefix":"skye-10.0.0/",
+         "s3_local_folder":"content/skyedoc"
+      }
+   }
 }
 ```
 
@@ -101,5 +139,4 @@ folder_path|the folder the application should scan for files to import.
 1. check the /.env.example file and generate the /.env file based on it
 2. go to root and execute docker-compose up
 
-## Supported documentation
 
