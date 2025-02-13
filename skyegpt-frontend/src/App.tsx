@@ -119,26 +119,26 @@ const App: React.FC = () => {
                 <div className="skgpt-chatContainer">
                     <div className="skgpt-tabs">
                         <div className="tab-header">
-                            <div className="header-btn active assistant">GPT Assistant</div>
-                            <div className="header-btn chroma">Chroma</div>
+                            <div className="header-btn chroma active">Chroma</div>
+                            <div className="header-btn assistant">GPT Assistant</div>
                         </div>
                         <div className="tab-content">
-                            <div className="gpt-tab assistant active">
-                                <ChatBox
-                                    title="Ask GPT Assistant"
-                                    askEndpoint = {askEndpointAssistant}
-                                    messages={assistantMessages} // Pass the assistantMessages state to the Assistant ChatBox
-                                    setMessages={setAssistantMessages} // Pass the setMessages function to update assistantMessages
-                                    className="gptAssistant"
-                                />
-                            </div>
-                            <div className="gpt-tab chroma">
+                            <div className="gpt-tab chroma active">
                                 <ChatBox
                                     title="Ask GPT Chroma"
-                                    askEndpoint = {askEndpointChroma}
-                                    messages={chromaMessages} // Pass the chromaMessages state to the Chroma ChatBox
-                                    setMessages={setChromaMessages} // Pass the setMessages function to update chromaMessages
+                                    askEndpoint={askEndpointChroma}
+                                    messages={chromaMessages}
+                                    setMessages={setChromaMessages}
                                     className="gptChroma"
+                                />
+                            </div>
+                            <div className="gpt-tab assistant">
+                                <ChatBox
+                                    title="Ask GPT Assistant"
+                                    askEndpoint={askEndpointAssistant}
+                                    messages={assistantMessages}
+                                    setMessages={setAssistantMessages}
+                                    className="gptAssistant"
                                 />
                             </div>
                         </div>
