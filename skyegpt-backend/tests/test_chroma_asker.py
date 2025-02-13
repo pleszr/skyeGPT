@@ -3,7 +3,7 @@ os.environ["OPENAI_API_KEY"] = "dummy-key"
 from ChromaAsker import (send_question_to_gpt,
                          add_relevant_documents_to_message_history,
                          find_relevant_documents_for_question,
-                         is_message_history_is_too_big,
+                         is_message_history_too_big,
                          ask_gpt_powered_by_chroma)
 from unittest.mock import patch, MagicMock
 import TestUtils
@@ -133,7 +133,7 @@ def test_is_message_history_too_big_yes():
     ]
 
     max_prompt_size = 5
-    assert is_message_history_is_too_big(message_history,
+    assert is_message_history_too_big(message_history,
                                          max_prompt_size)
 
 
@@ -144,7 +144,7 @@ def test_is_message_history_too_big_no():
     ]
 
     max_prompt_size = 5
-    assert not is_message_history_is_too_big(message_history,
+    assert not is_message_history_too_big(message_history,
                                              max_prompt_size)
 
 
