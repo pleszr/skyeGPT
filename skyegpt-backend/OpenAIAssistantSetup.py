@@ -10,7 +10,6 @@ def setup_openai_assistant(
     assistant_name: str,
     assistant_instructions: str,
     gpt_model: str,
-    number_of_retries_for_assistant_answer: int,
     temperature: float,
     new_vector_store_name: str,
     existing_vector_store_id: str,
@@ -21,7 +20,6 @@ def setup_openai_assistant(
     s3_folder_prefix: str,
     s3_local_folder: str
 ):
-    assistant_settings_store["number_of_retries_for_assistant_answer"] = number_of_retries_for_assistant_answer
 
     assistant_id = find_or_create_assistant(
         assistant_name,

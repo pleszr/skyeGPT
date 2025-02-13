@@ -105,9 +105,6 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
                 buffer = lines.pop() || ''; // Keep the last incomplete line in buffer
 
                 for (const line of lines) {
-                    if (line.trim() === 'data: [DONE]') {
-                        return;
-                    }
                     if (line.startsWith('data: ')) {
                         const chunk = line.slice(6); // Remove 'data: ' prefix
                         fullMessage += chunk;
