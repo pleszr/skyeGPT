@@ -181,7 +181,7 @@ def test_load_conversation_from_store_or_generate_default_not_found():
 @patch("ChromaAsker.load_conversation_from_store_or_generate_default")
 @patch("ChromaAsker.send_question_to_gpt")
 @patch("ChromaAsker.find_relevant_documents_for_question")
-@patch("ChromaAsker.is_message_history_is_too_big")
+@patch("ChromaAsker.is_message_history_too_big")
 @patch.dict("ChromaAsker.conversation_store", {}, clear=True)
 @patch.dict("ChromaSetup.chroma_settings_store", {
     "gpt_developer_prompt": "Default Prompt",
