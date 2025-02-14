@@ -11,6 +11,7 @@ skyegpt-backend/Tests/chroma/
 content/
 .idea/
 .DS_Store
+settings/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
