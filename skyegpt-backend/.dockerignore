@@ -6,6 +6,7 @@ skyeGpt.iml
 content/
 .idea/
 .DS_Store
+settings/
 
 # Ignore version control systems
 .git
