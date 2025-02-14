@@ -1,5 +1,6 @@
 import chromadb
-import ChromaSetup
+import ChromaClient
+import RagSetup
 from openai import OpenAI
 from typing import List, Dict
 from typing import Generator
@@ -9,7 +10,7 @@ chroma_client = chromadb.PersistentClient()
 conversation_store = {}
 
 
-def ask_gpt_powered_by_chroma(
+def ask_gpt_using_rag_pipeline(
         question: str,
         conversation_id: str
 ):
@@ -25,7 +26,7 @@ def ask_gpt_powered_by_chroma(
     relevant_documents = find_relevant_documents_for_question(
         "SkyeDoc",
         question,
-        ChromaSetup.chroma_settings_store["number_of_chroma_results"]
+        RagSetup.rag_settings_store["k_nearest_neighbors"]
     )
     message_history = add_relevant_documents_to_message_history(
         relevant_documents,
@@ -64,7 +65,7 @@ def load_conversation_from_store_or_generate_default(
     default_message = [
             {
                 "role": "developer",
-                "content": ChromaSetup.chroma_settings_store["gpt_developer_prompt"]
+                "content": RagSetup.rag_settings_store["gpt_developer_prompt"]
             }
         ]
 
@@ -89,7 +90,7 @@ def find_relevant_documents_for_question(
         query: str,
         number_of_results: int
 ) -> dict:
-    collection = ChromaSetup.get_collection_by_name(collection_name)
+    collection = ChromaClient.get_collection_by_name(collection_name)
     results = collection.query(
         query_texts=[query],
         n_results=number_of_results
@@ -103,7 +104,7 @@ def add_relevant_documents_to_message_history(
 ):
     updated_message_history = message_history[:]
 
-    for document_index in range(0, ChromaSetup.chroma_settings_store["number_of_chroma_results"]):
+    for document_index in range(0, RagSetup.rag_settings_store["k_nearest_neighbors"]):
         relevant_document = relevant_documents["documents"][0][document_index]
         relevant_link = relevant_documents["metadatas"][0][document_index]["documentation_link"]
 
@@ -120,8 +121,8 @@ def send_question_to_gpt(
         message_history: List[Dict[str, str]]
 ) -> Generator[str, None, None]:
     stream = client.chat.completions.create(
-        temperature=ChromaSetup.chroma_settings_store["gpt_temperature"],
-        model=ChromaSetup.chroma_settings_store["gpt_model"],
+        temperature=RagSetup.rag_settings_store["gpt_temperature"],
+        model=RagSetup.rag_settings_store["gpt_model"],
         messages=message_history,
         stream=True
     )

@@ -1,7 +1,8 @@
 from fastapi import FastAPI, Query, Body
 from fastapi.responses import StreamingResponse
-import ChromaSetup
-import ChromaAsker
+import RagSetup
+import ChromaClient
+import RagPipeline
 import OpenAIAssistantAsker
 import OpenAIAssistantSetup
 from openai import OpenAI
@@ -30,7 +31,7 @@ async def setup_chroma(request: dict = Body(...)):
     should_import = request["chroma_parameters"]["should_import"]
     folder_path = request["chroma_parameters"]["folder_path"]
     documentation_source = request["chroma_parameters"]["documentation_source"]
-    number_of_chroma_results = request["chroma_parameters"]["number_of_chroma_results"]
+    k_nearest_neighbors = request["chroma_parameters"]["k_nearest_neighbors"]
     markdown_split_headers = request["chroma_parameters"]["markdown_split_headers"]
 
     gpt_model = request["gpt_parameters"]["gpt_model"]
@@ -43,12 +44,12 @@ async def setup_chroma(request: dict = Body(...)):
     s3_folder_prefix = request["documentation_sources"]["s3"]["s3_folder_prefix"]
     s3_local_folder = request["documentation_sources"]["s3"]["s3_local_folder"]
 
-    number_of_uploaded_documents = ChromaSetup.setup_chroma(
+    number_of_uploaded_documents = RagSetup.setup_rag_pipeline(
                 collection_name,
                 should_import,
                 folder_path,
                 documentation_source,
-                number_of_chroma_results,
+                k_nearest_neighbors,
                 markdown_split_headers,
                 gpt_model,
                 gpt_temperature,
@@ -63,21 +64,7 @@ async def setup_chroma(request: dict = Body(...)):
 
 @app.delete("/deleteCollection")
 async def delete_collection(collection_name: str = Query(..., description="The name of the collection to delete")):
-    ChromaSetup.delete_collection(collection_name)
-
-
-# @app.post("/playground")
-# async def playground(data: dict = Body(...)):
-#     my_dict = {
-#         "key1": "value1",
-#         "key2": [1, 2, 3],
-#         "nested": {
-#             "key3": "value3"
-#         }
-#     }
-#     return "yo"
-
-client = OpenAI()
+    ChromaClient.delete_collection(collection_name)
 
 
 @app.post("/askChroma")
@@ -87,7 +74,7 @@ async def ask_chroma(request: dict = Body(...)):
 
     return StreamingResponse(
         format_to_sse(
-            ChromaAsker.ask_gpt_powered_by_chroma(question, conversation_id)
+            RagPipeline.ask_gpt_using_rag_pipeline(question, conversation_id)
         ),
         media_type="text/event-stream"
     )
@@ -110,6 +97,7 @@ async def ask_assistant(request: dict = Body(...)):
 
 @app.post("/createThread")
 async def create_thread():
+    client = OpenAI()
     my_thread = client.beta.threads.create()
     chroma_conversation_id = uuid.uuid4()
     return {
