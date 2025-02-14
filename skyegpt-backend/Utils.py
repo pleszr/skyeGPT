@@ -2,7 +2,7 @@ import markdown
 from typing import Generator
 import os
 import json
-import ChromaSetup
+import RagSetup
 import OpenAIAssistantSetup
 
 
@@ -23,7 +23,7 @@ def format_to_sse(
 
 def save_settings_stores():
     save_settings_to_file(
-        ChromaSetup.chroma_settings_store,
+        RagSetup.rag_settings_store,
         "chroma_settings_store.json"
     )
     save_settings_to_file(
@@ -34,7 +34,7 @@ def save_settings_stores():
 
 def load_settings_stores():
     try:
-        ChromaSetup.chroma_settings_store = load_settings_from_file("chroma_settings_store.json")
+        RagSetup.rag_settings_store = load_settings_from_file("chroma_settings_store.json")
         print("Chroma settings loaded")
     except FileNotFoundError:
         print("chroma_settings_store.json is not present. Chroma settings not loaded")
@@ -44,7 +44,6 @@ def load_settings_stores():
         print("Assistant settings loaded")
     except FileNotFoundError:
         print("assistant_settings_store.json is not present. OpenAI Assistant settings not loaded")
-
 
 
 def save_settings_to_file(

@@ -31,7 +31,7 @@ There are two major workflows, the Setup and the Asker. Setup needs to ran only 
  should_import | can be true/false. If true, when the setup request is sent, it will scan the folders and import. Be careful, one file can be imported multiple times and that can cause issues with the closest neighbor! Setting it to false prevents this. Use this if you want to change another parameter without triggering re-import.
 folder_path | The path to the folder where the markdown files are stored.
 documentation_source | is used to generate the documentation_link. For now, only "skye" is supported.
-number_of_chroma_results | Defines how much of the closest neighbors from the vector db will be sent to ChatGPT as relevant documentation. Is one of the fine/tuning options for better outputs.
+k_nearest_neighbors | Defines how much of the closest neighbors from the vector db will be sent to ChatGPT as relevant documentation. Is one of the fine/tuning options for better outputs.
 markdown_split_headers | The application splits the markdown files to smaller/bigger chunks based on headers. Possible values are ["#"], ["#","##"], ["#","##","###"] and they define which level of headers is being used for splitting (as an example, ["#"] splits the files only based on first headers, ["#","##","###"] splits them based on the first three headers. The smaller the pieces the less precise the answer is, and more tokens are used for each call, but higher chance of ChatGPT not being aware of the necessary context.
  gpt-model| Defines which ChatGPT model should be used.
  gpt_temperature| Defines ChatGPT's temperature - controls how predictable or creative the responses will be. Can be be set between 0.1 and 10, the smaller the number the less creative the response will be.
@@ -52,7 +52,7 @@ s3_local_folder| Folder path where you want to save the files to.
       "should_import":true,
       "folder_path":"content",
       "documentation_source":"skye",
-      "number_of_chroma_results":4,
+      "k_nearest_neighbors":4,
       "markdown_split_headers":[
          "#",
          "##"

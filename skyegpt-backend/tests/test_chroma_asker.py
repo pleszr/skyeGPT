@@ -1,24 +1,24 @@
 import os
 os.environ["OPENAI_API_KEY"] = "dummy-key"
-from ChromaAsker import (send_question_to_gpt,
+from RagPipeline import (send_question_to_gpt,
                          add_relevant_documents_to_message_history,
                          find_relevant_documents_for_question,
                          is_message_history_too_big,
-                         ask_gpt_powered_by_chroma)
+                         ask_gpt_using_rag_pipeline)
 from unittest.mock import patch, MagicMock
 import TestUtils
-import ChromaSetup
-import ChromaAsker
+import RagSetup
+import RagPipeline
 import copy
 
 
-@patch("ChromaAsker.client.chat.completions.create")
-@patch.dict(ChromaSetup.chroma_settings_store, {}, clear=True)
+@patch("RagPipeline.client.chat.completions.create")
+@patch.dict(RagSetup.rag_settings_store, {}, clear=True)
 def test_send_question_to_gpt(mock_create):
     temperature = 0.1
     gpt_model = "test_gpt_model"
-    ChromaSetup.chroma_settings_store["gpt_temperature"] = temperature
-    ChromaSetup.chroma_settings_store["gpt_model"] = gpt_model
+    RagSetup.rag_settings_store["gpt_temperature"] = temperature
+    RagSetup.rag_settings_store["gpt_model"] = gpt_model
     message_history = [
             {"role": "user", "content": "msg_1"},
             {"role": "assistant", "content": "msg_2"}
@@ -41,9 +41,9 @@ def test_send_question_to_gpt(mock_create):
     )
 
 
-@patch.dict(ChromaSetup.chroma_settings_store, {}, clear=True)
+@patch.dict(RagSetup.rag_settings_store, {}, clear=True)
 def test_add_relevant_documents_to_message_history():
-    ChromaSetup.chroma_settings_store["number_of_chroma_results"] = 3
+    RagSetup.rag_settings_store["k_nearest_neighbors"] = 3
     message_history = [
         {"role": "user", "content": "msg_1"},
         {"role": "assistant", "content": "msg_2"}
@@ -85,7 +85,7 @@ def test_add_relevant_documents_to_message_history():
     assert message_history == copy_of_original_message_history
 
 
-@patch("ChromaSetup.get_collection_by_name")
+@patch("ChromaClient.get_collection_by_name")
 def test_find_relevant_documents_for_question(mock_get_collection_by_name):
     collection_name = "test_collection_name"
     query = "dummy query"
@@ -148,8 +148,8 @@ def test_is_message_history_too_big_no():
                                              max_prompt_size)
 
 
-@patch.dict(ChromaAsker.conversation_store, {}, clear=True)  # Ensures isolated test state
-@patch.dict(ChromaSetup.chroma_settings_store, {"gpt_developer_prompt": "Default Prompt"}, clear=True)
+@patch.dict(RagPipeline.conversation_store, {}, clear=True)  # Ensures isolated test state
+@patch.dict(RagSetup.rag_settings_store, {"gpt_developer_prompt": "Default Prompt"}, clear=True)
 def test_load_conversation_from_store_or_generate_default_found():
     conversation_id = "existing_conversation"
     expected_conversation = [
@@ -157,35 +157,35 @@ def test_load_conversation_from_store_or_generate_default_found():
         {"role": "assistant", "content": "Hi, how can I help?"}
     ]
 
-    ChromaAsker.conversation_store[conversation_id] = expected_conversation
+    RagPipeline.conversation_store[conversation_id] = expected_conversation
 
-    actual_conversation = ChromaAsker.load_conversation_from_store_or_generate_default(conversation_id)
+    actual_conversation = RagPipeline.load_conversation_from_store_or_generate_default(conversation_id)
 
     assert actual_conversation == expected_conversation
 
 
-@patch.dict(ChromaAsker.conversation_store, {}, clear=True)  # Ensures isolated test state
-@patch.dict(ChromaSetup.chroma_settings_store, {"gpt_developer_prompt": "Default Prompt"}, clear=True)
+@patch.dict(RagPipeline.conversation_store, {}, clear=True)  # Ensures isolated test state
+@patch.dict(RagSetup.rag_settings_store, {"gpt_developer_prompt": "Default Prompt"}, clear=True)
 def test_load_conversation_from_store_or_generate_default_not_found():
     conversation_id = "missing_conversation"
     expected_default_conversation = [
         {"role": "developer", "content": "Default Prompt"}
     ]
 
-    actual_conversation = ChromaAsker.load_conversation_from_store_or_generate_default(conversation_id)
+    actual_conversation = RagPipeline.load_conversation_from_store_or_generate_default(conversation_id)
 
     assert actual_conversation == expected_default_conversation
 
 
-@patch("ChromaAsker.add_relevant_documents_to_message_history")
-@patch("ChromaAsker.load_conversation_from_store_or_generate_default")
-@patch("ChromaAsker.send_question_to_gpt")
-@patch("ChromaAsker.find_relevant_documents_for_question")
-@patch("ChromaAsker.is_message_history_too_big")
-@patch.dict("ChromaAsker.conversation_store", {}, clear=True)
-@patch.dict("ChromaSetup.chroma_settings_store", {
+@patch("RagPipeline.add_relevant_documents_to_message_history")
+@patch("RagPipeline.load_conversation_from_store_or_generate_default")
+@patch("RagPipeline.send_question_to_gpt")
+@patch("RagPipeline.find_relevant_documents_for_question")
+@patch("RagPipeline.is_message_history_too_big")
+@patch.dict("RagPipeline.conversation_store", {}, clear=True)
+@patch.dict("RagSetup.rag_settings_store", {
     "gpt_developer_prompt": "Default Prompt",
-    "number_of_chroma_results": 3
+    "k_nearest_neighbors": 3
 }, clear=True)
 def test_ask_gpt_powered_by_chroma_happy_path(
         mock_is_too_big,
@@ -221,8 +221,8 @@ def test_ask_gpt_powered_by_chroma_happy_path(
 
     mock_send_question.return_value = ["response", "_", "tokens"]
 
-    response_generator = ask_gpt_powered_by_chroma(question,
-                                                   conversation_id)
+    response_generator = ask_gpt_using_rag_pipeline(question,
+                                                    conversation_id)
     assistant_response = list(response_generator)
     assert assistant_response == ["response", "_", "tokens"]
 
@@ -234,7 +234,7 @@ def test_ask_gpt_powered_by_chroma_happy_path(
         {"role": "user", "content": "test question"},
         {"role": "assistant", "content": "response_tokens"}
     ]
-    assert ChromaAsker.conversation_store[conversation_id] == expected_final_conversation
+    assert RagPipeline.conversation_store[conversation_id] == expected_final_conversation
 
     mock_is_too_big.assert_called_once_with(initial_history,
                                             20)

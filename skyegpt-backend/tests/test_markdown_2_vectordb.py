@@ -69,7 +69,7 @@ def test_split_markdown_to_header_texts_top_level_headers():
     assert actual_length == expected_length, "Sample document has 2 sections when split at # headers"
 
 
-@patch("ChromaSetup.number_of_documents_in_collection")
+@patch("ChromaClient.number_of_documents_in_collection")
 @patch("Markdown2VectorDB.join_process")
 @patch("Markdown2VectorDB.start_process")
 @patch("Markdown2VectorDB.create_process")
@@ -231,8 +231,8 @@ def test_add_text_to_queue(
     assert len(ids2) == 2
 
 
-@patch("ChromaSetup.add_to_collection")
-@patch("ChromaSetup.get_collection_by_name")
+@patch("ChromaClient.add_to_collection")
+@patch("ChromaClient.get_collection_by_name")
 def test_chroma_import_consumer(mock_get_collection_by_name,
                                 mock_add_to_collection):
     batch1_ids = ["test_id1", "test_id2"]

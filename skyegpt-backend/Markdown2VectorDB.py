@@ -1,7 +1,7 @@
 from langchain_text_splitters import MarkdownHeaderTextSplitter
 from pathlib import Path
 from typing import List
-import ChromaSetup
+import ChromaClient
 import uuid
 import os
 import time
@@ -41,7 +41,7 @@ def scan_and_import_markdowns_from_folder(
 
     join_process(consumer_process)
 
-    number_of_documents = ChromaSetup.number_of_documents_in_collection(collection_name)
+    number_of_documents = ChromaClient.number_of_documents_in_collection(collection_name)
     print(f"Elapsed seconds: {time.time()-start_time:.0f} Record count: {number_of_documents}")
 
 
@@ -137,7 +137,7 @@ def chroma_import_consumer(
         collection_name,
         queue
 ):
-    collection = ChromaSetup.get_collection_by_name(collection_name)
+    collection = ChromaClient.get_collection_by_name(collection_name)
     batch_number = 0
     while True:
         batch_number += 1
@@ -149,7 +149,7 @@ def chroma_import_consumer(
         metadatas = batch["metadatas"]
         ids = batch["ids"]
         print(f"Saving batch: {batch_number} with {len(ids)} documents")
-        ChromaSetup.add_to_collection(
+        ChromaClient.add_to_collection(
             collection,
             documents=documents,
             metadatas=metadatas,

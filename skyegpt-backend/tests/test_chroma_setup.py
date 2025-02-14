@@ -1,14 +1,14 @@
-from ChromaSetup import (delete_collection,
-                         create_collection,
-                         set_chroma_client,
-                         verify_if_collection_exists,
-                         add_to_collection,
-                         get_collection_by_name,
-                         number_of_documents_in_collection,
-                         create_collection_if_needed,
-                         save_settings_to_settings_store,
-                         chroma_settings_store,
-                         setup_chroma)
+from ChromaClient import (delete_collection,
+                          create_collection,
+                          set_chroma_client,
+                          verify_if_collection_exists,
+                          add_to_collection,
+                          get_collection_by_name,
+                          number_of_documents_in_collection,
+                          create_collection_if_needed)
+from RagSetup import (save_settings_to_settings_store,
+                      rag_settings_store,
+                      setup_rag_pipeline)
 import chromadb
 from unittest.mock import patch, ANY
 import pytest
@@ -69,7 +69,7 @@ def test_add_document_to_collection():
                                                 ids=ids)
 
 
-@patch("ChromaSetup.chroma_client.get_collection")
+@patch("ChromaClient.chroma_client.get_collection")
 def test_get_collection_by_name(mock_get_collection):
     collection_name = "test_collection_name"
 
@@ -86,7 +86,7 @@ def test_get_collection_by_name(mock_get_collection):
     assert result_collection == mock_collection
 
 
-@patch("ChromaSetup.chroma_client.get_collection")
+@patch("ChromaClient.chroma_client.get_collection")
 def test_number_of_documents_in_collection(mock_get_collection):
     collection_name = "test_collection_name"
     number_of_documents = 5
@@ -102,7 +102,7 @@ def test_number_of_documents_in_collection(mock_get_collection):
     assert actual_number_of_documents == number_of_documents
 
 
-@patch("ChromaSetup.chroma_client.get_or_create_collection")
+@patch("ChromaClient.chroma_client.get_or_create_collection")
 def test_create_collection_if_needed_yes_needed(mock_get_or_create_collection):
     collection_name = "test_collection"
 
@@ -116,28 +116,28 @@ def test_create_collection_if_needed_yes_needed(mock_get_or_create_collection):
 
 
 def test_settings_to_settings_store():
-    number_of_chroma_results = 2
+    k_nearest_neighbors = 2
     gpt_model = "gpt-4o-mini"
     gpt_temperature = 0.1
     gpt_developer_prompt = "dev prompt"
 
-    number_of_settings = len(chroma_settings_store)
+    number_of_settings = len(rag_settings_store)
     assert number_of_settings == 0
 
-    save_settings_to_settings_store(number_of_chroma_results,
+    save_settings_to_settings_store(k_nearest_neighbors,
                                     gpt_model,
                                     gpt_temperature,
                                     gpt_developer_prompt)
 
-    number_of_settings = len(chroma_settings_store)
+    number_of_settings = len(rag_settings_store)
     assert number_of_settings == 4
 
 
 @patch("ImportFromS3.download_files_from_s3_bucket")
-@patch("ChromaSetup.number_of_documents_in_collection")
+@patch("ChromaClient.number_of_documents_in_collection")
 @patch("Markdown2VectorDB.scan_and_import_markdowns_from_folder")
-@patch("ChromaSetup.create_collection_if_needed")
-@patch("ChromaSetup.save_settings_to_settings_store")
+@patch("ChromaClient.create_collection_if_needed")
+@patch("RagSetup.save_settings_to_settings_store")
 def test_setup_chroma(mock_save_settings_to_settings_store,
                       mock_create_collection_if_needed,
                       mock_scan_and_import_markdowns_from_folder,
@@ -148,7 +148,7 @@ def test_setup_chroma(mock_save_settings_to_settings_store,
     should_import = True
     folder_path = "example/folder/path"
     documentation_source = "test_documentation_source"
-    number_of_chroma_results = 5
+    k_nearest_neighbors = 5
     markdown_split_headers = ["text_content1", "text_content2", "text_content3"]
     gpt_model = "gpt-4o-mini"
     gpt_temperature = 0.1
@@ -164,21 +164,21 @@ def test_setup_chroma(mock_save_settings_to_settings_store,
 
     mock_number_of_documents_in_collection.return_value = expected_number_of_documents
 
-    setup_chroma(collection_name,
-                 should_import,
-                 folder_path,
-                 documentation_source,
-                 number_of_chroma_results,
-                 markdown_split_headers,
-                 gpt_model,
-                 gpt_temperature,
-                 gpt_developer_prompt,
-                 documentation_selector,
-                 s3_bucket,
-                 s3_folder_prefix,
-                 s3_local_folder)
+    setup_rag_pipeline(collection_name,
+                       should_import,
+                       folder_path,
+                       documentation_source,
+                       k_nearest_neighbors,
+                       markdown_split_headers,
+                       gpt_model,
+                       gpt_temperature,
+                       gpt_developer_prompt,
+                       documentation_selector,
+                       s3_bucket,
+                       s3_folder_prefix,
+                       s3_local_folder)
 
-    mock_save_settings_to_settings_store.assert_called_once_with(number_of_chroma_results,
+    mock_save_settings_to_settings_store.assert_called_once_with(k_nearest_neighbors,
                                                                  gpt_model,
                                                                  gpt_temperature,
                                                                  gpt_developer_prompt)
