@@ -2,6 +2,8 @@ import markdown
 from typing import Generator
 import os
 import json
+import ChromaSetup
+import OpenAIAssistantSetup
 
 
 def convert_md_to_html(
@@ -19,6 +21,32 @@ def format_to_sse(
         yield f"data: {chunk}\n\n"
 
 
+def save_settings_stores():
+    save_settings_to_file(
+        ChromaSetup.chroma_settings_store,
+        "chroma_settings_store.json"
+    )
+    save_settings_to_file(
+        OpenAIAssistantSetup.assistant_settings_store,
+        "assistant_settings_store.json"
+    )
+
+
+def load_settings_stores():
+    try:
+        ChromaSetup.chroma_settings_store = load_settings_from_file("chroma_settings_store.json")
+        print("Chroma settings loaded")
+    except FileNotFoundError:
+        print("chroma_settings_store.json is not present. Chroma settings not loaded")
+
+    try:
+        OpenAIAssistantSetup.assistant_settings_store = load_settings_from_file("assistant_settings_store.json")
+        print("Assistant settings loaded")
+    except FileNotFoundError:
+        print("assistant_settings_store.json is not present. OpenAI Assistant settings not loaded")
+
+
+
 def save_settings_to_file(
         my_dict: dict,
         json_name: str
@@ -29,6 +57,7 @@ def save_settings_to_file(
 
     with open(file_path, "w") as json_file:
         json.dump(my_dict, json_file, indent=4)
+    print(f"{json_name} was saved successfully")
 
 
 def load_settings_from_file(

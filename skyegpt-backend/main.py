@@ -8,7 +8,8 @@ from openai import OpenAI
 import uuid
 from fastapi.middleware.cors import CORSMiddleware
 import chromadb
-from Utils import format_to_sse, save_settings_to_file, load_settings_from_file
+from Utils import format_to_sse, save_settings_stores, load_settings_stores
+import signal
 
 
 app = FastAPI()
@@ -152,33 +153,16 @@ async def setup_gpt_assistant(request: dict = Body(...)):
     return {"outcome:": setup_outcome}
 
 
-def save_settings_stores():
-    save_settings_to_file(
-        ChromaSetup.chroma_settings_store,
-        "chroma_settings_store.json"
-    )
-    save_settings_to_file(
-        OpenAIAssistantSetup.assistant_settings_store,
-        "assistant_settings_store.json"
-    )
+def exit_gracefully(signum, frame):
+    print(f"Received signal {signum}, saving settings before exit...")
+    save_settings_stores()
+    exit(0)
 
 
-def load_settings_stores():
-    try:
-        ChromaSetup.chroma_settings_store = load_settings_from_file("chroma_settings_store.json")
-        print("Chroma settings loaded")
-    except FileNotFoundError:
-        print("chroma_settings_store.json is not present. Chroma settings not loaded")
-
-    try:
-        OpenAIAssistantSetup.assistant_settings_store = load_settings_from_file("assistant_settings_store.json")
-        print("Assistant settings loaded")
-    except FileNotFoundError:
-        print("assistant_settings_store.json is not present. OpenAI Assistant settings not loaded")
-
+signal.signal(signal.SIGTERM, exit_gracefully)
+signal.signal(signal.SIGINT, exit_gracefully)
 
 if __name__ == "__main__":
     import uvicorn
     load_settings_stores()
     uvicorn.run(app, host="0.0.0.0", port=8000)
-    save_settings_stores()
