@@ -1,24 +1,28 @@
 from openai import OpenAI
 from pathlib import Path
 import ImportFromS3
+import Confluence2Text
 
 client = OpenAI()
 assistant_settings_store = {}
 
 
 def setup_openai_assistant(
-    assistant_name: str,
-    assistant_instructions: str,
-    gpt_model: str,
-    temperature: float,
-    new_vector_store_name: str,
-    existing_vector_store_id: str,
-    folder_path: str,
-    file_extension: str,
-    documentation_selector: dict[str, bool],
-    s3_bucket: str,
-    s3_folder_prefix: str,
-    s3_local_folder: str
+        assistant_name: str,
+        assistant_instructions: str,
+        gpt_model: str,
+        temperature: float,
+        new_vector_store_name: str,
+        existing_vector_store_id: str,
+        folder_path: str,
+        file_extension: str,
+        documentation_selector: dict[str, bool],
+        s3_bucket: str,
+        s3_folder_prefix: str,
+        s3_local_folder: str,
+        confl_api_endpoint: str,
+        confl_space_key: str,
+        confl_save_path: str
 ):
 
     assistant_id = find_or_create_assistant(
@@ -33,6 +37,13 @@ def setup_openai_assistant(
             s3_bucket,
             s3_folder_prefix,
             s3_local_folder
+        )
+
+    if documentation_selector.get("innoveo_partner_hub") is True:
+        Confluence2Text.download_public_confluence_as_text(
+            confl_api_endpoint,
+            confl_space_key,
+            confl_save_path
         )
 
     if existing_vector_store_id:

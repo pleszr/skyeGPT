@@ -29,8 +29,7 @@ There are two major workflows, the Setup and the Asker. Setup needs to ran only 
 |--|--|
 | collection_name | Defines the name of your collection. For now, keep it as SkyeDoc, later it will allow supporting multiple parallel collections.
  should_import | can be true/false. If true, when the setup request is sent, it will scan the folders and import. Be careful, one file can be imported multiple times and that can cause issues with the closest neighbor! Setting it to false prevents this. Use this if you want to change another parameter without triggering re-import.
-folder_path | The path to the folder where the markdown files are stored.
-documentation_source | is used to generate the documentation_link. For now, only "skye" is supported.
+folder_path | The path to the folder where the markdown files are stored. Use skyedoc to set documentation source to Skye which is required to generate links.
 k_nearest_neighbors | Defines how much of the closest neighbors from the vector db will be sent to ChatGPT as relevant documentation. Is one of the fine/tuning options for better outputs.
 markdown_split_headers | The application splits the markdown files to smaller/bigger chunks based on headers. Possible values are ["#"], ["#","##"], ["#","##","###"] and they define which level of headers is being used for splitting (as an example, ["#"] splits the files only based on first headers, ["#","##","###"] splits them based on the first three headers. The smaller the pieces the less precise the answer is, and more tokens are used for each call, but higher chance of ChatGPT not being aware of the necessary context.
  gpt-model| Defines which ChatGPT model should be used.
@@ -41,21 +40,24 @@ markdown_split_headers | The application splits the markdown files to smaller/bi
  s3_bucket| Name of the s3 bucket
 s3_folder_prefix| Name of the folder inside the s3 bucket
 s3_local_folder| Folder path where you want to save the files to.
+api_endpoint| Defines the Confluence REST API endpoint to fetch content. For Innoveo Partner Hub, it should be set to "https://innoveo.atlassian.net/wiki/rest/api/content".
+space_key| Specifies the Confluence space key from which to download content. For Innoveo Partner Hub, set this to "IPH".
+save_path| Specifies the local folder path where the downloaded Innoveo Partner Hub content will be stored. For example, "content/innoveo-partner-hub". Use innoveo-partner-hub to set documentation source to iph which is required to generate links.
  
 
 #### Sample json
 
 ```json 
-{
+
+```
+### Asker{
    "chroma_parameters":{
       "collection_name":"SkyeDoc",
       "should_import":true,
       "folder_path":"content",
-      "documentation_source":"skye",
       "k_nearest_neighbors":4,
       "markdown_split_headers":[
-         "#",
-         "##"
+         "#"
       ]
    },
    "gpt_parameters":{
@@ -72,11 +74,14 @@ s3_local_folder| Folder path where you want to save the files to.
          "s3_bucket":"skyedoc",
          "s3_folder_prefix":"skye-10.0.0/",
          "s3_local_folder":"content/skyedoc"
+      },
+      "confluence":{
+         "api_endpoint":"https://innoveo.atlassian.net/wiki/rest/api/content",
+         "space_key":"IPH",
+         "save_path":"content/innoveo-partner-hub"
       }
    }
 }
-```
-### Asker
 
 ## Assistant
 The Assistant mode uses OpenAI's Assistant product. There are two major functions:
@@ -97,13 +102,13 @@ assistant_instructions| With assistant, the instructions are given once for the 
  gpt-model| Defines which ChatGPT model should be used.
 existing_vector_store_id| Optional. If you want to re-use an existing vector_store_id (because you don't want to upload all files again) then set it, otherwise leave it empty.
 new_vector_store_name| Name of the vector_store if you are creating a new. 
-folder_path|the folder the application should scan for files to import.
+folder_path|the folder the application should scan for files to import. Use skyedoc to set documentation source to Skye which is required to generate links.
  file_extension| The extension of the files the application should find at during scanning.
   documentation_selector: s3 | Defines if files should be downloaded from s3 bucket. More details in documentation_sources. Needs following environment variables: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION
  documentation_selector: innoveo_partner_hub | Defines if the content of Innoveo partner hub should be downloaded. *Currently disabled. Track it [here](https://github.com/pleszr/skyeGPT/issues/14).*
  s3_bucket| Name of the s3 bucket
 s3_folder_prefix| Name of the folder inside the s3 bucket
-s3_local_folder| Folder path where you want to save the files to.
+s3_local_folder| Folder path where you want to save the files to. Use innoveo-partner-hub to set documentation source to iph which is required to generate links.
 
 #### Sample JSON
 ```json 
@@ -112,6 +117,7 @@ s3_local_folder| Folder path where you want to save the files to.
       "assistant_name":"SkyeGPT4",
       "assistant_instructions":"You are a support person working for a product organization called Innoveo. You are providing technical support to developers who are using a no-code platform called Innoveo Skye. Rely on the contextual files from the vector store for answers. Give short answers and always link the documentation where they can learn more. Refer everything from the lookup files, only refer to items which you are highly confident that it is accurate. If something is not answerable based on the documentation, don't hesitate to say that it is not possible according the documentation",
       "gpt-model":"gpt-4o-mini",
+      "number_of_retries_for_assistant_answer":20,
       "temperature":0.1
    },
    "vector_store_properties":{
@@ -129,6 +135,11 @@ s3_local_folder| Folder path where you want to save the files to.
          "s3_bucket":"skyedoc",
          "s3_folder_prefix":"skye-10.0.0/",
          "s3_local_folder":"content/skyedoc"
+      },
+      "confluence":{
+         "api_endpoint":"https://innoveo.atlassian.net/wiki/rest/api/content",
+         "space_key":"IPH",
+         "save_path":"content/innoveo-partner-hub"
       }
    }
 }

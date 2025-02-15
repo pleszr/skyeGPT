@@ -13,8 +13,7 @@ import DocumentationLinkGenerator
 def scan_and_import_markdowns_from_folder(
         collection_name: str,
         folder_path: str,
-        markdown_split_headers: List[str],
-        documentation_source: str
+        markdown_split_headers: List[str]
 ):
     batch_size = int(os.getenv("CHROMA_BATCH_SIZE"))
     queue = mp.Queue()
@@ -22,7 +21,6 @@ def scan_and_import_markdowns_from_folder(
     producer_process = create_process(target=chroma_import_producer, args=(
         folder_path,
         markdown_split_headers,
-        documentation_source,
         batch_size,
         queue
     ))
@@ -48,15 +46,15 @@ def scan_and_import_markdowns_from_folder(
 def chroma_import_producer(
         folder_path: str,
         markdown_split_headers: List[str],
-        documentation_source: str,
         batch_size: int,
         queue
 ):
     folder = Path(folder_path)
     for file in folder.rglob("*.md"):
         with open(file, "r", encoding="utf-8") as opened_file:
-            file_content = opened_file.read()
+            documentation_source = DocumentationLinkGenerator.select_doc_source_by_folder_path(file)
 
+            file_content = opened_file.read()
             texts = split_markdown_by_headers(
                 file_content,
                 markdown_split_headers

@@ -55,6 +55,7 @@ def ask_gpt_using_rag_pipeline(
             "content": response_text
         }
     )
+    print(updated_message_history)
 
     conversation_store[conversation_id] = updated_message_history
 

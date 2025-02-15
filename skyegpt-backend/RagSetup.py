@@ -1,5 +1,7 @@
 import ChromaClient
 from typing import List
+
+import Confluence2Text
 import ImportFromS3
 import Markdown2VectorDB
 
@@ -11,7 +13,6 @@ def setup_rag_pipeline(
         collection_name: str,
         should_import: bool,
         folder_path: str,
-        documentation_source,
         k_nearest_neighbors: int,
         markdown_split_headers: List[str],
         gpt_model: str,
@@ -20,7 +21,10 @@ def setup_rag_pipeline(
         documentation_selector: dict[str, bool],
         s3_bucket: str,
         s3_folder_prefix: str,
-        s3_local_folder: str
+        s3_local_folder: str,
+        confl_api_endpoint: str,
+        confl_space_key: str,
+        confl_save_path: str
 ):
     save_settings_to_settings_store(
         k_nearest_neighbors,
@@ -37,14 +41,19 @@ def setup_rag_pipeline(
             s3_folder_prefix,
             s3_local_folder
         )
+    if documentation_selector.get("innoveo_partner_hub") is True:
+        Confluence2Text.download_public_confluence_as_text(
+            confl_api_endpoint,
+            confl_space_key,
+            confl_save_path
+        )
 
     if should_import:
         print("Import is enabled. Starting to import...")
         Markdown2VectorDB.scan_and_import_markdowns_from_folder(
             collection_name,
             folder_path,
-            markdown_split_headers,
-            documentation_source
+            markdown_split_headers
         )
     else:
         print("Import is disabled. Proceeding...")
@@ -63,4 +72,3 @@ def save_settings_to_settings_store(
     rag_settings_store["gpt_model"] = gpt_model
     rag_settings_store["gpt_temperature"] = gpt_temperature
     rag_settings_store["gpt_developer_prompt"] = gpt_developer_prompt
-

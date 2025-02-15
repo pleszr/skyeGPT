@@ -133,6 +133,7 @@ def test_settings_to_settings_store():
     assert number_of_settings == 4
 
 
+@patch("Confluence2Text.download_public_confluence_as_text")
 @patch("ImportFromS3.download_files_from_s3_bucket")
 @patch("ChromaClient.number_of_documents_in_collection")
 @patch("Markdown2VectorDB.scan_and_import_markdowns_from_folder")
@@ -142,7 +143,8 @@ def test_setup_chroma(mock_save_settings_to_settings_store,
                       mock_create_collection_if_needed,
                       mock_scan_and_import_markdowns_from_folder,
                       mock_number_of_documents_in_collection,
-                      mock_download_files_from_s3_bucket
+                      mock_download_files_from_s3_bucket,
+                      mock_confluence_as_text
                       ):
     collection_name = "example_collection_name"
     should_import = True
@@ -161,13 +163,15 @@ def test_setup_chroma(mock_save_settings_to_settings_store,
         "s3": True,
         "innoveo_partner_hub": False
     }
+    api_endpoint = "test_endpoint"
+    space_key = "test_space_key"
+    save_path = "test_save_path"
 
     mock_number_of_documents_in_collection.return_value = expected_number_of_documents
 
     setup_rag_pipeline(collection_name,
                        should_import,
                        folder_path,
-                       documentation_source,
                        k_nearest_neighbors,
                        markdown_split_headers,
                        gpt_model,
@@ -176,7 +180,10 @@ def test_setup_chroma(mock_save_settings_to_settings_store,
                        documentation_selector,
                        s3_bucket,
                        s3_folder_prefix,
-                       s3_local_folder)
+                       s3_local_folder,
+                       api_endpoint,
+                       space_key,
+                       save_path)
 
     mock_save_settings_to_settings_store.assert_called_once_with(k_nearest_neighbors,
                                                                  gpt_model,
@@ -186,8 +193,9 @@ def test_setup_chroma(mock_save_settings_to_settings_store,
 
     mock_scan_and_import_markdowns_from_folder.assert_called_once_with(collection_name,
                                                                        folder_path,
-                                                                       markdown_split_headers,
-                                                                       documentation_source)
+                                                                       markdown_split_headers)
     mock_download_files_from_s3_bucket.assert_called_once_with(s3_bucket,
                                                                s3_folder_prefix,
                                                                s3_local_folder)
+
+    mock_confluence_as_text.assert_not_called()

@@ -95,8 +95,7 @@ def test_scan_and_import_markdowns_from_folder(
     scan_and_import_markdowns_from_folder(
         collection_name,
         folder_path,
-        markdown_split_headers,
-        documentation_source
+        markdown_split_headers
     )
 
     number_of_spawned_processes = 2
@@ -105,7 +104,6 @@ def test_scan_and_import_markdowns_from_folder(
         call(target=chroma_import_producer, args=(
             folder_path,
             markdown_split_headers,
-            documentation_source,
             batch_size,
             ANY
         )),
@@ -129,14 +127,18 @@ def test_scan_and_import_markdowns_from_folder(
     mock_number_of_documents.assert_called_once_with(collection_name)
 
 
+@patch("DocumentationLinkGenerator.select_doc_source_by_folder_path")
 @patch("Markdown2VectorDB.add_text_to_queue")
 @patch("Markdown2VectorDB.split_markdown_by_headers")
 @patch("builtins.open")
 @patch("pathlib.Path.rglob")
-def test_chroma_import_producer(mock_rglob,
-                                mock_open_file,
-                                mock_split_markdown,
-                                mock_add_text_to_queue):
+def test_rag_import_producer(
+        mock_rglob,
+        mock_open_file,
+        mock_split_markdown,
+        mock_add_text_to_queue,
+        mock_select_doc_source
+):
     mock_files = [MagicMock(spec=Path), MagicMock(spec=Path)]
     mock_files[0].name = "test_file1.md"
     mock_files[1].name = "test_file2.md"
@@ -149,9 +151,11 @@ def test_chroma_import_producer(mock_rglob,
     mock_file2 = mock_open(read_data=content_of_test_file_2).return_value
     mock_open_file.side_effect = [mock_file1, mock_file2]
 
+    documentation_source = "test_documentation_source"
+    mock_select_doc_source.return_value = documentation_source
+
     folder_path = "test/folder"
     markdown_split_headers = ["#", "##"]
-    documentation_source = "doc_source"
     batch_size = 10
     queue = "mock_queue"
     content_of_files = "mock_text"
@@ -159,7 +163,6 @@ def test_chroma_import_producer(mock_rglob,
 
     chroma_import_producer(folder_path,
                            markdown_split_headers,
-                           documentation_source,
                            batch_size,
                            queue)
 
