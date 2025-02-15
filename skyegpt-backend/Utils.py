@@ -4,13 +4,13 @@ import os
 import json
 import RagSetup
 import OpenAIAssistantSetup
+from markdownify import markdownify as md
 
 
-def convert_md_to_html(
-        answer_md: str,
-        extension: str
-):
-    return markdown.markdown(answer_md, extensions=[extension])
+def convert_html_to_md(
+        html_content: str
+) -> str:
+    return md(html_content, heading_style="ATX")
 
 
 def format_to_sse(

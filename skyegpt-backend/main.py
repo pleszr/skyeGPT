@@ -1,5 +1,7 @@
 from fastapi import FastAPI, Query, Body
 from fastapi.responses import StreamingResponse
+
+import Confluence2Text
 import RagSetup
 import ChromaClient
 import RagPipeline
@@ -25,12 +27,11 @@ app.add_middleware(
 )
 
 
-@app.post("/setupChroma")
-async def setup_chroma(request: dict = Body(...)):
+@app.post("/setupRag")
+async def setup_rag(request: dict = Body(...)):
     collection_name = request["chroma_parameters"]["collection_name"]
     should_import = request["chroma_parameters"]["should_import"]
     folder_path = request["chroma_parameters"]["folder_path"]
-    documentation_source = request["chroma_parameters"]["documentation_source"]
     k_nearest_neighbors = request["chroma_parameters"]["k_nearest_neighbors"]
     markdown_split_headers = request["chroma_parameters"]["markdown_split_headers"]
 
@@ -44,21 +45,27 @@ async def setup_chroma(request: dict = Body(...)):
     s3_folder_prefix = request["documentation_sources"]["s3"]["s3_folder_prefix"]
     s3_local_folder = request["documentation_sources"]["s3"]["s3_local_folder"]
 
+    confl_api_endpoint = request["documentation_sources"]["confluence"]["api_endpoint"]
+    confl_space_key = request["documentation_sources"]["confluence"]["space_key"]
+    confl_save_path = request["documentation_sources"]["confluence"]["save_path"]
+
     number_of_uploaded_documents = RagSetup.setup_rag_pipeline(
-                collection_name,
-                should_import,
-                folder_path,
-                documentation_source,
-                k_nearest_neighbors,
-                markdown_split_headers,
-                gpt_model,
-                gpt_temperature,
-                gpt_developer_prompt,
-                documentation_selector,
-                s3_bucket,
-                s3_folder_prefix,
-                s3_local_folder
-            )
+        collection_name,
+        should_import,
+        folder_path,
+        k_nearest_neighbors,
+        markdown_split_headers,
+        gpt_model,
+        gpt_temperature,
+        gpt_developer_prompt,
+        documentation_selector,
+        s3_bucket,
+        s3_folder_prefix,
+        s3_local_folder,
+        confl_api_endpoint,
+        confl_space_key,
+        confl_save_path
+    )
     return {"outcome": f"Chroma setup successful. Number of uploaded documents: {number_of_uploaded_documents}"}
 
 
@@ -124,6 +131,10 @@ async def setup_gpt_assistant(request: dict = Body(...)):
     s3_folder_prefix = request["documentation_sources"]["s3"]["s3_folder_prefix"]
     s3_local_folder = request["documentation_sources"]["s3"]["s3_local_folder"]
 
+    confl_api_endpoint = request["documentation_sources"]["confluence"]["api_endpoint"]
+    confl_space_key = request["documentation_sources"]["confluence"]["space_key"]
+    confl_save_path = request["documentation_sources"]["confluence"]["save_path"]
+
     setup_outcome = OpenAIAssistantSetup.setup_openai_assistant(
         assistant_name,
         assistant_instructions,
@@ -136,9 +147,23 @@ async def setup_gpt_assistant(request: dict = Body(...)):
         documentation_selector,
         s3_bucket,
         s3_folder_prefix,
-        s3_local_folder
+        s3_local_folder,
+        confl_api_endpoint,
+        confl_space_key,
+        confl_save_path
+
     )
     return {"outcome:": setup_outcome}
+
+
+@app.post("/playground")
+async def playground():
+    Confluence2Text.download_public_confluence_as_text(
+        "https://innoveo.atlassian.net/wiki/rest/api/content",
+        "IPH",
+        "content/iph"
+    )
+    return "yo"
 
 
 def exit_gracefully(signum, frame):
