@@ -15,7 +15,7 @@ def scan_and_import_markdowns_from_folder(
         folder_path: str,
         markdown_split_headers: List[str]
 ):
-    batch_size = int(os.getenv("CHROMA_BATCH_SIZE"))
+    batch_size = int(os.getenv("RAG_BATCH_SIZE"))
     queue = mp.Queue()
 
     producer_process = create_process(target=chroma_import_producer, args=(
