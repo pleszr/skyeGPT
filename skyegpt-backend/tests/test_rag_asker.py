@@ -185,14 +185,14 @@ def test_load_conversation_from_store_or_generate_default_not_found():
 @patch.dict("RagPipeline.conversation_store", {}, clear=True)
 @patch.dict("RagSetup.rag_settings_store", {
     "gpt_developer_prompt": "Default Prompt",
-    "k_nearest_neighbors": 3
-}, clear=True)
+    "k_nearest_neighbors": 3}, clear=True)
 def test_ask_gpt_powered_by_chroma_happy_path(
         mock_is_too_big,
         mock_find_documents,
         mock_send_question,
         mock_load_or_gen_def_conv,
-        mock_add_to_message_history
+        mock_add_to_message_history,
+        monkeypatch
 ):
     conversation_id = "test_conversation"
     question = "test question"
@@ -236,8 +236,9 @@ def test_ask_gpt_powered_by_chroma_happy_path(
     ]
     assert RagPipeline.conversation_store[conversation_id] == expected_final_conversation
 
+    monkeypatch.setenv("RAG_BATCH_SIZE", "120")
     mock_is_too_big.assert_called_once_with(initial_history,
-                                            20)
+                                            120)
 
     mock_find_documents.assert_called_once_with("SkyeDoc",
                                                 question,
