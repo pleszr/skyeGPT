@@ -5,6 +5,8 @@ from openai import OpenAI
 from typing import List, Dict
 from typing import Generator
 import os
+from fastapi import HTTPException
+
 
 client = OpenAI()
 chroma_client = chromadb.PersistentClient()
@@ -23,7 +25,7 @@ def ask_gpt_using_rag_pipeline(
     max_prompt_size = int(os.getenv("MAX_PROMPT_SIZE",120))
     if is_message_history_too_big(message_history,
                                   max_prompt_size):
-        return "Message history limit reached. Reload the page"
+        raise HTTPException(status_code=413, detail="Message history too big. Reload the page")
 
     relevant_documents = find_relevant_documents_for_question(
         "SkyeDoc",
