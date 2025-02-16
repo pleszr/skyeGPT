@@ -83,10 +83,9 @@ def test_scan_and_import_markdowns_from_folder(
     collection_name = "test_collection"
     folder_path = "test/folder/path"
     markdown_split_headers = ["#", "##"]
-    documentation_source = "test_documentation_source"
 
     batch_size = 20
-    monkeypatch.setenv("CHROMA_BATCH_SIZE", str(batch_size))
+    monkeypatch.setenv("RAG_BATCH_SIZE", str(batch_size))
 
     mock_producer = MagicMock()
     mock_consumer = MagicMock()
