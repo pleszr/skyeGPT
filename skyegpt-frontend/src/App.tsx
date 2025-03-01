@@ -8,7 +8,7 @@ const App: React.FC = () => {
     const [chromaMessages, setChromaMessages] = useState<{ sender: "user" | "bot"; text: string }[]>([]);
     const [isLoading, setIsLoading] = useState<boolean>(false); // Add loading state for the entire setup process
     const backendHost = import.meta.env.VITE_SKYEGPT_BACKEND_HOST
-        ? `http://${import.meta.env.VITE_SKYEGPT_BACKEND_HOST}`
+        ? `${import.meta.env.VITE_SKYEGPT_BACKEND_HOST}`
         : 'http://localhost:8000';
     const createThread = async () => {
         try {
