@@ -1,6 +1,6 @@
 
 # Purpose
-This application takes a set of documentation and creates an online chatbot which can answer based on the documentation. For demonstration and not for production purposes.
+This application takes a set of documentation and creates an online chatbot which can answer based on the documentation. For demonstration and not for production purposes..
 
 # Behavior
 The application can consume documentation (currently from public confluance spaces and local markdown files) and provides a chatbot which will answer the questions using the provided documentations as context. For context lookup and conversation management there are two possible options, one which uses a locally hosted semantic database and one which relies on the v2 Assistant API from OpenAI.
