@@ -87,6 +87,31 @@ async def ask_chroma(request: dict = Body(...)):
     )
 
 
+@app.post("/test_askChroma")
+async def ask_chroma_test(request: dict = Body(...)):
+    conversation_id = request["chroma_conversation_id"]
+    question = request["question"]
+
+    full_response = ""
+    for chunk in RagPipeline.ask_gpt_using_rag_pipeline(question, conversation_id):
+        full_response += chunk
+    nested_context = RagPipeline.current_context_store[conversation_id]["documents"]
+    flattened_context = []
+    if nested_context and isinstance(nested_context, list):
+        # Extract all strings from the nested structure
+        for sublist in nested_context:
+            if isinstance(sublist, list):
+                flattened_context.extend(sublist)
+            else:
+                flattened_context.append(sublist)
+
+    response = {"generated_answer": full_response,
+                "curr_context": flattened_context
+                }
+    print(f"response: {response}")
+    return response
+
+
 @app.post("/askAssistant")
 async def ask_assistant(request: dict = Body(...)):
     question = request["question"]

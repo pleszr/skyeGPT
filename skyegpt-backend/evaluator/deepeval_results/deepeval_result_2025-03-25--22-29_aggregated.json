@@ -1,0 +1,24 @@
+{
+  "number_of_tests": 17,
+  "successful_tests": 2,
+  "failed_tests": 15,
+  "overall_cost": 0.7008375,
+  "metrics": {
+    "Faithfulness": {
+      "aggregated_ratio": 0.99,
+      "success_rate": "17/17"
+    },
+    "Answer Relevancy": {
+      "aggregated_ratio": 0.8,
+      "success_rate": "16/17"
+    },
+    "Context Relevancy (GEval)": {
+      "aggregated_ratio": 0.52,
+      "success_rate": "7/17"
+    },
+    "Actual output/expected output quality (GEval)": {
+      "aggregated_ratio": 0.47,
+      "success_rate": "7/17"
+    }
+  }
+}
