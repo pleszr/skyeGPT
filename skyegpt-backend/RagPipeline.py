@@ -11,6 +11,7 @@ from fastapi import HTTPException
 client = OpenAI()
 chroma_client = chromadb.PersistentClient()
 conversation_store = {}
+current_context_store = {}
 
 
 def ask_gpt_using_rag_pipeline(
@@ -32,6 +33,9 @@ def ask_gpt_using_rag_pipeline(
         question,
         RagSetup.rag_settings_store["k_nearest_neighbors"]
     )
+
+    current_context_store[conversation_id] = relevant_documents
+
     message_history = add_relevant_documents_to_message_history(
         relevant_documents,
         message_history
