@@ -1,0 +1,35 @@
+﻿question,reference_answer,reference_context,question_source
+"I have three time based schedulers:
+1.	Can run in parallel
+2.	Can run in parallel
+3.	Cannot run in parallel
+While scheduler a) is already running, c) gets queued, after that b) gets queued. Will b) run in parallel with a)? If while a) is running, b) gets queued first and c) gets queued second, will b) run parallel with a)?","If c) gets queued before b), b) will not run in parallel with a), because skye is always checking the very next scheduler in the queue, and that is c), which is non-parallel. So a) will finish, and both will wait for it. Then c) will run and finish and b) will wait for it. Then b) will run and finish.
+If b) gets queued before c), it will get triggered and start running while a) is still running. c) will wait for both to finish and then start.","# Parallel execution
+
+In a queue of tasks which are ready for execution, where there is a combination of tasks that can run in parallel with others and tasks that cannot run in parallel with others, the order of execution will be the following:
+
+- If the next task in the queue is a task that cannot run in parallel, this task will be running alone.
+- If the next task in the queue is a task that can run in parallel, all the tasks that are ready and that can run in parallel will be grouped and triggered. The queue will wait until they are done to trigger the next item from the queue.","https://innoveo.atlassian.net/browse/ZCH-3155
+https://innoveo.atlassian.net/browse/ICSP-21269"
+Do I need to migrate attributes that do not have a default value?,"- Compact database doesn’t store empty attributes, so there is no need to migrate
+- Difference between versions before and after 8.7","# The Why
+## Necessity of migration
+
+Innoveo Skye is built on using models that are representing products, processes, organizations, etc. The models (definitions) are prepared by the Business Canvas tool.
+Innoveo Skye software on the servers uses the models to create objects (implementations) in which the unique data is stored.
+By time, the models change, and this can cause inconsistency with the objects already existing in the database.To overcome this challenge, migration is needed.
+
+# The What
+## Compact database
+
+Since Skye 7, there is an option called compact database. If the compact database is enabled, then the attributes without values will not be saved to the database. 
+This is implemented on a rather deep (database-connection) layer of the application and works in a way, that if an attribute can not be found in the database, Skye will assume that it is empty.
+This is a really big gamechanger for the migration.
+
+### Why is this so important?There are two parts to it.
+    
+You don’t have to migrate attributes that do not need to have a value when the implementation is being opened for the first time. If you add an attribute called “customerFirstName” and you expect the customers to fill that information in your next phase, you don’t have to migrate this attribute, as it is expected to have no value for all the existing implementations.
+- A lot of attributes not only do not have but can not have values in the database. You don’t have to migrate Excel attributes, service attributes, container attributes, basically nothing which does not have the default value option in Skye.
+    
+It reduces the number of rows required to save an implementation. This is different on every project, but the thumb-rule is that usually, an implementation has 60% fewer rows with this feature enabled. This will reduce your database size by almost 60% which then again will shorten your migration run time exponentially.","Andre Cohen: Everest - Automatic implementation migration is enabled
+Yash Bodhale: Rakbank - Update attributes values where mobile number and email add..."

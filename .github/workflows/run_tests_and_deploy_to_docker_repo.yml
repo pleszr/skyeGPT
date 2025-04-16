@@ -16,7 +16,7 @@ jobs:
         python-version: '3.13' 
     - run: cd skyegpt-backend && pip install --no-cache-dir -r requirements.txt
     - run: pip install pytest
-    - run: cd skyegpt-backend && PYTHONPATH=$(pwd) pytest
+    - run: cd skyegpt-backend && PYTHONPATH=$(pwd) pytest tests
 
   deploy_backend_to_docker_repo:
     needs: run_backend_unit_tests

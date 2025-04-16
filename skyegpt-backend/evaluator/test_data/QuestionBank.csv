@@ -1,0 +1,459 @@
+question,reference_answer,reference_context,question_source
+"I have three time based schedulers:
+1.	Can run in parallel
+2.	Can run in parallel
+3.	Cannot run in parallel
+While scheduler a) is already running, c) gets queued, after that b) gets queued. Will b) run in parallel with a)? If while a) is running, b) gets queued first and c) gets queued second, will b) run parallel with a)?","If c) gets queued before b), b) will not run in parallel with a), because skye is always checking the very next scheduler in the queue, and that is c), which is non-parallel. So a) will finish, and both will wait for it. Then c) will run and finish and b) will wait for it. Then b) will run and finish.
+If b) gets queued before c), it will get triggered and start running while a) is still running. c) will wait for both to finish and then start.","# Parallel execution
+
+In a queue of tasks which are ready for execution, where there is a combination of tasks that can run in parallel with others and tasks that cannot run in parallel with others, the order of execution will be the following:
+
+- If the next task in the queue is a task that cannot run in parallel, this task will be running alone.
+- If the next task in the queue is a task that can run in parallel, all the tasks that are ready and that can run in parallel will be grouped and triggered. The queue will wait until they are done to trigger the next item from the queue.","https://innoveo.atlassian.net/browse/ZCH-3155
+https://innoveo.atlassian.net/browse/ICSP-21269"
+Do I need to migrate attributes that do not have a default value?,"- Compact database doesn’t store empty attributes, so there is no need to migrate
+- Difference between versions before and after 8.7","# The Why
+## Necessity of migration
+
+Innoveo Skye is built on using models that are representing products, processes, organizations, etc. The models (definitions) are prepared by the Business Canvas tool.
+Innoveo Skye software on the servers uses the models to create objects (implementations) in which the unique data is stored.
+By time, the models change, and this can cause inconsistency with the objects already existing in the database.To overcome this challenge, migration is needed.
+
+# The What
+## Compact database
+
+Since Skye 7, there is an option called compact database. If the compact database is enabled, then the attributes without values will not be saved to the database. 
+This is implemented on a rather deep (database-connection) layer of the application and works in a way, that if an attribute can not be found in the database, Skye will assume that it is empty.
+This is a really big gamechanger for the migration.
+
+### Why is this so important?There are two parts to it.
+    
+You don’t have to migrate attributes that do not need to have a value when the implementation is being opened for the first time. If you add an attribute called “customerFirstName” and you expect the customers to fill that information in your next phase, you don’t have to migrate this attribute, as it is expected to have no value for all the existing implementations.
+- A lot of attributes not only do not have but can not have values in the database. You don’t have to migrate Excel attributes, service attributes, container attributes, basically nothing which does not have the default value option in Skye.
+    
+It reduces the number of rows required to save an implementation. This is different on every project, but the thumb-rule is that usually, an implementation has 60% fewer rows with this feature enabled. This will reduce your database size by almost 60% which then again will shorten your migration run time exponentially.","Andre Cohen: Everest - Automatic implementation migration is enabled
+Yash Bodhale: Rakbank - Update attributes values where mobile number and email add..."
+Where can I find the audit trail logs?,"- Log4j prints it to a separate audit trail log file, in the skye runtime file system
+- It can be configured via log4j to also add it to putty and graylog logs by setting the “additivity” to true (this is not an option via admin console)","# View audit log
+
+Audit trail information is printed by Log4j logger ""skye.audittrail"" using log level INFO.
+- It produces log lines in the following format:
+Attribute <attribute full text-id path> on implementation <implementation UUID> changed value from <old value> to <new value> at <modification timestamp> by <user role> user <username>.
+
+- Example:
+Attribute 'Home.Product.Package' on implementation '8d46aeb7-5af5-421d-a906-c475ccd9314f' changed value from 'super' to 'standard' at 2021-03-04T14:16:52.486Z by 'callcenter' user 'usercc'.
+
+By Skye deployment default, audit log data is written to an audit-trail log file on Skye runtime filesystem.
+Upon request, audit log data may also be sent to Graylog. Audit logs may contain sensitive user data, therefore setup in Graylog requires fine-grained user access permission configuration in Graylog.
+
+# Log4j overview
+
+log4j is a reliable, fast and flexible logging framework. It is highly configurable through external configuration files at runtime. 
+It views the logging process in terms of levels of priorities and offers mechanisms to direct logging information to a great variety of destinations, such as a database, file, console, UNIX Syslog, etc.
+
+log4j has three main components:
+   - loggers: Responsible for capturing logging information.
+   - appenders: Responsible for publishing logging information to various preferred destinations.
+   - layouts: Responsible for formatting logging information in different styles.
+The log4j2.xml file in folder <tomcat>/conf/skye/config configures the logging behavior of Skye
+
+# Skye log4j configuration
+
+The log4j2.xml configuration file is located in /opt/tomcat_<appname>/conf/skye/config and is notified with -Dlog4j.configurationFile parameter to Tomcat.All web applications within the Tomcat instance share the same log4j configuration file, i.e. for Skye User Management the webapps skyeum, skye-admin, idp, and sts all share the same file.
+
+The following chapters describe log4j configuration when debugging some Skye functions, along with example log output. The log4j2.xml configuration file may be adapted manually on a DEV stage for testing and debugging purposes, changes are considered without a Tomcat restart, though still require up to 30 seconds waiting time.
+
+Log examples are displayed to show the output when described loggers are activated. Example log messages contain the log level, the full logger name, and the message","Andre Cohen posted: Audit trail not working
+Bharath A: Audit Trail Functionality"
+How can I check the indices  and extract them to another file format?,"- mention multiple ways to check indices: admin console, API call, putty
+- give a high level explanation of how commands exist for checking index contents, copying them into folders on your computer, etc.
+- mention the index converter
+- be ready to elaborate on parts the user is interested in, based on the link in the next cell","# Step 0: Indentify the indexes
+
+When referring to indexes, we're discussing a dataset uploaded in CSV format via the Admin console. As there's no out-of-the-box method to download it, I'll show you the steps.
+Open Putty, connect to the bastion host (jump host), and SSH to the stage you'd like to use. In this example i’m going to use Hamilton stage, DEV environment.
+$ ssh app01.dev.int.hamilton.innoveo-skye.net
+
+You need to identify which index or indexes you'd like to save. To check all available indexes, run the following command:
+$ curl -X GET ""localhost:9200/_cat/indices""
+
+If you are facing a problem or getting a “Connection refused” or “Couldn't connect to server” error, please switch user.
+$ sudo su - stagenamedev1a
+$ curl -X GET ""localhost:9200/_cat/indices""
+stagename - Your Skye stage name, for example: everestredev1a or hamiltondev1a
+dev1a - Refers to the environment. If you connected to dev, it's dev1a. If you connected to UAT or SIT, it's uat1a or sit1a, respectively.
+
+for example:
+I’m connected to Hamilton stage, DEV environment.
+$ sudo su - hamiltondev1a
+$ curl -X GET ""localhost:9200/_cat/indices""
+Please note that, depending on the stage, the full index name will follow the following pattern: 'stagenamedev1a_indexname'. Hence, you will need to refer to them in this way.
+
+# Step 3: Download the index(es) and save it to your local computer
+
+Simply execute the following command:
+$ curl -X GET ""localhost:9200/full_index_name/_search?pretty&size=10000"" >> input.txt
+for example:
+$ curl -X GET ""localhost:9200/hamiltondev1a_prodcops/_search?pretty&size=10000"" >> input.txt
+By using this command, we create a file named 'input.txt' in the stage's storage. It will be located in your default home directory, which corresponds to your Putty username. 
+
+For instance, in my case, it's 'inncssa' at /home/inncssa.
+You can “vim” or “cat” to check if the file that we created actually is what we are looking for.
+$ vim /home/yourputtyusername/input.txt or cat /home/yourputtyusername/input.txt
+for example:
+$ vim /home/inncssa/input.txt or cat /home/inncssa/input.txt
+In order to download this to your local computer you need to set a tunnel and connect to WinSCP ->(more info how to do that: How to connect to a stage with WinSCP and copy log files or How to connect with WinSCP to a stage)
+
+# Step 4: Convert the downloaded index to CSV and JSON
+
+Visit the following site: https://sallai.tech/indexconverter ( I created a Flask web app to handle the raw JSON format, convert it back to CSV, or provide the formatted clean JSON version)
+- Upload the “input.txt” you have downloaded → 
+- Click “Process” → wait a couple of minutes
+- Download either the CSV or the JSON or both",Ayushi Gupta: Rakbank - how to get Catalina logs if UUID's are not returning the d... (Project BA)
+Why am I not able to see in the logs the requests and responses of my APIs?,"If you are unable to see the requests and responses of your APIs in the logs, there could be several reasons for this issue:
+
+Logging Configuration: The logging level for your API requests and responses may not be set to capture the necessary details. You may need to adjust the logging configuration to ensure that the relevant logs are being recorded. For example, you can enable debug logging for specific packages related to your API.
+
+Log Filters: If there are filters applied to your logging system, they might be excluding the logs you are interested in. Ensure that your log queries are correctly set up to include the desired log messages.
+
+Log Storage Location: The logs might be stored in a different location than expected. Make sure you are checking the correct log files or log management system (like Graylog) where the logs are being sent.
+
+API Errors: If your APIs are encountering errors before they can log requests and responses, those logs may not be generated. Check for any errors in the application that might prevent logging.
+
+Access Permissions: Ensure that you have the necessary permissions to view the logs. Sometimes, access restrictions can prevent you from seeing certain log entries.
+
+Log Rotation or Cleanup: If log rotation or cleanup policies are in place, older logs may have been deleted or archived, making it difficult to find the logs you need.
+
+To troubleshoot this issue further, you can refer to the documentation on how to read logs and configure logging settings: How to read logs and Logs.","# Skye exposed REST services
+
+Logger: skye.integration.http
+For the REST services exposed by Skye, configured in the Endpoint attribute within the API definition, the log category used is skye.integration.http (like for the httpInvoker attribute).
+Use level INFO for production and DEBUG (detailed) or TRACE (very detailed) for development/test environments.
+<logger name=""skye.integration.http"" level=""INFO"" />
+
+# Outgoing web services
+## Request and response logging
+
+Outgoing web service calls are traced with logger ""org.apache.cxf.services...DummyImpl"".  By default, request and response messages of outgoing web service requests are logged into the web service log file. 
+With the following log4j setting, outgoing web service requests/responses would not be logged anymore:
+<logger name=""org.apache.cxf.services...DummyImpl"" level=""ERROR"" additivity=""false"">
+    <AppenderRef ref=""WEBSERVICE_FILE""/>
+</logger>
+
+## Logging response body only in case of an exception
+
+The logger ""skye.integration.webservice.exception.logger"" with log level DEBUG will only print the response body in the logs in case an exception occurred during the web service invocation.
+The following log4j configuration will print these exception logs in the web service log file.
+<logger name=""skye.integration.webservice.exception.logger"" level=""DEBUG"" additivity=""false"">
+    <AppenderRef ref=""WEBSERVICE_FILE""/>
+</logger
+
+## Web service client logging
+
+Calling remote web services are additionally logged by following logger. By default, it is logged into the catalina.out and the profile log file.  
+<logger name=""skye.integration.webservice.client"" level=""PROFILE"" additivity=""true"">
+    <AppenderRef ref=""PROFILE_FILE""/>
+</logger>
+
+# Internal API service
+
+Logger: skye.api.internal
+Skye provides internal invoker and internal endpoint services for direct API service calls within Skye application.
+Use level INFO for production and DEBUG (detailed) or TRACE (very detailed) for development/test environments.
+The following is the default logger setting, which writes to the webservice log file and sends to Graylog:
+<logger name=""skye.api.internal"" level=""INFO"" additivity=""false"">
+            <AppenderRef ref=""WEBSERVICE_FILE""/>
+            <AppenderRef ref=""GELF""/>
+</logger>
+Set level DEBUG to log request and response body.  ","Unknown user: RAKBANK- Issue with Fetching API request and Response (Project BA), Ayushi Gupta: Rakbank - how to get Catalina logs if UUID's are not returning the d... (Project BA) "
+Is there a way where we can utilize the same process for two different generics? / Can I use the same process for two products?,"No, you cannot use the same process for two products in Innoveo Skye. Each process is typically tied to a specific product definition, and while you can create similar processes for different products, they must be defined separately.","# Structural embedding
+
+As the name indicates, process definitions are part of the process oriented streams.
+A process implementation always references a ""Current process object"" which is either of model type product or generic (in user management: user, user group or generic). 
+
+# How to configure a process
+A process definition consists of a root with two mandatory attributes and one brick per process step. Buttons are defined as action attributes on every process step brick. Please find the detailed configuration manual below.
+
+# Configuring a new process
+
+On the root on the control attribute ""@CurrentProcessObject"" on tab 'Reference' set model type of referenced model to ""Product"".
+Refer to ""Delete task"" for Delete behavior.
+Add reference to a model (select product definition you want to use this process for). Note: It is only possible to reference one process object from a process.",Ayushi Gupta: RAKBANK - We have two different generics but using the same process
+Deleting excels will create migration issue?,"No, deleting excels will not create migration issues.","# Compact database
+
+Before we get into this, there is an important factor that we need to clarify. Since Skye 7, there is an option called compact database.
+If the compact database is enabled, then the attributes without values will not be saved to the database.
+This is implemented on a rather deep (database-connection) layer of the application and works in a way, that if an attribute can not be found in the database, Skye will assume that it is empty.
+This is a really big gamechanger for the migration. 
+
+#Effect on migration
+
+The key part is the “if an attribute can not be found in the database, Skye will assume that it is empty”. 
+Without this setting, if an attribute is not found for an implementation, Skye would run on an error as it would find inconsistent implementations.
+If this setting is enabled, then when it is not found an attribute it will not run into an error, it will assume it is empty.
+
+# Why is this so important?
+There are two parts to it. 
+
+You don’t have to migrate attributes that do not need to have a value when the implementation is being opened for the first time.
+If you add an attribute called “customerFirstName” and you expect the customers to fill that information in your next phase, you don’t have to migrate this attribute, as it is expected to have no value for all the existing implementations.
+   - A lot of attributes not only do not have but can not have values in the database. You don’t have to migrate Excel attributes, service attributes, container attributes, basically nothing which does not have the default value option in Skye.
+It reduces the number of rows required to save an implementation. This is different on every project, but the thumb-rule is that usually, an implementation has 60% fewer rows with this feature enabled.
+This will reduce your database size by almost 60% which then again will shorten your migration run time exponentially.",Bharath A: Deleting excels will create migration issue?; https://innoveo.atlassian.net/browse/SUP-2638
+What are the best practices to build integration with Skye?,"Yes, there is a best practice documentation available for integrations. You can find it in the following link: Best Practices Documentation. This document outlines ideas and accepted practices for making configurations easy to read and understand, which can be helpful when dealing with integration tickets.","# Purpose 
+
+It is a common requirement from the customer to integrate either with their system(s) or with third parties to insert the application into an ecosystem or extend with functionalities which are not available in Skye. 
+
+#Prerequisites
+Before you start the analysis, you need the following:
+    - API documentation
+    - Sample requests / responses to every API method
+    - Test endpoint and credentials
+
+These are quite general and basic needs, if the API provider did not provide them at first, feel free to ask for them. If they are unable or unwilling to provide this in some way, it is an alarming sign.
+Either the API is not really ready to be used or the provider is not really committed to have this integration.
+
+#API management
+There is a few things, which is good to know about the API. These information can be useful later.
+    - Who owns the API? Customer or third party
+    - Is the API specifically developed for this project or it is a general purpose API?
+        - If the API is developed for you project, you have a higher change to request changes, but the API might be less stable / reliable.
+    - Is it an ongoing / recent development or an existing API?
+    -  If it is an ongoing / recent development you can expect some changes / issues with the system.
+    - Is anyone else using the API right now?
+       -  If the server’s capacity is low, another party using the API can impact your work (slow / unavailable API) ",Andre Cohen: [EVEREST] Do we have somewhere a best practice documentation for inte...
+"AutoMigration is running for all the definitions due to the batch auto-migration, can we skip the automigration for events?","No, you cannot skip the auto-migration for events when batch auto-migration is running for all definitions. The automatic implementation migration is designed to ensure consistency across all implementations, including events, during the migration process.","# Overview
+
+The purpose of the automatic implementation migration functionality is to simplify and automate the process of migrating existing implementations to match the latest changes made to the definitions as these are developed/modified over time. The goal is to save the effort and troubles of developing and running error-prone SQL scripts that use to accompany the changes made to definitions.
+
+## How it works
+
+The way it works can be summarized as follows:
+- Each definition has a version based on its ‘last modified’ field. This means that each time a definition is modified it will have a new and unique version.
+- Each implementation also has a ‘definition version’ field which indicates the version of the definition that this particular implementation is associated with. This field is only set when an implementation is created or migrated.
+- When a new version of a definition is activated, all existing implementations' ‘definition version’ still point to the previous version, and are now considered outdated.
+- The application will compare the source (old) definition with the target (new) definition and, based on the differences, generate a migration plan which describes the necessary transformations. These may include, for example, adding/removing/renaming bricks or attributes. The target definition is always the latest activated.
+- The migration plan is applied to each implementation associated with the source definition. The implementation 'definition version' is also updated to match the target definition.
+
+In certain cases, the need for custom scripts (SQL or another form) cannot be fully eliminated when, for business reasons, the migration requires transformations that cannot be generated automatically (see Manual migration), but these cases should be rare.
+
+## Batch
+
+Implementations can also be migrated as part of a batch process, running on the admin application as a background thread, iterating over each outdated implementation and migrating it. This process may run over long periods of time, generally without affecting the normal operation of the system, although there are some limitations and exception cases that should be considered, which are described in more detail in Limitations and best practices.
+
+In deployment scenarios with Freetext re-indexing and Skye event runs, it is beneficial to not activate batch auto-migration but trigger automatic migration manually through JMX after re-indexing and event runs. With automatic migration enabled, on re-indexing or event run, implementations are migrated on-the-fly. 
+
+The batch migration is separated into different jobs. Each job migrates all outdated implementations associated only with one particular definition version. More than one job might be created if there are multiple definitions or implementations in different source versions for the same definition. The jobs are queued and run one at a time.
+
+The progress of each job and other migration-related metrics can be monitored with JMX.
+
+Sometimes, even though the definition changed, there are no structural changes (e.g. the case of modifying a text). In these cases, the implementations ‘definition versions’ still need to be updated to the current one but no further modifications are needed. To accomplish this without incurring the overhead cost of loading each implementation, a different type of job is launched which doesn’t load the implementations into memory.
+
+# Limitations and best practices
+## Events selection criteria
+
+Recommendation: Skye event execution shall be inactive until the batch migration is completed.
+
+## Stale implementations in cache
+
+Recommendation: batch auto-migration shall not run in an environment with online users on the system. Either the environment needs to be put offline or use JMX commands to start and stop auto-migration jobs during low usage times.","Bharath A: Auto-Migration, https://innoveo.atlassian.net/browse/SKYE-11568"
+is it possible to configure popup dialog windows in multibricks and action buttons within the same popup dialogs?,"-Currently not possible.
+-Popups can be opened via action attributes.
+-we can not put action attributes into multibricks dinamicaly.","Pop-up dialogs
+# Overview
+
+Pop-up dialogs can enhance the user experience of an Innoveo Skye application in many different ways.They can be used to display additional information, ask for the user's confirmation or display an entire process inside the dialog to structure a larger workflow.
+
+# Display attributes in a pop-up dialog
+
+The dialogs that display attributes are configured in the UI definition using the Popup dialog UI element. The attributes that are assigned to the UI element and are visible in the context from which the dialog is opened will be displayed inside the dialog. These pop-up dialogs can be opened using the Action attributes.
+
+
+Multibricks
+# Overview
+
+In different business cases it may be useful to define a set of attributes once in the definition but create multiple implementations of it.
+
+Examples:
+- Insure multiple drivers in one Motor policy
+- Insure multiple vehicles in one Motor policy
+- Insure multiple children in a family health insurance policy
+- Insure multiple locations in one Home policy
+- Insure multiple valuable items in one Home policy 
+
+In all of these cases the attributes to be captured for every single item (driver, vehicle, child, location, valuable item) are always the same. When you want to insure for example multiple drivers you will need the same information from the second and the third – e.g. first name, last name, date of birth and driving experience. In the product definition you don’t want to define a specific number of additional drivers on different bricks and replicate all attributes n times. The idea is more to define the attributes to be captured for additional drivers once and then create them n times if needed.
+
+# Limitations
+- It is only possible to use fiedsets to group attributes belonging to multibricks (no panels or tabs).
+- Only one level of fieldsets is supported. No further bricks below the ones representing the fieldsets are possible.
+- In case fieldsets are configured for multibricks, it is not possible to assign attributes to the multibrick ui group itself.
+- It is not possible to make the fieldset group visible via dependencies configured on the attributes assigned to the fieldset groups.
+
+# Not supported
+## Use both components together
+
+It is not possible to use for one multibrick the two configuration options in different channels. You have to decide for one or the other.",Bob's question in Project BA Chat
+How can I access a jumphost from putty?,"Mention private-public keys
+Give SSH Authentication related steps
+Explain choosing desired stage from jumphost","# How to connect to a SkyeStage
+
+There are two types of Skye stages: 
+- where we have jumphost (saas), usually used for customer environments
+- where we don't have jumphost (local), usually used for demo/training/SkyeTest stages
+
+# How to connect
+
+1. Add the host name you have
+2. Install pageant and load your ssh key
+3. Go to Connection/SSH/Auth and browse your private key and tick in ""Allow agent forwarding""
+4. Save your connection on the session tab and click open
+5. In the Connection/Data points you can define your username. This is something Innoveo generates for you, usually with the following pattern: inn+first two letter of first name + first to latter of last name. So for John Doe, it would be innjodo.
+6. Once you are connected to jumphost, type ""ssh "" (there is a space at the end) and press tab twice. Copy the stage you want to connect.
+7. Type ""ssh STAGENAME"" and press enter. Change STAGENAME to value you copied in point 5.","https://innoveo.atlassian.net/browse/ICSP-7727 
+https://innoveo.atlassian.net/browse/ICSP-22036"
+What do I have to provide in my ticket when asking for support?,"Skye version and environment specs
+Detailed description of the issue
+Affected definitions
+URLs when relevant","# What is a support ticket
+
+Includes, but is not restricted to:
+- acquiring a new service from Partner Service Catalog 
+- you don’t know how to configure something
+- you know how to configure something but it does not work
+- you have a question regarding the application
+- you need help designing a solution for your requirements
+
+# What to include in the support ticket
+
+In general, share all information necessary for analysis.
+To be able to work on reported issues it is important, that the following information is provided in each ticket:
+
+- The version of Skye where the issue happens
+- A detailed description of the issue (step by step description) and expected behavior: 
+    - Please also specify the involved attributes by <Brick.TextId>
+- Url to access the stage and Business Canvas server settings in order to reproduce
+- In case a private journey, a link to a confluence page where the username/password is available
+- If you think is a UI issue please specified: 
+    - Browser
+    - Check behavior without the custom CSS / custom js
+        - this means deleting the custom CSS, restarting the stage and then checking again
+- Define which definition you have a problem with and share which stage we can pull the definitions from","https://innoveo.atlassian.net/browse/SUP-2780
+https://innoveo.atlassian.net/browse/SUP-2628"
+How to change flex data search filtering?,"The flex data filtering will always serach in the whole data and not just the first characters. So if you type ""eng"" the results could be: England, Software engineer","# Overview
+
+Wildcards are special characters that can be used in search terms to represent one or more other characters. Wildcards can be useful in improving search results.
+The use of wildcard characters, specifically '*', and '?', is now feasible within the following Skye search components:
+    - Free text search
+    - Automatic search queries
+    - Flexdata attributes
+    - Reference attributes
+
+# Supported wildcards
+
+Skye search components support the following wildcard characters:
+    Asterisk (*) - matches any number of characters (wh* will return what, why and where)
+    Question mark (?) - matches any single character in a specific position (b?ll will return bell, bill and ball)
+
+# Example
+(Examples are given for the following dataset: Software engineer & QA engineer)
+
+    - Search query: *er
+    Flexdata: Software engineer, QA engineer
+
+    - Search query: So*
+    Flexdata: Software engineer
+
+    - Search query: engin?er
+    Flexdata: Software engineer, QA engineer","István Varga: Hi Project BA Support, Has anyone ever had to create multiple conse..."
+Prevent duplicated usernames eve if the validation pop up?,"In a somewhat similar scenario I had to ensure the uniqueness of values in update processes (multiple values had to be unique), there the issue is worse as you already had something saved, so you cannot prevent the saving with disabling a button.",Unknown user: hi Project BA Support do you know a way to prevent the below scen...,"Andre Cohen: Hi Suruchi Pande as discussed on the call, for your requirement, you ..."
+Reference auto search not returning details?,The reference should only have the uuid 1 time and not 2 times with semi colon between as the search will not work properly in those cases.,"# Overview
+
+Reference attributes are used to link implementations. Some of them are set automatically at creation time of an implementation structure, others are set by configuration. References between implementations are needed in order to use values of attributes of one implementation in the other one. Therefore it is possible to navigate through implementation references via dependencies, excels and variable resolver expressions.
+
+# Reference attribute properties
+
+Property: Set Reference
+Description:
+Defines how a reference can be set if it is not done by a user via the user interface (e.g. by dependency, excel etc.). The effective value of the reference attribute is not affected by this property. It is always ""{rootUUID};{rootUUID}"".
+
+Set reference by UUID
+If this option is chosen, the UUID of the implementation root to be referenced must be set as value in the following format: {rootUUID};{rootUUID} in order to set the reference.
+
+Set reference by @CustomId
+If this option is chosen, the value that is set must be equal to the value of the attribute ""@CustomId"" on an implementation of a model text-id specified below in order to set the reference.
+Mandatory: Yes
+Default value: by UUID
+Example: by @CustomId
+
+# The value of a reference attribute
+
+The value of a reference attribute is the concatenation of the root uuid and the brick uuid (or again the root uuid if the reference points to the root) separated by "";"". This is also true if the reference is set via @CustomId! 
+- {rootUUID};{brickUUID}
+- {rootUUID};{rootUUID}",István Varga: Reference autocomplete with no restrictions is not returning details...
+Is it possible to navigate from one process into an another and load the implementation's data?,"This is possible in Skye by using URLs. There should be an action button with exit process navigation properties. Also a redirect URL control attribute needed in the process step. 
+The redirect URL should contain the new process enter and use the ""data"" or ""action"" parameter. Make sure the data is encrypted by using 'encrypt' function resolver.","# Load implementations
+
+To start a process and load an existing implementation either the parameter 'data' or 'uuid' have to be used:
+
+Process layout: internal and public
+data: /page/{channel}/{language}/{country}/process/enter/{processId}?data=%encrypt('load=source:%{modelTextId->uuid}')&activeZone={zoneId}
+uuid: /page/{channel}/{language}/{country}/process/enter/{processId}?uuid=%encrypt('%{modelTextId->uuid}')&activeZone={zoneId}
+
+Process layout: standalone
+data: /page/{channel}/{language}/{country}/component/process?processId={processId}&data=%encrypt('load=source:%{modelTextId->uuid}')
+uuid: /page/{channel}/{language}/{country}/component/process?processId={processId}&uuid=%encrypt('%{modelTextId->uuid}')
+
+##Example
+https://training10.innoveo.com/page/callcenter/en/us/process/enter/HomeCreatePolicy?data=%encrypt('load=source:%{Home->uuid}')&activeZone=myproduct
+
+## Explanations
+
+- data: Parameter which has to be used together with the uuid of the implementation to be loaded.
+The part which is loaded needs to be encrypted, meaning the function resolver %encrypt() has to be used. (Possible to combine this parameter with action parameters like e.g. 'copyAndLoad', 'set', 'setReferences' or 'createBricks'. See chapters below)
+-uuid: Parameter which loads an implementation given its uuid. 
+The part which is loaded needs to be encrypted, meaning the function resolver %encrypt() has to be used. (Not possible to combine this parameter with other action parameters.)",
+I am generating documents using a PrintService attribute on a generic definition. How can I access the datas that are on the product definition and print them onto the document?,"You can access the datas on the product definition by using a reference attribute. Reference attributes pick up UUIDs as values, so you can map the generic's UUID to the created reference attribute on the product definition. Depending on your solution, you can do it in the opposite way as well.","Generating Documents
+# Overview
+
+Innoveo Skye offers XSLT-FOP based document generation and document archive functionalities out of the box. It also offers the possibility to extract template definitions, images, styles and font definition in to a common definition for reuse across products.  
+
+Apache™ FOP (Formatting Objects Processor) is a print formatter driven by XSL formatting objects (XSL-FO) and an output independent formatter. It is a Java application that reads a formatting object (FO) tree and renders the resulting pages to a specified output. Innoveo Skye leverages the power of FOP to generate document that can output target as PDF.
+
+The documents are generated on demand, meaning that it is generated when the user click on a document link. There are distinct URL’s for document generation with or without persisting or with attachment to an email.
+
+# Adding content from attributes navigating through references and back references 
+
+In the following example,  two attributes are included coming from a navigation through a back reference (firstName, lastName), and an attribute is included from a navigation through a reference. 
+
+To include external attributes, all of them (references, back references and attributes) need to have visibility read in the printing context.
+```
+        <fo:block>
+               First name from back ref:
+              <xsl:for-each select=""//attribute-lines[*/id = 'Travel-myBackRef-Home-Customer-firstName']/right-column-attribute"">      
+              - <xsl:value-of select=""value-text""/> 
+              </xsl:for-each>
+           </fo:block>
+            <fo:block>
+           Last name from back ref:  
+               <xsl:for-each select=""//attribute-lines[*/id = 'Travel-myBackRef-Home-Customer-lastName']/right-column-attribute"">      
+              - <xsl:value-of select=""value-text""/>
+              </xsl:for-each>
+        </fo:block>
+
+          <fo:block>
+          Email from a reference: <xsl:value-of select=""//attribute-lines[*/id = 'Travel-MotorRef-Motor-Customer-Email']/*/value-text""/>
+        </fo:block>
+```
+
+Reference attribute
+# Overview
+
+Reference attributes are used to link implementations. Some of them are set automatically at creation time of an implementation structure, others are set by configuration. References between implementations are needed in order to use values of attributes of one implementation in the other one. Therefore it is possible to navigate through implementation references via dependencies, excels and variable resolver expressions. 
+
+# The value of a reference attribute
+
+The value of a reference attribute is the concatenation of the root uuid and the brick uuid (or again the root uuid if the reference points to the root) separated by "";"". This is also true if the reference is set via @CustomId! 
+
+    {rootUUID};{brickUUID} 
+    {rootUUID};{rootUUID}
+ ",
