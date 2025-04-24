@@ -1,14 +1,10 @@
-FROM node:18-alpine
-
+FROM node:20-alpine
 WORKDIR /app
-
 COPY package.json package-lock.json ./
-RUN npm ci --include=dev
-
+RUN npm ci
 COPY . .
-
 RUN npm run build
-
 EXPOSE 5173
 
-CMD ["npm", "run", "dev"]
+# We are using DOCKER-compose to run the app in development mode so we dont need to run the dev server here.
+# CMD ["npm", "run", "dev"]
