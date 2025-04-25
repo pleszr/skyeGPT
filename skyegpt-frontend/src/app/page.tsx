@@ -52,8 +52,7 @@ const HomePage = () => {
           <div className="flex flex-col h-full">
             <div className="flex h-[50px] gap-3">
                 <div
-                  className="flex justify-center items-center text-xl bg-white min-w-[180px] min-h-[50px] rounded-t-[20px] shadow-[0_10px_15px_rgba(0,0,0,0.25)] cursor-pointer active:bg-white"
-                  style={{ padding: '10px' }}
+                  className="flex justify-center items-center text-xl bg-white min-w-[180px] min-h-[50px] rounded-t-[20px] shadow-[0_10px_15px_rgba(0,0,0,0.25)] cursor-pointer active:bg-white p-[10px]"
                 >
                   Ask Skye Documentation
                 </div>

@@ -16,12 +16,6 @@
   width: 1230px;
 }
 
-.flex justify-center items-center {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background-color: #fff;
-}
 
 @media (prefers-color-scheme: dark) {
   :root {
@@ -34,6 +28,7 @@ a {
   text-decoration: none;
   transition: color 0.2s ease-in-out;
 }
+
 
 
 body {

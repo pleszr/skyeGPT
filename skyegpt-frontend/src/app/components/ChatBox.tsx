@@ -135,56 +135,59 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
 
   return (
     <div className={`flex flex-col h-full gap-10 max-h-[660px] justify-between ${className}`}>
-      <div className="chatMessages flex flex-col gap-2.5 p-2 max-h-[500px] overflow-y-auto">
-        {messages.map((msg, index) => (
-          <div
-            key={index}
-            className={
-              msg.sender === 'user'
-                ? 'userMessage bg-[#d1f7d1] self-end px-3 py-2 rounded-[10px] max-w-[80%]'
-                : 'botMessage bg-[#f1f1f1] self-start px-3 py-2 rounded-[10px] max-w-[80%]'
-            }
-          >
-            {msg.sender === 'bot' ? (
+    <div className="chatMessages flex flex-col gap-8 p-8 max-h-[570px] overflow-y-auto scroll-smooth">
+      {messages.map((msg, index) => (
+        <div
+          key={index}
+          className={
+            msg.sender === 'user'
+              ? 'userMessage bg-[#1ea974] self-end py-8 px-8 rounded-[50px_50px_0px_50px] max-w-[80%] text-white'
+              : 'botMessage bg-[#e5e5e5] self-start py-8 px-8 pl-12 rounded-[50px_50px_50px_0] max-w-[80%] text-black'
+          }
+        >
+          {msg.sender === 'bot' ? (
+            <div className="flex flex-col">
               <ReactMarkdown
                 remarkPlugins={[remarkBreaks]}
                 components={{
-                  ol: ({ children }) => <ol className="pl-12">{children}</ol>,
-                  ul: ({ children }) => <ul className="pl-12">{children}</ul>,
-                  p: ({ children }) => <p className="last:pb-0">{children}</p>,
+                  ol: ({ children }) => <ol className="pl-12 not-last:pb-6 list-decimal">{children}</ol>,
+                  ul: ({ children }) => <ul className="pl-12 not-last:pb-6 list-disc">{children}</ul>,
+                  p: ({ children }) => <p className="not-last:pb-1 last:pb-0">{children}</p>,
+                  h3: ({ children }) => <h3 className="text-xl font-bold mt-6 mb-4 text-black">{children}</h3>,
                 }}
               >
                 {msg.text.replace(/\\n/g, '\n')}
               </ReactMarkdown>
-            ) : (
-              msg.text
-            )}
-          </div>
-        ))}
-        {isLoading && <div className="loading text-center p-2">Loading...</div>}
-      </div>
-      <div className="flex items-end gap-3 min-h-[50px]">
-        <div
-          className="flex flex-1 bg-gray-200 p-4 rounded-[30px] h-[50px] transition-[height] duration-250 max-h-[200px]"
-          ref={textareaContRef}
-        >
-          <textarea
-            ref={textareaRef}
-            rows={1}
-            className="skgpt-input-textarea border-none text-base text-black resize-none bg-transparent p-0 w-full font-[Poppins] min-h-[30px] placeholder:text-base focus:outline-none"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Write your question here..."
-          />
+            </div>
+          ) : (
+            <div className="text-base text-white">{msg.text}</div>
+          )}
         </div>
-        <button
-          className="skgpt-btn sendBtn h-[50px] w-[100px] text-xl text-white bg-[#1EA974] rounded-full border-none cursor-pointer"
-          onClick={sendMessage}
-        >
-          Send
-        </button>
-      </div>
+      ))}
+      {isLoading && <div className="loading text-center p-2.5">Loading...</div>}
     </div>
+    <div className="flex items-end gap-3 min-h-[50px]">
+      <div
+        className="flex flex-1 bg-gray-200 p-4 px-8 rounded-[30px] h-[50px] transition-[height] duration-250 max-h-[200px]"
+        ref={textareaContRef}
+      >
+        <textarea
+          ref={textareaRef}
+          rows={1}
+          className="skgpt-input-textarea border-none text-base text-black resize-none bg-transparent p-0 w-full font-[Poppins] min-h-[30px] placeholder:text-base focus:outline-none"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder="Write your question here..."
+        />
+      </div>
+      <button
+        className="skgpt-btn sendBtn h-[50px] w-[100px] text-xl text-white bg-[#1EA974] rounded-full border-none cursor-pointer"
+        onClick={sendMessage}
+      >
+        Send
+      </button>
+    </div>
+  </div>
   );
 };
 
