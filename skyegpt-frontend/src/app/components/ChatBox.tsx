@@ -18,24 +18,28 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const textareaContRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null); 
 
   const sendTechnicalMessage = async (message: string) => {
     setMessages((prev) => [...prev, { sender: 'bot', text: message }]);
   };
 
   useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.focus();
+    }
     textareaResize();
     hitEnter();
   }, []);
 
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
   const scrollToBottom = () => {
-    setTimeout(() => {
-      const chatContainer = document.querySelector('.skgpt-chatMessages');
-      if (chatContainer) {
-        chatContainer.scrollTop = chatContainer.scrollHeight;
-        console.log('scrolling');
-      }
-    }, 100);
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
   };
 
   const hitEnter = () => {
@@ -55,8 +59,11 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
 
     setMessages((prev) => addMessage(prev, createUserMessage(input)));
     setInput('');
-    scrollToBottom();
     setIsLoading(true);
+
+    if (textareaRef.current) {
+      textareaRef.current.focus();
+    }
 
     const threadId = localStorage.getItem('threadId');
     const chroma_conversation_id = localStorage.getItem('chroma_conversation_id');
@@ -109,7 +116,6 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
               newMessages[newMessages.length - 1] = createBotMessage(fullMessage);
               return newMessages;
             });
-            scrollToBottom();
           }
         }
       }
@@ -135,59 +141,62 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
 
   return (
     <div className={`flex flex-col h-full gap-10 max-h-[660px] justify-between ${className}`}>
-    <div className="chatMessages flex flex-col gap-8 p-8 max-h-[570px] overflow-y-auto scroll-smooth">
-      {messages.map((msg, index) => (
-        <div
-          key={index}
-          className={
-            msg.sender === 'user'
-              ? 'userMessage bg-[#1ea974] self-end py-8 px-8 rounded-[50px_50px_0px_50px] max-w-[80%] text-white'
-              : 'botMessage bg-[#e5e5e5] self-start py-8 px-8 pl-12 rounded-[50px_50px_50px_0] max-w-[80%] text-black'
-          }
-        >
-          {msg.sender === 'bot' ? (
-            <div className="flex flex-col">
-              <ReactMarkdown
-                remarkPlugins={[remarkBreaks]}
-                components={{
-                  ol: ({ children }) => <ol className="pl-12 not-last:pb-6 list-decimal">{children}</ol>,
-                  ul: ({ children }) => <ul className="pl-12 not-last:pb-6 list-disc">{children}</ul>,
-                  p: ({ children }) => <p className="not-last:pb-1 last:pb-0">{children}</p>,
-                  h3: ({ children }) => <h3 className="text-xl font-bold mt-6 mb-4 text-black">{children}</h3>,
-                }}
-              >
-                {msg.text.replace(/\\n/g, '\n')}
-              </ReactMarkdown>
-            </div>
-          ) : (
-            <div className="text-base text-white">{msg.text}</div>
-          )}
-        </div>
-      ))}
-      {isLoading && <div className="loading text-center p-2.5">Loading...</div>}
-    </div>
-    <div className="flex items-end gap-3 min-h-[50px]">
       <div
-        className="flex flex-1 bg-gray-200 p-4 px-8 rounded-[30px] h-[50px] transition-[height] duration-250 max-h-[200px]"
-        ref={textareaContRef}
+        className="chatMessages flex flex-col gap-8 p-8 max-h-[570px] overflow-y-auto scroll-smooth"
+        ref={chatContainerRef}
       >
-        <textarea
-          ref={textareaRef}
-          rows={1}
-          className="skgpt-input-textarea border-none text-base text-black resize-none bg-transparent p-0 w-full font-[Poppins] min-h-[30px] placeholder:text-base focus:outline-none"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Write your question here..."
-        />
+        {messages.map((msg, index) => (
+          <div
+            key={index}
+            className={
+              msg.sender === 'user'
+                ? 'userMessage bg-[#1ea974] self-end py-8 px-8 rounded-[50px_50px_0px_50px] max-w-[80%] text-white'
+                : 'botMessage bg-[#e5e5e5] self-start py-8 px-8 pl-12 rounded-[50px_50px_50px_0] max-w-[80%] text-black'
+            }
+          >
+            {msg.sender === 'bot' ? (
+              <div className="flex flex-col">
+                <ReactMarkdown
+                  remarkPlugins={[remarkBreaks]}
+                  components={{
+                    ol: ({ children }) => <ol className="pl-12 not-last:pb-6 list-decimal">{children}</ol>,
+                    ul: ({ children }) => <ul className="pl-12 not-last:pb-6 list-disc">{children}</ul>,
+                    p: ({ children }) => <p className="not-last:pb-1 last:pb-1">{children}</p>,
+                    h3: ({ children }) => <h3 className="text-xl font-bold mb-4 pb-1 text-black">{children}</h3>,
+                  }}
+                >
+                  {msg.text.replace(/\\n/g, '\n')}
+                </ReactMarkdown>
+              </div>
+            ) : (
+              <div className="text-base text-white">{msg.text}</div>
+            )}
+          </div>
+        ))}
+        {isLoading && <div className="loading text-center p-2.5">Loading...</div>}
       </div>
-      <button
-        className="skgpt-btn sendBtn h-[50px] w-[100px] text-xl text-white bg-[#1EA974] rounded-full border-none cursor-pointer"
-        onClick={sendMessage}
-      >
-        Send
-      </button>
+      <div className="flex items-end gap-3 min-h-[50px]">
+        <div
+          className="flex flex-1 bg-gray-200 p-4 px-8 rounded-[30px] h-[50px] transition-[height] duration-250 max-h-[200px]"
+          ref={textareaContRef}
+        >
+          <textarea
+            ref={textareaRef}
+            rows={1}
+            className="skgpt-input-textarea border-none text-base text-black resize-none bg-transparent p-0 w-full font-[Poppins] min-h-[30px] placeholder:text-base focus:outline-none"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Write your question here..."
+          />
+        </div>
+        <button
+          className="skgpt-btn sendBtn h-[50px] w-[100px] text-xl text-white bg-[#1EA974] rounded-full border-none cursor-pointer"
+          onClick={sendMessage}
+        >
+          Send
+        </button>
+      </div>
     </div>
-  </div>
   );
 };
 
