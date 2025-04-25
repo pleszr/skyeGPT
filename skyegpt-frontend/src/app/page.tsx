@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import React, { useState, useEffect } from 'react';
 import ChatBox from '@/app/components/ChatBox';
 import { Message } from '@/app/utils/MessageManager';
@@ -35,6 +36,7 @@ const HomePage = () => {
 
   useEffect(() => {
     createThread();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const askEndpointChroma = `${backendHost}/askChroma`;
@@ -42,8 +44,8 @@ const HomePage = () => {
   return (
     <div className="w-screen h-screen max-w-full max-h-full">
       <header className="flex justify-between h-[114px] px-12 py-6">
-        <img src="/logo.svg" alt="logo" className="h-[90px]" />
-        <span className="text-xs">design by Fanni Wihl | frontend by Marcell Monoki & Csaba Sallai</span>
+      <Image src="/logo.svg" alt="logo" width={150} height={90} className="h-[90px]" />        
+      <span className="text-xs">design by Fanni Wihl | frontend by Marcell Monoki & Csaba Sallai</span>
       </header>
       <div className="h-[calc(100%-114px)]">
         <div className="flex flex-col pt-8 pb-16 h-full mx-auto custom-width">

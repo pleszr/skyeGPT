@@ -151,7 +151,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
                 components={{
                   ol: ({ children }) => <ol className="pl-12">{children}</ol>,
                   ul: ({ children }) => <ul className="pl-12">{children}</ul>,
-                  p: ({ children }) => <p className="pb-6 last:pb-0">{children}</p>,
+                  p: ({ children }) => <p className="last:pb-0">{children}</p>,
                 }}
               >
                 {msg.text.replace(/\\n/g, '\n')}
