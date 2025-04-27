@@ -164,6 +164,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
     }
   };
 
+  //  For different fixed heights you should change these prop: h-[60vh] max-h-[60vh] 
   return (
     <div className={`flex flex-col h-full gap-4 justify-between ${className}`}>
       <div
