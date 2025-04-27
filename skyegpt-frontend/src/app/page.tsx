@@ -7,7 +7,6 @@ import { Message } from '@/app/utils/MessageManager';
 
 const HomePage = () => {
   const [chromaMessages, setChromaMessages] = useState<Message[]>([]);
-  // i set a fallback for the backend host in case the env variable is not set
   const backendHost = process.env.NEXT_PUBLIC_SKYEGPT_BACKEND_HOST || 'http://localhost:8000';
 
   const createThread = async () => {
@@ -42,22 +41,22 @@ const HomePage = () => {
   const askEndpointChroma = `${backendHost}/askChroma`;
 
   return (
-    <div className="w-screen h-screen max-w-full max-h-full">
-      <header className="flex justify-between h-[114px] px-12 py-6">
-      <Image src="/logo.svg" alt="logo" width={150} height={90} className="h-[90px]" />        
-      <span className="text-xs">design by Fanni Wihl | frontend by Marcell Monoki & Csaba Sallai</span>
+    <div className="w-screen h-screen max-w-full max-h-full flex flex-col">
+      <header className="flex justify-between items-center h-[80px] sm:h-[100px] px-4 sm:px-8 md:px-12 py-4 sm:py-6">
+        <Image src="/logo.svg" alt="logo" width={120} height={60} className="h-[60px] sm:h-[80px]" />
+        <span className="text-xs sm:text-sm text-gray-600">
+          design by Fanni Wihl | frontend by Marcell Monoki & Csaba Sallai
+        </span>
       </header>
-      <div className="h-[calc(100%-114px)]">
-        <div className="flex flex-col pt-8 pb-16 h-full mx-auto custom-width">
-          <div className="flex flex-col h-full">
-            <div className="flex h-[50px] gap-3">
-                <div
-                  className="flex justify-center items-center text-xl bg-white min-w-[180px] min-h-[50px] rounded-t-[20px] shadow-[0_10px_15px_rgba(0,0,0,0.25)] cursor-pointer active:bg-white p-[10px]"
-                >
-                  Ask Skye Documentation
-                </div>
+      <div className="flex-1">
+        <div className="flex flex-col pt-4 sm:pt-6 pb-8 sm:pb-12 h-full mx-auto w-full max-w-[90%] sm:max-w-[1230px]">
+          <div className="flex h-full flex-col">
+            <div className="flex h-[40px] sm:h-[50px] gap-2 sm:gap-3">
+              <div className="flex justify-center items-center text-base sm:text-xl bg-white min-w-[160px] sm:min-w-[180px] h-full rounded-t-[20px] shadow-md cursor-pointer hover:bg-gray-50 transition-colors duration-200 p-2 sm:p-3">
+                Ask Skye Documentation
+              </div>
             </div>
-            <div className="flex-1 bg-white shadow-[0_10px_15px_rgba(0,0,0,0.25)] z-[1] rounded-[0_50px_50px_50px] p-8">
+            <div className="flex-1 bg-white shadow-lg rounded-[0_40px_40px_40px] p-4 sm:p-6 md:p-8">
               <div className="h-full">
                 <ChatBox
                   title="Ask GPT Chroma"

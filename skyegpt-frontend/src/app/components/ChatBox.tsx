@@ -18,7 +18,8 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const textareaContRef = useRef<HTMLDivElement>(null);
-  const chatContainerRef = useRef<HTMLDivElement>(null); 
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+  const wasNearBottomRef = useRef<boolean>(true);
 
   const sendTechnicalMessage = async (message: string) => {
     setMessages((prev) => [...prev, { sender: 'bot', text: message }]);
@@ -33,12 +34,32 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
   }, []);
 
   useEffect(() => {
-    scrollToBottom();
+    if (textareaRef.current) {
+      textareaRef.current.focus();
+    }
+  }, [textareaRef, messages.length]);
+
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = chatContainerRef.current;
+      wasNearBottomRef.current = scrollHeight - scrollTop - clientHeight < 100;
+    }
+
+    const raf = requestAnimationFrame(() => {
+      if (wasNearBottomRef.current || messages[messages.length - 1]?.sender === 'user') {
+        scrollToBottom();
+      }
+    });
+    return () => cancelAnimationFrame(raf);
   }, [messages]);
 
   const scrollToBottom = () => {
     if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+      console.log('Scrolling to bottom');
+      chatContainerRef.current.scrollTo({
+        top: chatContainerRef.current.scrollHeight,
+        behavior: 'smooth',
+      });
     }
   };
 
@@ -60,6 +81,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
     setMessages((prev) => addMessage(prev, createUserMessage(input)));
     setInput('');
     setIsLoading(true);
+    wasNearBottomRef.current = true; 
 
     if (textareaRef.current) {
       textareaRef.current.focus();
@@ -132,66 +154,80 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
     const textareaCont = textareaContRef.current;
 
     if (textarea && textareaCont) {
-      textarea.addEventListener('input', () => {
+      const resize = () => {
         textareaCont.style.height = 'auto';
-        textareaCont.style.height = `${textarea.scrollHeight + 20}px`;
-      });
+        textareaCont.style.height = `${Math.min(textarea.scrollHeight + 20, 200)}px`;
+      };
+      textarea.addEventListener('input', resize);
+      resize();
+      return () => textarea.removeEventListener('input', resize);
     }
   };
 
   return (
-    <div className={`flex flex-col h-full gap-10 max-h-[660px] justify-between ${className}`}>
+    <div className={`flex flex-col h-full gap-4 justify-between ${className}`}>
       <div
-        className="chatMessages flex flex-col gap-8 p-8 max-h-[570px] overflow-y-auto scroll-smooth"
+        className="chatMessages flex flex-col gap-4 p-4 sm:p-6 md:p-8 overflow-y-auto scroll-smooth bg-white rounded-[20px] h-[60vh] max-h-[60vh]"
         ref={chatContainerRef}
       >
         {messages.map((msg, index) => (
           <div
             key={index}
-            className={
+            className={`p-4 sm:p-5 md:p-6 rounded-[30px] max-w-[90%] sm:max-w-[80%] transition-opacity duration-300 ${
               msg.sender === 'user'
-                ? 'userMessage bg-[#1ea974] self-end py-8 px-8 rounded-[50px_50px_0px_50px] max-w-[80%] text-white'
-                : 'botMessage bg-[#e5e5e5] self-start py-8 px-8 pl-12 rounded-[50px_50px_50px_0] max-w-[80%] text-black'
-            }
+                ? 'bg-gradient-to-r from-[#1ea974] to-[#17a267] self-end text-white rounded-tl-[30px] rounded-br-[0]'
+                : 'bg-[#ececec] self-start text-black rounded-tr-[30px] rounded-bl-[0] shadow-sm'
+            }`}
           >
             {msg.sender === 'bot' ? (
               <div className="flex flex-col">
                 <ReactMarkdown
                   remarkPlugins={[remarkBreaks]}
                   components={{
-                    ol: ({ children }) => <ol className="pl-12 not-last:pb-6 list-decimal">{children}</ol>,
-                    ul: ({ children }) => <ul className="pl-12 not-last:pb-6 list-disc">{children}</ul>,
-                    p: ({ children }) => <p className="not-last:pb-1 last:pb-1">{children}</p>,
-                    h3: ({ children }) => <h3 className="text-xl font-bold mb-4 pb-1 text-black">{children}</h3>,
+                    ol: ({ children }) => <ol className="pl-6 sm:pl-8 list-decimal">{children}</ol>,
+                    ul: ({ children }) => <ul className="pl-6 sm:pl-8 list-disc">{children}</ul>,
+                    p: ({ children }) => <p className="mb-2">{children}</p>,
+                    h3: ({ children }) => (
+                      <h3 className="text-lg sm:text-xl font-semibold mb-3 text-black">{children}</h3>
+                    ),
                   }}
                 >
                   {msg.text.replace(/\\n/g, '\n')}
                 </ReactMarkdown>
               </div>
             ) : (
-              <div className="text-base text-white">{msg.text}</div>
+              <div className="text-sm sm:text-base">{msg.text}</div>
             )}
           </div>
         ))}
-        {isLoading && <div className="loading text-center p-2.5">Loading...</div>}
+        {isLoading && (
+          <div className="loading flex justify-center items-center p-4">
+            <div className="animate-pulse flex space-x-2">
+              <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+              <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+              <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+            </div>
+          </div>
+        )}
       </div>
-      <div className="flex items-end gap-3 min-h-[50px]">
+      <div className="flex items-end gap-2 sm:gap-3 p-2 sm:p-4">
         <div
-          className="flex flex-1 bg-gray-200 p-4 px-8 rounded-[30px] h-[50px] transition-[height] duration-250 max-h-[200px]"
+          className="flex flex-1 bg-gray-100 p-3 sm:p-4 rounded-[20px] transition-all duration-200 max-h-[150px] shadow-sm"
           ref={textareaContRef}
         >
           <textarea
             ref={textareaRef}
             rows={1}
-            className="skgpt-input-textarea border-none text-base text-black resize-none bg-transparent p-0 w-full font-[Poppins] min-h-[30px] placeholder:text-base focus:outline-none"
+            className="skgpt-input-textarea border-none text-sm sm:text-base text-black resize-none bg-transparent w-full font-[Poppins] min-h-[30px] placeholder:text-gray-500 focus:outline-none"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Write your question here..."
           />
         </div>
         <button
-          className="skgpt-btn sendBtn h-[50px] w-[100px] text-xl text-white bg-[#1EA974] rounded-full border-none cursor-pointer"
+          className="skgpt-btn sendBtn h-10 sm:h-12 w-20 sm:w-24 text-base sm:text-lg text-white bg-[#1ea974] rounded-full border-none cursor-pointer hover:bg-[#17a267] transition-colors duration-200 disabled:opacity-50"
           onClick={sendMessage}
+          disabled={isLoading || !input.trim()}
         >
           Send
         </button>
