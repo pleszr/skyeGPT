@@ -44,8 +44,10 @@ const HomePage = () => {
     <div className="w-screen h-screen max-w-full max-h-full flex flex-col">
       <header className="flex justify-between items-center gap-[1rem] h-[80px] sm:h-[100px] px-4 sm:px-8 md:px-12 py-4 sm:py-6">
         <Image src="/logo.svg" alt="logo" width={120} height={60} className="h-[60px] sm:h-[80px]" />
-        <span className="text-xs sm:text-sm text-gray-600">
-          design by Fanni Wihl | frontend by Marcell Monoki & Csaba Sallai
+        <span className="flex flex-col text-xs sm:text-sm text-gray-600 leading-snug text-right">
+          <span>design by Fanni Wihl</span>
+          <span>frontend by Csaba Sallai</span>
+          <span>backend by Roland Plesz</span>
         </span>
       </header>
       <div className="flex-1">
