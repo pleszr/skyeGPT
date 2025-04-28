@@ -166,7 +166,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
 
   //  For different fixed heights you should change these prop: h-[60vh] max-h-[60vh] 
   return (
-    <div className={`flex flex-col h-full gap-4 justify-between ${className}`}>
+    <div className={`flex flex-col gap-4 justify-between ${className}`}>
       <div
         className="chatMessages flex flex-col gap-4 p-4 sm:p-6 md:p-8 overflow-y-auto scroll-smooth bg-white rounded-[20px] h-[60vh] max-h-[60vh]"
         ref={chatContainerRef}
@@ -219,7 +219,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
           <textarea
             ref={textareaRef}
             rows={1}
-            className="skgpt-input-textarea border-none text-sm sm:text-base text-black resize-none bg-transparent w-full font-[Poppins] min-h-[30px] placeholder:text-gray-500 focus:outline-none"
+            className="skgpt-input-textarea border-none text-sm sm:text-base text-black resize-none bg-transparent w-full font-[Poppins] min-h-[40px] placeholder:text-gray-500 focus:outline-none"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Write your question here..."
