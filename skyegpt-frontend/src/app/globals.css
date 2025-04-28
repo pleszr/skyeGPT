@@ -1,0 +1,76 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+:root {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+.custom-width {
+  width: 1230px;
+}
+
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #f2f2f2;
+  }
+}
+
+a {
+  color: blue;
+  text-decoration: none;
+  transition: color 0.2s ease-in-out;
+}
+
+
+body {
+
+  background-color: var(--background);
+  font-family: "Poppins", serif; 
+}
+
+
+@media (max-width: 640px) {
+  .chatMessages {
+    padding: 1rem;
+  }
+
+  .skgpt-btn.sendBtn {
+    width: 80px;
+    height: 40px;
+    font-size: 0.875rem;
+  }
+
+  .skgpt-input-textarea {
+    font-size: 0.875rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .custom-width {
+    width: 100%;
+    max-width: 100%;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.chatMessages > div {
+  animation: fadeIn 0.3s ease-in;
+}
