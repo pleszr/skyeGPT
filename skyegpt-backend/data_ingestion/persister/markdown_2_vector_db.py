@@ -1,31 +1,33 @@
 from langchain_text_splitters import MarkdownHeaderTextSplitter
 from pathlib import Path
 from typing import List
-import ChromaClient
+from retriever import db_client
 import uuid
 import os
 import time
 import multiprocessing as mp
-from ProcessWrapper import create_process, start_process, join_process
-import DocumentationLinkGenerator
+from ..utils.process_wrapper import create_process, start_process, join_process
+from ..utils import documentation_link_generator
 
 
 def scan_and_import_markdowns_from_folder(
         collection_name: str,
         folder_path: str,
         markdown_split_headers: List[str]
-):
+) -> None :
+    db_client.create_collection_if_needed(collection_name)
+
     batch_size = int(os.getenv("RAG_BATCH_SIZE"))
     queue = mp.Queue()
 
-    producer_process = create_process(target=chroma_import_producer, args=(
+    producer_process = create_process(target=_chroma_import_producer, args=(
         folder_path,
         markdown_split_headers,
         batch_size,
         queue
     ))
 
-    consumer_process = create_process(target=chroma_import_consumer, args=(
+    consumer_process = create_process(target=_chroma_import_consumer, args=(
         collection_name,
         queue
     ))
@@ -39,11 +41,11 @@ def scan_and_import_markdowns_from_folder(
 
     join_process(consumer_process)
 
-    number_of_documents = ChromaClient.number_of_documents_in_collection(collection_name)
+    number_of_documents = db_client.number_of_documents_in_collection(collection_name)
     print(f"Elapsed seconds: {time.time()-start_time:.0f} Record count: {number_of_documents}")
 
 
-def chroma_import_producer(
+def _chroma_import_producer(
         folder_path: str,
         markdown_split_headers: List[str],
         batch_size: int,
@@ -52,15 +54,15 @@ def chroma_import_producer(
     folder = Path(folder_path)
     for file in folder.rglob("*.md"):
         with open(file, "r", encoding="utf-8") as opened_file:
-            documentation_source = DocumentationLinkGenerator.select_doc_source_by_folder_path(file)
+            documentation_source = documentation_link_generator.select_doc_source_by_folder_path(file)
 
             file_content = opened_file.read()
-            texts = split_markdown_by_headers(
+            texts = _split_markdown_by_headers(
                 file_content,
                 markdown_split_headers
             )
 
-            add_text_to_queue(
+            _add_text_to_queue(
                 texts,
                 Path(file.name).stem,
                 documentation_source,
@@ -69,7 +71,7 @@ def chroma_import_producer(
             )
 
 
-def split_markdown_by_headers(
+def _split_markdown_by_headers(
         file_content: str,
         markdown_split_headers: List[str]
 ):
@@ -88,7 +90,7 @@ def split_markdown_by_headers(
     return document_contents
 
 
-def add_text_to_queue(
+def _add_text_to_queue(
         content_text_array: List[str],
         file_name: str,
         documentation_source: str,
@@ -100,7 +102,7 @@ def add_text_to_queue(
     ids = []
 
     for text in content_text_array:
-        documentation_link = DocumentationLinkGenerator.link_generator(
+        documentation_link = documentation_link_generator.link_generator(
             file_name,
             documentation_source
         )
@@ -131,11 +133,11 @@ def add_text_to_queue(
         })
 
 
-def chroma_import_consumer(
+def _chroma_import_consumer(
         collection_name,
         queue
 ):
-    collection = ChromaClient.get_collection_by_name(collection_name)
+    collection = db_client.get_collection_by_name(collection_name)
     batch_number = 0
     while True:
         batch_number += 1
@@ -147,7 +149,7 @@ def chroma_import_consumer(
         metadatas = batch["metadatas"]
         ids = batch["ids"]
         print(f"Saving batch: {batch_number} with {len(ids)} documents")
-        ChromaClient.add_to_collection(
+        db_client.add_to_collection(
             collection,
             documents=documents,
             metadatas=metadatas,

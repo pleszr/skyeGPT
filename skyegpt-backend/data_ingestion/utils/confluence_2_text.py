@@ -1,9 +1,9 @@
 import requests
 import os
 import multiprocessing as mp
-from Utils import convert_html_to_md
+from common.utils import convert_html_to_md
 import time
-from ProcessWrapper import create_process, start_process, join_process
+from .process_wrapper import create_process, start_process, join_process
 from fastapi import HTTPException
 
 

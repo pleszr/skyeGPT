@@ -1,3 +1,10 @@
+# Run locally
+cd skyegpt-backend
+python3 -m venv venv
+source venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
+PYTHONPATH=. python3 main.py
 
 # Purpose
 This application takes a set of documentation and creates an online chatbot which can answer based on the documentation. For demonstration and not for production purposes.

@@ -1,11 +1,12 @@
 import chromadb
-import ChromaClient
-import RagSetup
+import retriever.ChromaClient as ChromaClient
+from data_ingestion import RagSetup
 from openai import OpenAI
 from typing import List, Dict
 from typing import Generator
 import os
 from fastapi import HTTPException
+import json
 
 
 client = OpenAI()
@@ -14,32 +15,26 @@ conversation_store = {}
 current_context_store = {}
 
 
-def ask_gpt_using_rag_pipeline(
+async def ask_gpt_using_rag_pipeline(
         question: str,
         conversation_id: str
 ):
 
-    message_history = load_conversation_from_store_or_generate_default(
-        conversation_id
-    )
+    message_history = load_conversation_from_store_or_generate_default(conversation_id)
 
-    max_prompt_size = int(os.getenv("MAX_PROMPT_SIZE",120))
-    if is_message_history_too_big(message_history,
-                                  max_prompt_size):
+    max_prompt_size = int(os.getenv("MAX_PROMPT_SIZE", 120))
+    if is_message_history_too_big(message_history, max_prompt_size):
         raise HTTPException(status_code=413, detail="Message history too big. Reload the page")
 
-    relevant_documents = find_relevant_documents_for_question(
-        "SkyeDoc",
-        question,
-        RagSetup.rag_settings_store["k_nearest_neighbors"]
-    )
+    # relevant_documents = find_relevant_documents_for_question(
+    #     "SkyeDoc",
+    #     question,
+    #     RagSetup.rag_settings_store["k_nearest_neighbors"]
+    # )
 
-    current_context_store[conversation_id] = relevant_documents
+    # current_context_store[conversation_id] = relevant_documents
 
-    message_history = add_relevant_documents_to_message_history(
-        relevant_documents,
-        message_history
-    )
+    # message_history = add_relevant_documents_to_message_history(relevant_documents, message_history)
 
     message_history.append(
         {
@@ -48,11 +43,11 @@ def ask_gpt_using_rag_pipeline(
         }
     )
 
-    assistant_answer = send_question_to_gpt(message_history)
-
+    # assistant_answer = send_question_to_gpt(message_history)
+    assistant_answer = PydenticAi.ask_gemini(json.dumps(message_history))
     response_text = ""
 
-    for token in assistant_answer:
+    async for token in assistant_answer:
         yield token
         response_text += token
 
@@ -77,7 +72,6 @@ def load_conversation_from_store_or_generate_default(
                 "content": RagSetup.rag_settings_store["gpt_developer_prompt"]
             }
         ]
-
     return conversation_store.get(
         conversation_id,
         default_message)

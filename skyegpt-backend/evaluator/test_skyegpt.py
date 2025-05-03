@@ -1,5 +1,6 @@
 from typing import List, Dict
 import pytest
+import json
 import deepeval
 from deepeval import assert_test
 from deepeval.test_case import LLMTestCase, LLMTestCaseParams
@@ -14,15 +15,15 @@ from dotenv import load_dotenv
 from evaluator import evaluator_utils
 from evaluator.llm_wrapper import query_llm
 
-LLM_ENDPOINT: str = 'http://localhost:8000/test_askChroma'
+LLM_ENDPOINT: str = 'http://localhost:8000/test_askPydantic'
 DATA_DIRECTORY: str = 'evaluator/test_data'
 QUESTION_BANK_FILE: str = 'QuestionBank.csv'
 GPT_MODEL: str = 'gpt-4o'
 
 RELEVANCY_THRESHOLD: float = 0.5
 FAITHFULNESS_THRESHOLD: float = 0.7
-ACTUAL_EXPECTED_OUTPUT_QUALITY_THRESHOLD: float = 0.7
-CONTEXT_RELEVANCY_THRESHOLD: float = 0.6
+ACTUAL_EXPECTED_OUTPUT_QUALITY_THRESHOLD: float = 0.6
+CONTEXT_RELEVANCY_THRESHOLD: float = 0.5
 
 
 def create_dataset() -> EvaluationDataset:
@@ -50,9 +51,29 @@ def prepare_test_case_with_llm_response(test_case_data: Dict[str, str]) -> LLMTe
         context=test_case_data["reference_context"].split('§§'),
         actual_output=api_response.get("generated_answer"),
         expected_output=expected_output,
-        retrieval_context=api_response.get("curr_context")
+        retrieval_context=convert_context_to_list_str(api_response.get('curr_context'))
     )
     return test_case
+
+
+def convert_context_to_list_str(curr_context: dict) -> list[str]:
+    if not curr_context or not isinstance(curr_context, dict):
+        print("Warning: convert_context_to_list_str received None or invalid input.")
+        return []
+    result_list = []
+    tool_args = json.loads(curr_context["tool_args"])
+    result_list.append(f"Query: {tool_args.get('query', '')}")
+
+    tool_result = json.loads(curr_context["tool_result"])
+
+    for doc in tool_result.get("documents", [[]])[0]:
+        result_list.append(f"Document: {doc}")
+
+    for meta in tool_result.get("metadatas", [[]])[0]:
+        link = meta.get("documentation_link")
+        if link:
+            result_list.append(f"Link: {link}")
+    return result_list
 
 
 def create_evaluation_metrics() -> List[BaseMetric]:

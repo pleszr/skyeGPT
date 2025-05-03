@@ -8,7 +8,7 @@ def query_skyegpt(url: str, question: str, conversation_id: str) -> dict:
 
     request_body = {
         "question": question,
-        "chroma_conversation_id": conversation_id
+        "conversation_id": conversation_id
     }
 
     response = requests.post(url, json=request_body, headers=headers)

@@ -19,6 +19,7 @@ jobs:
     - run: cd skyegpt-backend && PYTHONPATH=$(pwd) pytest tests
 
   deploy_backend_to_docker_repo:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: run_backend_unit_tests
     runs-on: ubuntu-latest
     steps:
@@ -46,7 +47,7 @@ jobs:
           push: true
           tags: |
             rplesz/skyegpt-backend:latest
-            rplesz/skyegpt-backend:v1
+            rplesz/skyegpt-backend:${{ github.run_id }}
   
   run_frontend_unit_tests:
     runs-on: ubuntu-latest
@@ -54,6 +55,7 @@ jobs:
     - run: echo "this is where frontend unit tests are supposed to be"
 
   deploy_frontend_to_docker_repo:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: run_frontend_unit_tests
     runs-on: ubuntu-latest
     steps:
@@ -81,4 +83,4 @@ jobs:
           push: true
           tags: |
             rplesz/skyegpt-frontend:latest
-            rplesz/skyegpt-frontend:v1
+            rplesz/skyegpt-frontend:${{ github.run_id }}
