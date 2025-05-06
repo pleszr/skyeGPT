@@ -1,6 +1,12 @@
-from common import utils
-from agentic import PydanticAi
+from common import utils, logger
+from agentic import agent_service, prompts
 from typing import AsyncGenerator, Optional, Any
+from common.stores import StoreManager
+from agentic.conversation import Conversation
+from fastapi import HTTPException, status
+
+
+store_manager = StoreManager()
 
 
 class AgentResponseStreamingService:
@@ -34,9 +40,18 @@ class AgentResponseStreamingService:
             AgentRunError: when the underlying AI model fails to generate a response.
             Exception: for any other unexpected errors.
         """
-        formatted_stream = utils.async_format_to_sse(PydanticAi.ask_gemini(question, conversation_id))
+        logger.info(f"Asker service stream_agent_response started")
+        agent_service_model = agent_service.AgentService(
+            store_manager,
+            prompts.responder_openai_v4_openai_template
+        )
+
+        agent_response_stream = await agent_service_model.stream_agent_response(question, conversation_id)
+        formatted_stream = utils.async_format_to_sse(agent_response_stream)
+
         async for item in formatted_stream:
             yield item
+        logger.info(f"Asker service stream_agent_response finished")
 
 
 class AgentResponseService:
@@ -69,20 +84,32 @@ class AgentResponseService:
         response = await _aggregate_agent_response(question, conversation_id)
 
         if with_context:
-            nested_context: Optional[Any] = _get_conversation_context(conversation_id)
+            nested_context: Optional[Any] = await _get_conversation_context(conversation_id)
             if nested_context:
                 response["curr_context"] = nested_context
 
         return response
 
 
+class ConversationRetrieverService:
+    async def get_conversation_by_id(self, conversation_id: str) -> Conversation:
+        conversation = await store_manager.get_conversation_by_id(conversation_id)
+        if not conversation.content:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found")
+        return conversation
+
+
 async def _aggregate_agent_response(question: str, conversation_id: str) -> dict[str, Any]:
+    agent_service_model = agent_service.AgentService(
+        store_manager,
+        prompts.responder_openai_v4_openai_template
+    )
     parts: list[str] = []
-    async for chunk in PydanticAi.ask_gemini(question, conversation_id):
+    async for chunk in await agent_service_model.stream_agent_response(question, conversation_id):
         parts.append(chunk)
     full_response = "".join(parts)
     return {"generated_answer": full_response}
 
 
-def _get_conversation_context(conversation_id: str) -> dict[str, Any]:
-    return PydanticAi.current_context_store.get(conversation_id)
+async def _get_conversation_context(conversation_id: str) -> list[dict[str, Any]]:
+    return await store_manager.get_conversation_context(conversation_id)

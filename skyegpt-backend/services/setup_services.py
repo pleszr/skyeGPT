@@ -1,10 +1,9 @@
 from data_ingestion.scrapers.save_skye_documentation import download_skye_documentation_from_s3
 from data_ingestion.scrapers.save_innoveo_partner_hub import download_innoveo_partner_hub
-from common import logger, utils
+from common import logger, utils, constants
 from retriever import db_client
-from exceptions import CollectionNotFoundError
+from common.exceptions import ResponseGenerationError
 from data_ingestion.persister import markdown_2_vector_db
-from common import constants
 
 
 class IngestionService:
@@ -115,7 +114,7 @@ class DatabaseService:
         try:
             db_client.delete_collection(collection_name)
             logger.info(f"DatabaseService: Deletion successful for collection '{collection_name}'")
-        except CollectionNotFoundError as e:
+        except ResponseGenerationError as e:
             logger.info(f"DatabaseService: Collection '{collection_name}' not found for deletion.", exc_info=True)
             raise e
         except Exception as e:
@@ -139,7 +138,7 @@ class DatabaseService:
             number_of_documents = db_client.number_of_documents_in_collection(collection_name)
             logger.info(f"DatabaseService: Number of collections in {collection_name}: {number_of_documents}")
             return number_of_documents
-        except CollectionNotFoundError as e:
+        except ResponseGenerationError as e:
             logger.exception(f"DatabaseService: Collection '{collection_name}' not found for deletion.")
             raise e
         except Exception as e:

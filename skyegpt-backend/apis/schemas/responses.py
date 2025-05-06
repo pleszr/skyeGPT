@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field, ConfigDict
 from typing import Any, Optional, Dict
+from agentic.conversation import Conversation
 
 
 class CreateConversationIdResponse(BaseModel):
@@ -89,6 +90,23 @@ class ImportResponse(BaseModel):
             "examples": [
                 {
                     "number_of_documents": 42,
+                }
+            ]
+        }
+    }
+
+
+class ConversationResponse(BaseModel):
+    """
+    Response model for retrieving a conversation
+    """
+    conversation: Conversation = Field(..., description="The conversation")
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "conversation": ["ModelRequest", "ModelResponse"],
                 }
             ]
         }

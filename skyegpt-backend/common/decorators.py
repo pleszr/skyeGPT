@@ -3,27 +3,25 @@ from fastapi import status, HTTPException
 import asyncio
 from fastapi.responses import StreamingResponse
 from common import logger, message_bundle, constants
-from pydantic_ai import UserError, AgentRunError, UsageLimitExceeded
+from common.exceptions import StoreManagementException, ResponseGenerationError, UsageLimitExceededError
 import json
 from typing import AsyncGenerator
 
 
-def catch_stream_errors(func):
+def handle_response_stream_errors(func):
     @wraps(func)
     async def wrapper(*args, **kwargs):
         try:
             return await func(*args, **kwargs)
-        except asyncio.CancelledError:
-            raise
-        except UsageLimitExceeded as e:
+        except UsageLimitExceededError as e:
             logger.exception(e.message)
             return _generate_sse_stream_from_error_message(message_bundle.USAGE_LIMIT_EXCEEDED_ERROR)
-        except (AgentRunError, UserError) as e:
+        except ResponseGenerationError as e:
             logger.exception(e.message)
-            return _generate_sse_stream_from_error_message()
+            return _generate_sse_stream_from_error_message(message_bundle.INTERNAL_ERROR)
         except Exception:
             logger.exception("Uncaught Exception")
-            return _generate_sse_stream_from_error_message()
+            return _generate_sse_stream_from_error_message(message_bundle.INTERNAL_ERROR)
     return wrapper
 
 
@@ -48,15 +46,15 @@ async def _stream_error(
     yield f"event: error\ndata: {json.dumps(error_data)}\n\n"
 
 
-def catch_response_errors(func):
+def handle_aggregated_response_errors(func):
     @wraps(func)
     async def wrapper(*args, **kwargs):
         try:
             return await func(*args, **kwargs)
-        except UsageLimitExceeded as e:
+        except UsageLimitExceededError as e:
             logger.exception(e.message)
             raise HTTPException(status_code=429, detail=message_bundle.USAGE_LIMIT_EXCEEDED_ERROR)
-        except (AgentRunError, UserError) as e:
+        except ResponseGenerationError as e:
             logger.exception(e.message)
             raise HTTPException(status_code=500, detail=message_bundle.INTERNAL_ERROR)
         except Exception:
@@ -65,14 +63,25 @@ def catch_response_errors(func):
     return wrapper
 
 
-def catch_unknown_errors(func):
+def handle_unknown_errors(func):
     @wraps(func)
     async def wrapper(*args, **kwargs):
         try:
             return await func(*args, **kwargs)
         except HTTPException as http_exc:
             raise http_exc
-        except Exception:
+        except Exception as e:
             logger.exception("Uncaught Exception")
-            raise HTTPException(status_code=500, detail=message_bundle.INTERNAL_ERROR)
+            raise HTTPException(status_code=500, detail=message_bundle.INTERNAL_ERROR) from e
+    return wrapper
+
+
+def handle_store_errors(func):
+    @wraps(func)
+    async def wrapper(*args, **kwargs):
+        try:
+            return await func(*args, **kwargs)
+        except (ValueError, TypeError, AttributeError, KeyError) as e:
+            logger.exception('Exception during Store Management')
+            raise StoreManagementException from e
     return wrapper

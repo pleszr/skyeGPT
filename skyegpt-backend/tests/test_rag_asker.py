@@ -148,7 +148,7 @@ def test_is_message_history_too_big_no():
                                              max_prompt_size)
 
 
-@patch.dict(RagPipeline.conversation_store, {}, clear=True)  # Ensures isolated test state
+@patch.dict(RagPipeline._conversation_store, {}, clear=True)  # Ensures isolated test state
 @patch.dict(RagSetup.rag_settings_store, {"gpt_developer_prompt": "Default Prompt"}, clear=True)
 def test_load_conversation_from_store_or_generate_default_found():
     conversation_id = "existing_conversation"
@@ -157,14 +157,14 @@ def test_load_conversation_from_store_or_generate_default_found():
         {"role": "assistant", "content": "Hi, how can I help?"}
     ]
 
-    RagPipeline.conversation_store[conversation_id] = expected_conversation
+    RagPipeline._conversation_store[conversation_id] = expected_conversation
 
     actual_conversation = RagPipeline.load_conversation_from_store_or_generate_default(conversation_id)
 
     assert actual_conversation == expected_conversation
 
 
-@patch.dict(RagPipeline.conversation_store, {}, clear=True)  # Ensures isolated test state
+@patch.dict(RagPipeline._conversation_store, {}, clear=True)  # Ensures isolated test state
 @patch.dict(RagSetup.rag_settings_store, {"gpt_developer_prompt": "Default Prompt"}, clear=True)
 def test_load_conversation_from_store_or_generate_default_not_found():
     conversation_id = "missing_conversation"
@@ -234,7 +234,7 @@ def test_ask_gpt_powered_by_chroma_happy_path(
         {"role": "user", "content": "test question"},
         {"role": "assistant", "content": "response_tokens"}
     ]
-    assert RagPipeline.conversation_store[conversation_id] == expected_final_conversation
+    assert RagPipeline._conversation_store[conversation_id] == expected_final_conversation
 
     monkeypatch.setenv("RAG_BATCH_SIZE", "120")
     mock_is_too_big.assert_called_once_with(initial_history,

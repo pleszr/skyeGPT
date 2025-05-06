@@ -3,16 +3,17 @@ from fastapi.responses import Response
 from common import logger
 from dependencies import get_ingestion_service, get_database_service
 from services.setup_services import IngestionService, DatabaseService
-from exceptions import CollectionNotFoundError
+from common.exceptions import ResponseGenerationError
 from .schemas.requests import SkyeVersionRequest, ImportRequest
 from .schemas.responses import DownloadResponse, ImportResponse
-from common.decorators import catch_unknown_errors
+from common.decorators import handle_unknown_errors
 from common import message_bundle, constants
 
 
 setup_apis_router = APIRouter(prefix="/setup", tags=["Setup Endpoints"])
 
 
+@handle_unknown_errors
 @setup_apis_router.post("/data/skye-documentation",
                         summary="Download Skye documentation to server",
                         description=(
@@ -25,7 +26,6 @@ setup_apis_router = APIRouter(prefix="/setup", tags=["Setup Endpoints"])
                             500: {"description": "Internal server error."}
                         },
                         status_code=status.HTTP_200_OK)
-@catch_unknown_errors
 async def download_skye_documentation(
         request: SkyeVersionRequest,
         ingestion_service: IngestionService = Depends(get_ingestion_service)
@@ -40,6 +40,7 @@ async def download_skye_documentation(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error_message)
 
 
+@handle_unknown_errors
 @setup_apis_router.post("/data/innoveo-partner-hub",
                         summary="Download Innoveo Partner Hub to server",
                         description=(
@@ -50,7 +51,6 @@ async def download_skye_documentation(
                             500: {"description": "Internal server error."}
                         },
                         status_code=status.HTTP_200_OK)
-@catch_unknown_errors
 async def download_iph(
         ingestion_service: IngestionService = Depends(get_ingestion_service)
 ) -> DownloadResponse:
@@ -58,6 +58,7 @@ async def download_iph(
     return DownloadResponse(folder_content=tree_structure)
 
 
+@handle_unknown_errors
 @setup_apis_router.delete(
     "/database/collections/{collection_name}",
     summary="Deletes a collection from the database.",
@@ -70,17 +71,17 @@ async def download_iph(
     status_code=204,
     response_class=Response
 )
-@catch_unknown_errors
 async def delete_collection(collection_name: str, db_service: DatabaseService = Depends(get_database_service)):
     try:
         db_service.delete_collection(collection_name)
         return Response(status_code=status.HTTP_204_NO_CONTENT)
-    except CollectionNotFoundError as value_error:
+    except ResponseGenerationError as value_error:
         error_message = f"Tried to delete {collection_name}, but it doesn't exist"
         logger.info(error_message, error=value_error)
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=error_message)
 
 
+@handle_unknown_errors
 @setup_apis_router.post("/import",
                         summary="Import downloaded content to Vector database",
                         description=(
@@ -93,7 +94,6 @@ async def delete_collection(collection_name: str, db_service: DatabaseService = 
                             422: {"description": "Incorrect request"}
                         },
                         status_code=status.HTTP_200_OK)
-@catch_unknown_errors
 async def import_to_database(
         request: ImportRequest,
         ingestion_service: IngestionService = Depends(get_ingestion_service),

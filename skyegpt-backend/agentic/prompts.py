@@ -1,6 +1,8 @@
 from datetime import datetime
 from pydantic import BaseModel, Field
 from .models import MODELS
+from typing import Callable, List
+from . import tools
 
 
 class PromptDefinition(BaseModel):
@@ -11,6 +13,7 @@ class PromptDefinition(BaseModel):
     temperature: float
     instructions: str
     prompt_template: str
+    tools: List[Callable]
 
 
 responder_openai_v1 = PromptDefinition(
@@ -20,7 +23,8 @@ responder_openai_v1 = PromptDefinition(
     temperature=0.0,
     instructions="Given the information the tools you have access to and not prior knowledge, answer the query. "
                  "Aim to give a link of the relevant documentation.",
-    prompt_template="Question:"
+    prompt_template="Question:",
+    tools=[]
 )
 
 responder_openai_v2 = PromptDefinition(
@@ -31,7 +35,8 @@ responder_openai_v2 = PromptDefinition(
     instructions="You are a support person helping to resolve questions related to Innoveo Skye. "
                  "Do NOT rely on your existing knowledge, ALWAYS use the tools and answer the questions ONLY based on "
                  "the outcome of the tools. Aim to give a link of the relevant documentation",
-    prompt_template="User question:"
+    prompt_template="User question:",
+    tools=[]
 )
 
 responder_openai_v3 = PromptDefinition(
@@ -46,7 +51,8 @@ responder_openai_v3 = PromptDefinition(
                  "Aim to give a link of the relevant documentation where the user finds more detailed instructions",
     prompt_template="User is asking about Innoveo Skye or one of its features. "
                     "CRITICAL: use your tools to gather context. You must NOT answer it from your memory."
-                    "The question: {{user_prompt}}"
+                    "The question: {{user_prompt}}",
+    tools=[]
 )
 
 responder_openai_v4_openai_template = PromptDefinition(
@@ -80,6 +86,7 @@ responder_openai_v4_openai_template = PromptDefinition(
                  """,
     prompt_template="""
     You are an agent whose job is to answer questions based the documentation of the Innoveo Skye or related documents. 
-    Use your tools to check the documentation. User's question: {{user_prompt}}
+    Use your tools to check the documentation. User's question: {{user_question}}
     """,
+    tools=[tools.search_in_skye_documentation]
 )

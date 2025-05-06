@@ -2,13 +2,14 @@ from fastapi import APIRouter, Depends, status
 from .schemas.responses import AgentResponse, PlaygroundResponse
 from .schemas.requests import ConversationQueryRequest
 from dependencies import AgentResponseService, get_agent_response_service
-from common.decorators import catch_response_errors
-import agentic.PydanticAi as PydanticAi
+from common.decorators import handle_aggregated_response_errors, handle_unknown_errors
 from common import logger
 
 evaluator_apis_router = APIRouter(prefix="/evaluate", tags=["Evaluator"])
 
 
+@handle_unknown_errors
+@handle_aggregated_response_errors
 @evaluator_apis_router.post(
     "/response",
     summary="Returns response in one message including used context",
@@ -22,7 +23,6 @@ evaluator_apis_router = APIRouter(prefix="/evaluate", tags=["Evaluator"])
         status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "Internal server error during Pydantic AI processing."}
     }
 )
-@catch_response_errors
 async def evaluate_pydantic(
         request: ConversationQueryRequest,
         agent_response_service: AgentResponseService = Depends(get_agent_response_service)
@@ -54,18 +54,18 @@ async def evaluate_pydantic(
         status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "Internal server error during Playground processing."}
     }
 )
-@catch_response_errors
 async def evaluate_playground(request: ConversationQueryRequest) -> PlaygroundResponse:
     """
     Used to test various features. Dev only.
     """
-    conversation_id = request.conversation_id
-    query = request.query
-    logger.info(f"Received request for playground: conversation_id='{conversation_id}'")
-
-    response_text = ''
-    generator = PydanticAi.ask_gemini(query, str(conversation_id))
-    async for token in generator:
-        response_text += token
-    logger.info(f"Successfully call to playground with conversation_id='{conversation_id}'")
+    response_text = request.query
+    # conversation_id = request.conversation_id
+    # query = request.query
+    # logger.info(f"Received request for playground: conversation_id='{conversation_id}'")
+    #
+    #
+    # generator = PydanticAi.stream_agent_response(query, str(conversation_id))
+    # async for token in generator:
+    #     response_text += token
+    # logger.info(f"Successfully call to playground with conversation_id='{conversation_id}'")
     return PlaygroundResponse(response=response_text)
