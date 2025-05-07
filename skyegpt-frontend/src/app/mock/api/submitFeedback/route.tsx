@@ -1,10 +1,10 @@
+// /mock/api/submitFeedback.ts
 import { NextRequest, NextResponse } from 'next/server';
 
 interface Feedback {
   message_index: number;
   feedback_text: string;
   rating: 'thumbs-up' | 'thumbs-down' | null;
-  thread_id: string;
   chroma_conversation_id: string;
   timestamp: string;
 }
@@ -15,30 +15,31 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
-    const requiredFields = ['message_index', 'feedback_text', 'thread_id', 'chroma_conversation_id'];
+    const requiredFields = ['message_index', 'feedback_text', 'chroma_conversation_id'];
     for (const field of requiredFields) {
       if (!(field in body)) {
         return NextResponse.json({ error: `Missing required field: ${field}` }, { status: 400 });
       }
+      // Special check for feedback_text as it also has a .trim() validation later
+      if (field === 'feedback_text' && (typeof body[field] !== 'string' || !body[field].trim())) {
+        return NextResponse.json({ error: 'feedback_text must be a non-empty string' }, { status: 400 });
+      }
     }
 
-    const { message_index, feedback_text, rating, thread_id, chroma_conversation_id } = body;
+    const { message_index, feedback_text, rating, chroma_conversation_id } = body;
 
     if (!Number.isInteger(message_index)) {
       return NextResponse.json({ error: 'message_index must be an integer' }, { status: 400 });
     }
-    if (typeof feedback_text !== 'string' || !feedback_text.trim()) {
-      return NextResponse.json({ error: 'feedback_text must be a non-empty string' }, { status: 400 });
-    }
-    if (rating !== null && !['thumbs-up', 'thumbs-down'].includes(rating)) {
+
+    if (body.hasOwnProperty('rating') && rating !== null && !['thumbs-up', 'thumbs-down'].includes(rating)) {
       return NextResponse.json(
         { error: "rating must be 'thumbs-up', 'thumbs-down', or null" },
         { status: 400 }
       );
     }
-    if (typeof thread_id !== 'string' || !thread_id.trim()) {
-      return NextResponse.json({ error: 'thread_id must be a non-empty string' }, { status: 400 });
-    }
+
+
     if (typeof chroma_conversation_id !== 'string' || !chroma_conversation_id.trim()) {
       return NextResponse.json(
         { error: 'chroma_conversation_id must be a non-empty string' },
@@ -46,22 +47,24 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const feedback: Feedback = {
+    const feedbackEntry: Feedback = {
       message_index,
       feedback_text,
-      rating,
-      thread_id,
+      rating: body.hasOwnProperty('rating') ? rating : null, 
       chroma_conversation_id,
       timestamp: new Date().toISOString(),
     };
 
-    feedbacks.push(feedback);
+    feedbacks.push(feedbackEntry);
 
-    console.log('Received feedback:', feedback);
+    console.log('Received feedback:', feedbackEntry);
 
     return NextResponse.json({ message: 'Feedback submitted successfully' }, { status: 200 });
   } catch (error: unknown) {
     console.error('Error processing feedback:', error);
+    if (error instanceof SyntaxError) {
+        return NextResponse.json({ error: 'Invalid JSON payload' }, { status: 400 });
+    }
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

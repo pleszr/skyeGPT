@@ -4,9 +4,9 @@ import React, { useState, useEffect, useRef, useCallback, memo, useMemo } from '
 import Image from 'next/image';
 import { addMessage, createUserMessage, createBotMessage, Message } from '@/app/utils/messageManager';
 import ReactMarkdown from 'react-markdown';
-import remarkBreaks from 'remark-breaks';
 import { debounce } from 'lodash';
 import remarkGfm from 'remark-gfm';
+
 
 export interface ChatBoxProps {
   title: string;
@@ -64,9 +64,10 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
   }, []);
 
   const sendMessage = useCallback(async () => {
-    if (!input.trim()) return;
+    const trimmedInput = input.trim();
+    if (!trimmedInput) return;
 
-    setMessages((prev) => addMessage(prev, createUserMessage(input)));
+    setMessages((prev) => addMessage(prev, createUserMessage(trimmedInput)));
     setInput('');
     if (textareaRef.current) {
       textareaRef.current.style.height = '50px';
@@ -82,10 +83,16 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
       return;
     }
 
+    // 
+    // const hiddenInstruction = "Please provide your full response as a GitHub Flavored Markdown document";
+    // const queryToSendToBackend = `${hiddenInstruction}\n\nUser query: ${trimmedInput}`;
+
+    const queryToSendToBackend = `\n\nUser query: ${trimmedInput}`;
+
     const fetchStream = async (attempt: number): Promise<boolean> => {
       try {
         setMessages((prev) => addMessage(prev, createBotMessage('')));
-    
+
         const response = await fetch(askEndpoint, {
           method: 'POST',
           headers: {
@@ -94,40 +101,50 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
           },
           body: JSON.stringify({
             conversation_id: conversationId,
-            query: input,
+            query: queryToSendToBackend,
           }),
         });
-    
+
         if (!response.ok) {
           throw new Error(`Failed to fetch streaming response: ${response.status}`);
         }
-    
+
         const reader = response.body?.getReader();
         if (!reader) throw new Error('No reader available');
-    
+
         let fullMessage = '';
         let buffer = '';
-    
+
         while (true) {
           const { value, done } = await reader.read();
           if (done) {
+            console.log("LLM STREAM COMPLETE. FINAL RAW Full Message received:", fullMessage);
             if (!fullMessage.trim()) {
               setMessages((prev) => {
                 const newMessages = [...prev];
-                newMessages[newMessages.length - 1] = createBotMessage(
-                  `No response received from the server${attempt < maxRetries ? '. Retrying...' : '.'}`
-                );
+                if (newMessages.length > 0 && newMessages[newMessages.length - 1].sender === 'bot') {
+                  newMessages[newMessages.length - 1] = createBotMessage(
+                    `No response received from the server${attempt < maxRetries ? '. Retrying...' : '.'}`
+                  );
+                }
                 return newMessages;
               });
               return false;
             }
+            setMessages((prev) => {
+              const newMessages = [...prev];
+              if (newMessages.length > 0 && newMessages[newMessages.length - 1].sender === 'bot') {
+                newMessages[newMessages.length - 1] = createBotMessage(fullMessage);
+              }
+              return newMessages;
+            });
             break;
           }
-    
+
           buffer += new TextDecoder().decode(value);
           const lines = buffer.split('\n');
           buffer = lines.pop() || '';
-    
+
           for (const line of lines) {
             console.log('SSE Line:', line);
             if (line.startsWith('data: ')) {
@@ -137,39 +154,55 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
                 try {
                   chunk = JSON.parse(dataStr);
                 } catch {
-                  chunk = { text: dataStr };
+                  chunk = { text: dataStr }; 
                 }
-                let chunkText =
-                  chunk.text ||
-                  chunk.message ||
-                  chunk.content ||
-                  chunk.response ||
-                  (typeof chunk === 'string' ? chunk : '');
-    
-                if (
-                  chunkText.match(/^\d+$/) || 
-                  chunkText.match(/^\/[a-zA-Z0-9\/\.]+$/) || 
-                  chunkText.length < 2
-                ) {
-                  console.log('Filtered out:', chunkText);
-                  continue;
+
+                let derivedChunkText = '';
+                if (chunk !== null && chunk !== undefined) {
+                    if (typeof chunk === 'string') {
+                        derivedChunkText = chunk;
+                    } else if (chunk.text !== undefined && typeof chunk.text === 'string') {
+                        derivedChunkText = chunk.text;
+                    } else if (chunk.message !== undefined && typeof chunk.message === 'string') {
+                        derivedChunkText = chunk.message;
+                    } else if (chunk.content !== undefined && typeof chunk.content === 'string') {
+                        derivedChunkText = chunk.content;
+                    } else if (chunk.response !== undefined && typeof chunk.response === 'string') {
+                        derivedChunkText = chunk.response;
+                    } else if (typeof chunk === 'number' || typeof chunk === 'boolean') {
+                        derivedChunkText = String(chunk);
+                    }
                 }
-    
+                let chunkText = derivedChunkText;
+
+                // console.log('Raw SSE Chunk Text (processed):', JSON.stringify(chunkText)); 
+
                 if (chunkText === '-') {
                   chunkText = '- ';
                 }
-    
+
+                let shouldFilter = false;
+           
+
+                if (shouldFilter) {
+                  console.log('Filtered out (final decision):', chunkText);
+                  continue;
+                }
+
                 if (chunkText) {
                   fullMessage += chunkText;
                   setMessages((prev) => {
                     const newMessages = [...prev];
-                    newMessages[newMessages.length - 1] = createBotMessage(fullMessage);
+                    if (newMessages.length > 0 && newMessages[newMessages.length - 1].sender === 'bot') {
+                      newMessages[newMessages.length - 1] = createBotMessage(fullMessage);
+                    }
                     return newMessages;
                   });
                 }
-                console.log('SSE Chunk:', chunk);
+                console.log('Processed SSE Chunk (added to fullMessage):', JSON.stringify(chunkText));
+
               } catch (e) {
-                console.warn('Invalid SSE chunk:', line, e);
+                console.warn('Invalid SSE chunk processing error:', e, 'Original line:', line);
               }
             }
           }
@@ -179,14 +212,17 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
         console.error(`Send message error (attempt ${attempt + 1}):`, error);
         setMessages((prev) => {
           const newMessages = [...prev];
-          newMessages[newMessages.length - 1] = createBotMessage(
-            `Error: Could not get a response${attempt < maxRetries ? '. Retrying...' : '.'}`
-          );
+          if (newMessages.length > 0 && newMessages[newMessages.length - 1].sender === 'bot') {
+            newMessages[newMessages.length - 1] = createBotMessage(
+              `Error: Could not get a response${attempt < maxRetries ? '. Retrying...' : '.'}`
+            );
+          }
           return newMessages;
         });
         return false;
       }
     };
+
     let attempt = 0;
     let success = false;
     while (attempt <= maxRetries && !success) {
@@ -249,6 +285,12 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
         setRatingError((prev) => ({ ...prev, [messageIndex]: '' }));
 
         const conversationId = localStorage.getItem('chroma_conversation_id');
+        if (!conversationId) {
+            console.error("Cannot submit rating: chroma_conversation_id is missing.");
+            setRatingError((prev) => ({ ...prev, [messageIndex]: 'Session ID missing.' }));
+            setFeedbackState((prev) => ({ ...prev, [messageIndex]: previousFeedback }));
+            return;
+        }
 
         try {
           const response = await fetch(submitRatingEndpoint, {
@@ -304,10 +346,15 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
 
     setSubmitError('');
     const conversationId = localStorage.getItem('chroma_conversation_id');
+    if (!conversationId) {
+        console.error("Cannot submit feedback: chroma_conversation_id is missing.");
+        setSubmitError('Session ID missing.');
+        return;
+    }
     const rating = feedbackState[activeMessageIndex] || null;
 
     const tempFeedbackText = feedbackText;
-    setFeedbackText('');
+    setFeedbackText(''); 
 
     try {
       const response = await fetch(submitFeedbackEndpoint, {
@@ -328,7 +375,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
       setIsConfirmationModalOpen(true);
     } catch (error) {
       console.error('Error submitting feedback:', error);
-      setFeedbackText(tempFeedbackText);
+      setFeedbackText(tempFeedbackText); 
       const errorMessage =
         error instanceof Error && error.message.includes('Failed to fetch')
           ? 'Failed to connect to the server.'
@@ -339,25 +386,26 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
 
   const handleConfirmationModalClose = useCallback(() => {
     setIsConfirmationModalOpen(false);
+    setIsModalOpen(false); 
     setActiveMessageIndex(null);
   }, []);
 
   const getModalHeader = useCallback(() => {
     if (activeMessageIndex === null) return 'Share your feedback';
-    const feedback = feedbackState[activeMessageIndex];
-    return feedback === 'thumbs-down' ? 'Report an Issue' : 'Share your feedback';
+    const feedbackVal = feedbackState[activeMessageIndex];
+    return feedbackVal === 'thumbs-down' ? 'Report an Issue' : 'Share your feedback';
   }, [activeMessageIndex, feedbackState]);
 
   const getTextareaPlaceholder = useCallback(() => {
     if (activeMessageIndex === null) return 'write your feedback here...';
-    const feedback = feedbackState[activeMessageIndex];
-    return feedback === 'thumbs-down' ? 'write your issue here...' : 'write your feedback here...';
+    const feedbackVal = feedbackState[activeMessageIndex];
+    return feedbackVal === 'thumbs-down' ? 'write your issue here...' : 'write your feedback here...';
   }, [activeMessageIndex, feedbackState]);
 
   const getConfirmationMessage = useCallback(() => {
     if (activeMessageIndex === null) return 'Feedback Sent!';
-    const feedback = feedbackState[activeMessageIndex];
-    return feedback === 'thumbs-down' ? 'Report Sent!' : 'Feedback Sent!';
+    const feedbackVal = feedbackState[activeMessageIndex];
+    return feedbackVal === 'thumbs-down' ? 'Report Sent!' : 'Feedback Sent!';
   }, [activeMessageIndex, feedbackState]);
 
   return (
@@ -559,21 +607,13 @@ const MemoizedMessage = memo(
             >
               <div className="flex flex-col">
               <ReactMarkdown
-                remarkPlugins={[remarkBreaks, remarkGfm]}
-                components={{
-                  ol: ({ children }) => <ol className="pl-6 sm:pl-8 list-decimal">{children}</ol>,
-                  ul: ({ children }) => <ul className="pl-6 sm:pl-8 list-disc">{children}</ul>,
-                  p: ({ children }) => <p className="mb-2">{children}</p>,
-                  h3: ({ children }) => (
-                    <h3 className="text-lg sm:text-xl font-semibold mb-3 text-black">{children}</h3>
-                  ),
-                }}
-              >
-                {msg.text.replace(/\\n/g, '\n')}
-              </ReactMarkdown>
+              remarkPlugins={[remarkGfm]}
+            >
+              {msg.text.replace(/\\n/g, '\n')}
+            </ReactMarkdown>
               </div>
             </div>
-            {msg.sender === 'bot' && (index !== messages.length - 1 || !isLoading) && (
+            {msg.sender === 'bot' && (index !== messages.length - 1 || !isLoading) && msg.text.trim() !== '' && ( // Added check for non-empty bot message
               <div className="flex flex-col items-end gap-2 mt-2">
                 <div className="flex items-center gap-2">
                   <button
@@ -595,10 +635,10 @@ const MemoizedMessage = memo(
                     <Image
                       src="/tup.png"
                       alt="Thumbs Up"
-                      width={0}
-                      height={0}
-                      style={{ height: 'auto', width: 'auto' }}
-                      priority
+                      width={16} 
+                      height={16}
+                      // style={{ height: 'auto', width: 'auto' }}
+                      priority={false}
                       className={`w-[16px] h-auto ${feedbackState[index] === 'thumbs-up' ? 'tint-green' : ''}`}
                     />
                   </button>
@@ -614,10 +654,10 @@ const MemoizedMessage = memo(
                     <Image
                       src="/tdown.png"
                       alt="Thumbs Down"
-                      width={0}
-                      height={0}
-                      style={{ height: 'auto', width: 'auto' }}
-                      priority
+                      width={16}
+                      height={16} 
+                      // style={{ height: 'auto', width: 'auto' }}
+                      priority={false}
                       className={`w-[16px] h-auto ${feedbackState[index] === 'thumbs-down' ? 'tint-green' : ''}`}
                     />
                   </button>
@@ -639,13 +679,16 @@ const MemoizedMessage = memo(
     );
   },
   (prevProps, nextProps) => {
-    return (
-      prevProps.msg === nextProps.msg &&
-      prevProps.index === nextProps.index &&
-      prevProps.isLoading === nextProps.isLoading &&
-      prevProps.feedbackState[prevProps.index] === nextProps.feedbackState[nextProps.index] &&
-      prevProps.ratingError[prevProps.index] === nextProps.ratingError[nextProps.index]
-    );
+    if (prevProps.msg.text !== nextProps.msg.text ||
+        prevProps.msg.sender !== nextProps.msg.sender ||
+        prevProps.index !== nextProps.index ||
+        prevProps.isLoading !== nextProps.isLoading ||
+        prevProps.feedbackState[prevProps.index] !== nextProps.feedbackState[nextProps.index] ||
+        prevProps.ratingError[prevProps.index] !== nextProps.ratingError[nextProps.index] ||
+        prevProps.messages.length !== nextProps.messages.length) {
+      return false; 
+    }
+    return true;
   }
 );
 
