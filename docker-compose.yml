@@ -3,15 +3,25 @@ services:
   backend:
     build:
       context: ./skyegpt-backend
+    container_name: skyegpt-backend
     ports:
       - "8000:8000"
     env_file:
       - skyegpt-backend/.env
     depends_on:
-      - frontend
+      - chroma
+  chroma:
+    image: chromadb/chroma:1.0.8
+    container_name: chroma
+    ports:
+      - "8001:8000"
+    volumes:
+      - chroma_data:/chroma/chroma
+    restart: unless-stopped
   frontend:
     build:
       context: ./skyegpt-frontend
+    container_name: skyegpt-frontend
     ports:
       - "5173:5173"
     volumes:
@@ -20,3 +30,4 @@ services:
 volumes:
   pgdata: {}
   node_modules: {}
+  chroma_data: {}
