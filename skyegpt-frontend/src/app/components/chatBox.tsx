@@ -84,11 +84,11 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
       return;
     }
 
-    // Hidden instruction BY DEFAULT OUR AI DOES NOT SENDING THE RESPONSE IN MARKDOWN FORMAT, In order to format the response - WE NEED TO ADD A HIDDEN INSTRUCTION
+    // Hidden instruction BY DEFAULT - OUR AI DOES NOT SENDING THE RESPONSE IN MARKDOWN FORMAT, In order to format the response - WE NEED TO ADD A HIDDEN INSTRUCTION
     const hiddenInstruction = "Please provide your full response as a GitHub Flavored Markdown document, only contents , dont wrap the entire thing in a '''markdown''' code"
     const queryToSendToBackend = `${hiddenInstruction}\n\nUser query: ${trimmedInput}`;
     
-    // If we fixed this in the backend code - we can go back the non-hidden instruction way
+    // If we fixed this in the BACKEND - we can go back the non-hidden instruction (WE JUST NEED TO ADD NEW INSTRUCTIONS))
     //const queryToSendToBackend = `\n\nUser query: ${trimmedInput}`; // Using direct query
 
     const fetchStream = async (attempt: number): Promise<boolean> => {
@@ -180,9 +180,8 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
                 console.log('Raw SSE Chunk Text (processed):', JSON.stringify(chunkText));
 
 
-                // Minimal filtering (currently none active)
                 let shouldFilter = false;
-                // if (/* add specific noise filter conditions here if needed */) {
+                //  {
                 //   shouldFilter = true;
                 // }
 
