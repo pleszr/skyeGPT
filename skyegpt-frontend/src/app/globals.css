@@ -1,0 +1,127 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+:root {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+.custom-width {
+  width: 1230px;
+}
+
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #f2f2f2;
+  }
+}
+
+a {
+  color: blue;
+  text-decoration: none;
+  transition: color 0.2s ease-in-out;
+}
+
+
+body {
+
+  background-color: var(--background);
+  font-family: "Poppins", serif; 
+}
+
+@media (max-width: 640px) {
+  .chatMessages {
+    padding: 1rem;
+  }
+
+  .skgpt-btn.sendBtn img {
+    width: 80px !important; 
+  }
+
+
+  .skgpt-input-textarea {
+    font-size: 0.875rem;
+  }
+
+  .chatMessages pre {
+    font-size: 0.75rem;
+    padding: 12px; 
+    border-radius: 8px;
+  }
+}
+
+@media (max-width: 768px) {
+  .custom-width {
+    width: 100%;
+    max-width: 100%;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.chatMessages > div {
+  animation: fadeIn 0.3s ease-in;
+}
+
+.tint-green {
+  filter: brightness(0) saturate(100%) invert(47%) sepia(50%) saturate(500%) hue-rotate(110deg) brightness(90%) contrast(90%);
+}
+
+.chatMessages pre {
+  max-width: 100%;
+  overflow-x: auto;
+  background-color: #2d2d2d; 
+  border-radius: 10px; 
+  padding: 16px;
+  box-sizing: border-box;
+  font-size: 0.875rem; 
+  color: #f8f8f2; 
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); 
+  white-space: pre-wrap;
+}
+
+.chatMessages pre::-webkit-scrollbar {
+  height: 8px;
+}
+
+.chatMessages pre::-webkit-scrollbar-track {
+  background: #2d2d2d;
+}
+
+.chatMessages pre::-webkit-scrollbar-thumb {
+  background: #555; 
+  border-radius: 4px;
+}
+
+.chatMessages pre::-webkit-scrollbar-thumb:hover {
+  background: #777; 
+}
+
+.chatMessages pre code {
+  display: block;
+  white-space: pre-wrap; 
+  line-height: 1.5;
+  background: transparent; 
+  color: inherit;
+}
+
+.chatMessages .self-start {
+  max-width: 90%;
+  word-break: break-word;
+}
