@@ -1,4 +1,3 @@
-// /mock/api/submitFeedback.ts
 import { NextRequest, NextResponse } from 'next/server';
 
 interface Feedback {
@@ -20,7 +19,6 @@ export async function POST(req: NextRequest) {
       if (!(field in body)) {
         return NextResponse.json({ error: `Missing required field: ${field}` }, { status: 400 });
       }
-      // Special check for feedback_text as it also has a .trim() validation later
       if (field === 'feedback_text' && (typeof body[field] !== 'string' || !body[field].trim())) {
         return NextResponse.json({ error: 'feedback_text must be a non-empty string' }, { status: 400 });
       }

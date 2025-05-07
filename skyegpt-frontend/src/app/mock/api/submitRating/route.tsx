@@ -1,4 +1,3 @@
-// /mock/api/submitRating.ts
 import { NextRequest, NextResponse } from 'next/server';
 
 interface Rating {
