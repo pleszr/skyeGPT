@@ -74,7 +74,6 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
     setIsLoading(true);
     wasNearBottomRef.current = true;
 
-
     const conversationId = localStorage.getItem('chroma_conversation_id');
 
     if (!conversationId) {
