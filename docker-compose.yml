@@ -2,16 +2,11 @@ services:
   backend:
     build:
       context: ./skyegpt-backend
-<<<<<<< HEAD
-    container_name: skyegpt-backend
-=======
->>>>>>> ebd5c38 (Normalize line endings to LF)
     ports:
       - "8000:8000"
     env_file:
       - skyegpt-backend/.env
     depends_on:
-<<<<<<< HEAD
       - chroma
   chroma:
     image: chromadb/chroma:1.0.8
@@ -22,21 +17,13 @@ services:
       - chroma_data:/chroma/chroma
     restart: unless-stopped
   frontend:
-    container_name: skyegpt-frontend
-=======
-      - frontend
-  frontend:
->>>>>>> ebd5c38 (Normalize line endings to LF)
     build:
       context: ./skyegpt-frontend
       dockerfile: Dockerfile
+    container_name: skyegpt-frontend
     ports:
       - "5173:5173"
 volumes:
-<<<<<<< HEAD
   pgdata: {}
   node_modules: {}
   chroma_data: {}
-=======
-  pgdata: {}
->>>>>>> ebd5c38 (Normalize line endings to LF)

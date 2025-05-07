@@ -6,6 +6,7 @@ import { addMessage, createUserMessage, createBotMessage, Message } from '@/app/
 import ReactMarkdown from 'react-markdown';
 import remarkBreaks from 'remark-breaks';
 import { debounce } from 'lodash';
+import remarkGfm from 'remark-gfm';
 
 export interface ChatBoxProps {
   title: string;
@@ -26,6 +27,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
   const [ratingError, setRatingError] = useState<{ [key: number]: string }>({});
   const [feedbackState, setFeedbackState] = useState<{ [key: number]: 'thumbs-up' | 'thumbs-down' | null }>({});
   const [activeMessageIndex, setActiveMessageIndex] = useState<number | null>(null);
+  const maxRetries = 2;
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const textareaContRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -72,6 +74,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
     setIsLoading(true);
     wasNearBottomRef.current = true;
 
+
     const conversationId = localStorage.getItem('chroma_conversation_id');
 
     if (!conversationId) {
@@ -80,91 +83,122 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
       return;
     }
 
-    try {
-      setMessages((prev) => addMessage(prev, createBotMessage('')));
-
-      const response = await fetch(askEndpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'text/event-stream',
-        },
-        body: JSON.stringify({
-          conversation_id: conversationId,
-          query: input,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch streaming response: ${response.status}`);
-      }
-
-      const reader = response.body?.getReader();
-      if (!reader) throw new Error('No reader available');
-
-      let fullMessage = '';
-      let buffer = '';
-
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) {
-          if (!fullMessage.trim()) {
-            setMessages((prev) => {
-              const newMessages = [...prev];
-              newMessages[newMessages.length - 1] = createBotMessage('No response received from the server.');
-              return newMessages;
-            });
-          } else {
-            // Normalize whitespace before final render
-            setMessages((prev) => {
-              const newMessages = [...prev];
-              newMessages[newMessages.length - 1] = createBotMessage(fullMessage.trim());
-              return newMessages;
-            });
-          }
-          break;
+    const fetchStream = async (attempt: number): Promise<boolean> => {
+      try {
+        setMessages((prev) => addMessage(prev, createBotMessage('')));
+    
+        const response = await fetch(askEndpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'text/event-stream',
+          },
+          body: JSON.stringify({
+            conversation_id: conversationId,
+            query: input,
+          }),
+        });
+    
+        if (!response.ok) {
+          throw new Error(`Failed to fetch streaming response: ${response.status}`);
         }
-
-        buffer += new TextDecoder().decode(value);
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
-
-        for (const line of lines) {
-          console.log('SSE Line:', line); // Debug raw SSE data
-          if (line.startsWith('data: ') && line.length > 6) {
-            const dataStr = line.slice(6).trim();
-            if (!dataStr) continue; // Skip empty data lines
-
-            let chunkText = '';
-            try {
-              const chunk = JSON.parse(dataStr);
-              // Try JSON fields for documented format
-              chunkText = chunk.text || chunk.message || chunk.content || chunk.response || '';
-              console.log('SSE JSON Chunk:', chunk); // Debug parsed JSON
-            } catch (e) {
-              // Treat as plain text (actual backend format)
-              chunkText = dataStr;
-              console.log('SSE Text Chunk:', chunkText); // Debug plain text
-            }
-
-            if (chunkText) {
-              // Add space after each chunk to separate tokens
-              fullMessage += chunkText + ' ';
+    
+        const reader = response.body?.getReader();
+        if (!reader) throw new Error('No reader available');
+    
+        let fullMessage = '';
+        let buffer = '';
+    
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) {
+            if (!fullMessage.trim()) {
               setMessages((prev) => {
                 const newMessages = [...prev];
-                newMessages[newMessages.length - 1] = createBotMessage(fullMessage);
+                newMessages[newMessages.length - 1] = createBotMessage(
+                  `No response received from the server${attempt < maxRetries ? '. Retrying...' : '.'}`
+                );
                 return newMessages;
               });
+              return false;
+            }
+            break;
+          }
+    
+          buffer += new TextDecoder().decode(value);
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+    
+          for (const line of lines) {
+            console.log('SSE Line:', line);
+            if (line.startsWith('data: ')) {
+              try {
+                const dataStr = line.slice(6);
+                let chunk;
+                try {
+                  chunk = JSON.parse(dataStr);
+                } catch {
+                  chunk = { text: dataStr };
+                }
+                let chunkText =
+                  chunk.text ||
+                  chunk.message ||
+                  chunk.content ||
+                  chunk.response ||
+                  (typeof chunk === 'string' ? chunk : '');
+    
+                if (
+                  chunkText.match(/^\d+$/) || 
+                  chunkText.match(/^\/[a-zA-Z0-9\/\.]+$/) || 
+                  chunkText.length < 2
+                ) {
+                  console.log('Filtered out:', chunkText);
+                  continue;
+                }
+    
+                if (chunkText === '-') {
+                  chunkText = '- ';
+                }
+    
+                if (chunkText) {
+                  fullMessage += chunkText;
+                  setMessages((prev) => {
+                    const newMessages = [...prev];
+                    newMessages[newMessages.length - 1] = createBotMessage(fullMessage);
+                    return newMessages;
+                  });
+                }
+                console.log('SSE Chunk:', chunk);
+              } catch (e) {
+                console.warn('Invalid SSE chunk:', line, e);
+              }
             }
           }
         }
+        return true;
+      } catch (error) {
+        console.error(`Send message error (attempt ${attempt + 1}):`, error);
+        setMessages((prev) => {
+          const newMessages = [...prev];
+          newMessages[newMessages.length - 1] = createBotMessage(
+            `Error: Could not get a response${attempt < maxRetries ? '. Retrying...' : '.'}`
+          );
+          return newMessages;
+        });
+        return false;
       }
-    } catch (error) {
-      console.error('Send message error:', error);
-      setMessages((prev) => addMessage(prev, createBotMessage('Error: Could not get a response.')));
-    } finally {
-      setIsLoading(false);
+    };
+    let attempt = 0;
+    let success = false;
+    while (attempt <= maxRetries && !success) {
+      success = await fetchStream(attempt);
+      if (!success && attempt < maxRetries) {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+      attempt++;
     }
+
+    setIsLoading(false);
   }, [input, setMessages, sendTechnicalMessage, askEndpoint]);
 
   const handleKeyDown = useCallback(
@@ -525,19 +559,19 @@ const MemoizedMessage = memo(
               className={`p-4 sm:p-5 md:p-6 rounded-[30px] transition-opacity duration-300 bg-[#ececec] text-black rounded-tr-[30px] rounded-bl-[0] shadow-sm`}
             >
               <div className="flex flex-col">
-                <ReactMarkdown
-                  remarkPlugins={[remarkBreaks]}
-                  components={{
-                    ol: ({ children }) => <ol className="pl-6 sm:pl-8 list-decimal">{children}</ol>,
-                    ul: ({ children }) => <ul className="pl-6 sm:pl-8 list-disc">{children}</ul>,
-                    p: ({ children }) => <p className="mb-2">{children}</p>,
-                    h3: ({ children }) => (
-                      <h3 className="text-lg sm:text-xl font-semibold mb-3 text-black">{children}</h3>
-                    ),
-                  }}
-                >
-                  {msg.text.replace(/\\n/g, '\n')}
-                </ReactMarkdown>
+              <ReactMarkdown
+                remarkPlugins={[remarkBreaks, remarkGfm]}
+                components={{
+                  ol: ({ children }) => <ol className="pl-6 sm:pl-8 list-decimal">{children}</ol>,
+                  ul: ({ children }) => <ul className="pl-6 sm:pl-8 list-disc">{children}</ul>,
+                  p: ({ children }) => <p className="mb-2">{children}</p>,
+                  h3: ({ children }) => (
+                    <h3 className="text-lg sm:text-xl font-semibold mb-3 text-black">{children}</h3>
+                  ),
+                }}
+              >
+                {msg.text.replace(/\\n/g, '\n')}
+              </ReactMarkdown>
               </div>
             </div>
             {msg.sender === 'bot' && (index !== messages.length - 1 || !isLoading) && (
