@@ -120,7 +120,6 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
         while (true) {
           const { value, done } = await reader.read();
           if (done) {
-            console.log("LLM STREAM COMPLETE. FINAL RAW Full Message received:", fullMessage);
             if (!fullMessage.trim()) {
               setMessages((prev) => {
                 const newMessages = [...prev];
@@ -148,7 +147,6 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
           buffer = lines.pop() || '';
 
           for (const line of lines) {
-            console.log('SSE Line:', line);
             if (line.startsWith('data: ')) {
               try {
                 const dataStr = line.slice(6);
@@ -175,18 +173,14 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
                         derivedChunkText = String(chunk);
                     }
                 }
-                let chunkText = derivedChunkText;
-
-                console.log('Raw SSE Chunk Text (processed):', JSON.stringify(chunkText));
+                const chunkText = derivedChunkText;
 
 
-                let shouldFilter = false;
-                //  {
-                //   shouldFilter = true;
-                // }
+
+                const shouldFilter = false;
+ 
 
                 if (shouldFilter) {
-                  console.log('Filtered out (final decision):', chunkText);
                   continue;
                 }
 
@@ -200,7 +194,6 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
                     return newMessages;
                   });
                 }
-                console.log('Processed SSE Chunk (added to fullMessage):', JSON.stringify(chunkText));
 
               } catch (e) {
                 console.warn('Invalid SSE chunk processing error:', e, 'Original line:', line);
