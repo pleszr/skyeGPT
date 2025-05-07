@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useCallback, memo, useMemo } from '
 import Image from 'next/image';
 import { addMessage, createUserMessage, createBotMessage, Message } from '@/app/utils/messageManager';
 import ReactMarkdown from 'react-markdown';
+import remarkBreaks from 'remark-breaks';
 import { debounce } from 'lodash';
 import remarkGfm from 'remark-gfm';
 
@@ -83,11 +84,12 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
       return;
     }
 
-    // 
-    // const hiddenInstruction = "Please provide your full response as a GitHub Flavored Markdown document";
-    // const queryToSendToBackend = `${hiddenInstruction}\n\nUser query: ${trimmedInput}`;
-
-    const queryToSendToBackend = `\n\nUser query: ${trimmedInput}`;
+    // Hidden instruction BY DEFAULT OUR AI DOES NOT SENDING THE RESPONSE IN MARKDOWN FORMAT, In order to format the response - WE NEED TO ADD A HIDDEN INSTRUCTION
+    const hiddenInstruction = "Please provide your full response as a GitHub Flavored Markdown document, only contents , dont wrap the entire thing in a '''markdown''' code"
+    const queryToSendToBackend = `${hiddenInstruction}\n\nUser query: ${trimmedInput}`;
+    
+    // If we fixed this in the backend code - we can go back the non-hidden instruction way
+    //const queryToSendToBackend = `\n\nUser query: ${trimmedInput}`; // Using direct query
 
     const fetchStream = async (attempt: number): Promise<boolean> => {
       try {
@@ -154,7 +156,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
                 try {
                   chunk = JSON.parse(dataStr);
                 } catch {
-                  chunk = { text: dataStr }; 
+                  chunk = { text: dataStr };
                 }
 
                 let derivedChunkText = '';
@@ -175,14 +177,14 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
                 }
                 let chunkText = derivedChunkText;
 
-                // console.log('Raw SSE Chunk Text (processed):', JSON.stringify(chunkText)); 
+                console.log('Raw SSE Chunk Text (processed):', JSON.stringify(chunkText));
 
-                if (chunkText === '-') {
-                  chunkText = '- ';
-                }
 
+                // Minimal filtering (currently none active)
                 let shouldFilter = false;
-           
+                // if (/* add specific noise filter conditions here if needed */) {
+                //   shouldFilter = true;
+                // }
 
                 if (shouldFilter) {
                   console.log('Filtered out (final decision):', chunkText);
@@ -607,10 +609,33 @@ const MemoizedMessage = memo(
             >
               <div className="flex flex-col">
               <ReactMarkdown
-              remarkPlugins={[remarkGfm]}
-            >
-              {msg.text.replace(/\\n/g, '\n')}
-            </ReactMarkdown>
+                  remarkPlugins={[remarkBreaks, remarkGfm]}
+                  components={{
+                    ol: ({ children }) => <ol className="pl-6 sm:pl-8 list-decimal">{children}</ol>,
+                    ul: ({ children }) => <ul className="pl-6 sm:pl-8 list-disc">{children}</ul>,
+                    p: ({ children }) => <p className="mb-2">{children}</p>,
+                    h1: ({ children }) => (
+                      <h1 className="text-2xl sm:text-3xl font-bold mb-3 text-black">{children}</h1>
+                    ),
+                    h2: ({ children }) => (
+                      <h2 className="text-xl sm:text-2xl font-semibold mb-3 text-black">{children}</h2>
+                    ),
+                    h3: ({ children }) => (
+                      <h3 className="text-lg sm:text-xl font-semibold mb-3 text-black">{children}</h3>
+                    ),
+                    h4: ({ children }) => (
+                      <h4 className="text-base sm:text-lg font-semibold mb-3 text-black">{children}</h4>
+                    ),
+                    h5: ({ children }) => (
+                      <h5 className="text-sm sm:text-base font-semibold mb-3 text-black">{children}</h5>
+                    ),
+                    h6: ({ children }) => (
+                      <h6 className="text-xs sm:text-sm font-semibold mb-3 text-black">{children}</h6>
+                    ),
+                  }}
+                >
+                  {msg.text.replace(/\\n/g, '\n')}
+                </ReactMarkdown>
               </div>
             </div>
             {msg.sender === 'bot' && (index !== messages.length - 1 || !isLoading) && msg.text.trim() !== '' && ( // Added check for non-empty bot message
