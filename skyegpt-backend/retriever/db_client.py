@@ -5,9 +5,9 @@ from common.exceptions import ResponseGenerationError
 import os
 from common.exceptions import CollectionNotFoundError
 
-# chroma_client = chromadb.PersistentClient() old
 CHROMA_HOST = os.getenv('CHROMA_HOST', 'chroma')
 CHROMA_PORT = os.getenv('CHROMA_PORT', 8000)
+
 chroma_client = chromadb.HttpClient(host=CHROMA_HOST, port=CHROMA_PORT)
 
 
