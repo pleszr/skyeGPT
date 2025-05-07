@@ -72,16 +72,10 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
     setIsLoading(true);
     wasNearBottomRef.current = true;
 
-    const threadId = localStorage.getItem('threadId');
-    const chroma_conversation_id = localStorage.getItem('chroma_conversation_id');
+    const conversationId = localStorage.getItem('chroma_conversation_id');
 
-    if (!threadId) {
-      await sendTechnicalMessage('No thread ID found. Please wait for the thread to be created.');
-      setIsLoading(false);
-      return;
-    }
-    if (!chroma_conversation_id) {
-      await sendTechnicalMessage('No chroma_conversation_id found. Please wait for the thread to be created.');
+    if (!conversationId) {
+      await sendTechnicalMessage('No conversation ID found. Please wait for the conversation to be created.');
       setIsLoading(false);
       return;
     }
@@ -91,16 +85,18 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
 
       const response = await fetch(askEndpoint, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'text/event-stream',
+        },
         body: JSON.stringify({
-          question: input,
-          thread_id: threadId,
-          chroma_conversation_id,
+          conversation_id: conversationId,
+          query: input,
         }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch response');
+        throw new Error(`Failed to fetch streaming response: ${response.status}`);
       }
 
       const reader = response.body?.getReader();
@@ -111,22 +107,55 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
 
       while (true) {
         const { value, done } = await reader.read();
-        if (done) break;
+        if (done) {
+          if (!fullMessage.trim()) {
+            setMessages((prev) => {
+              const newMessages = [...prev];
+              newMessages[newMessages.length - 1] = createBotMessage('No response received from the server.');
+              return newMessages;
+            });
+          } else {
+            // Normalize whitespace before final render
+            setMessages((prev) => {
+              const newMessages = [...prev];
+              newMessages[newMessages.length - 1] = createBotMessage(fullMessage.trim());
+              return newMessages;
+            });
+          }
+          break;
+        }
 
         buffer += new TextDecoder().decode(value);
         const lines = buffer.split('\n');
         buffer = lines.pop() || '';
 
         for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const chunk = line.slice(6);
-            fullMessage += chunk;
+          console.log('SSE Line:', line); // Debug raw SSE data
+          if (line.startsWith('data: ') && line.length > 6) {
+            const dataStr = line.slice(6).trim();
+            if (!dataStr) continue; // Skip empty data lines
 
-            setMessages((prev) => {
-              const newMessages = [...prev];
-              newMessages[newMessages.length - 1] = createBotMessage(fullMessage);
-              return newMessages;
-            });
+            let chunkText = '';
+            try {
+              const chunk = JSON.parse(dataStr);
+              // Try JSON fields for documented format
+              chunkText = chunk.text || chunk.message || chunk.content || chunk.response || '';
+              console.log('SSE JSON Chunk:', chunk); // Debug parsed JSON
+            } catch (e) {
+              // Treat as plain text (actual backend format)
+              chunkText = dataStr;
+              console.log('SSE Text Chunk:', chunkText); // Debug plain text
+            }
+
+            if (chunkText) {
+              // Add space after each chunk to separate tokens
+              fullMessage += chunkText + ' ';
+              setMessages((prev) => {
+                const newMessages = [...prev];
+                newMessages[newMessages.length - 1] = createBotMessage(fullMessage);
+                return newMessages;
+              });
+            }
           }
         }
       }
@@ -186,8 +215,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
         }));
         setRatingError((prev) => ({ ...prev, [messageIndex]: '' }));
 
-        const threadId = localStorage.getItem('threadId');
-        const chroma_conversation_id = localStorage.getItem('chroma_conversation_id');
+        const conversationId = localStorage.getItem('chroma_conversation_id');
 
         try {
           const response = await fetch(submitRatingEndpoint, {
@@ -196,8 +224,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
             body: JSON.stringify({
               message_index: messageIndex,
               rating: feedback,
-              thread_id: threadId,
-              chroma_conversation_id,
+              chroma_conversation_id: conversationId,
             }),
           });
 
@@ -236,20 +263,19 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
 
   const handleFeedbackSubmit = useCallback(async () => {
     if (activeMessageIndex === null) return;
-  
+
     if (!feedbackText.trim()) {
       setFeedbackError('Feedback cannot be empty.');
       return;
     }
-  
+
     setSubmitError('');
-    const threadId = localStorage.getItem('threadId');
-    const chroma_conversation_id = localStorage.getItem('chroma_conversation_id');
+    const conversationId = localStorage.getItem('chroma_conversation_id');
     const rating = feedbackState[activeMessageIndex] || null;
-  
+
     const tempFeedbackText = feedbackText;
     setFeedbackText('');
-  
+
     try {
       const response = await fetch(submitFeedbackEndpoint, {
         method: 'POST',
@@ -258,15 +284,14 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
           message_index: activeMessageIndex,
           feedback_text: tempFeedbackText,
           rating,
-          thread_id: threadId,
-          chroma_conversation_id,
+          chroma_conversation_id: conversationId,
         }),
       });
-  
+
       if (!response.ok) {
         throw new Error(`Server error: ${response.status}`);
       }
-  
+
       setIsConfirmationModalOpen(true);
     } catch (error) {
       console.error('Error submitting feedback:', error);

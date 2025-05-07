@@ -68,7 +68,7 @@ async def create_conversation() -> CreateConversationIdResponse:
     Generates and returns a new UUID V4 as a conversation ID.
     """
     logger.info("Received request to create a new conversation")
-    conversation_id = uuid.uuid4()
+    conversation_id = str(uuid.uuid4())  # CONVERT UUID to string, without this im getting internal error
     logger.info(f"Generated new conversation_id: {conversation_id}")
     return CreateConversationIdResponse(conversation_id=conversation_id)
 

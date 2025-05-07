@@ -9,36 +9,36 @@ const HomePage = () => {
   const [chromaMessages, setChromaMessages] = useState<Message[]>([]);
   const backendHost = process.env.NEXT_PUBLIC_SKYEGPT_BACKEND_HOST || 'http://localhost:8000';
 
-  const createThread = async () => {
+  const createConversation = async () => {
     try {
-      const response = await fetch(`${backendHost}/createThread`, {
+      const response = await fetch(`${backendHost}/ask/conversation`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
       });
 
       if (!response.ok) {
-        alert(`Could not create new thread: ${JSON.stringify(response)}`);
+        throw new Error(`Could not create new conversation: ${response.status}`);
       }
 
       const data = await response.json();
-      console.log('Thread created', data.thread_id);
-      localStorage.setItem('threadId', data.thread_id);
+      console.log('Conversation created', data.conversation_id);
+      localStorage.setItem('chroma_conversation_id', data.conversation_id);
 
-      console.log('Chroma conversation created', data.chroma_conversation_id);
-      localStorage.setItem('chroma_conversation_id', data.chroma_conversation_id);
     } catch (error) {
-      console.error('Error creating thread:', error);
+      console.error('Error creating conversation:', error);
+      alert('Failed to create conversation. Please try again.');
     }
   };
 
   useEffect(() => {
-    createThread();
+    createConversation();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const askEndpointChroma = `${backendHost}/askChroma`;
+  const askEndpointChroma = `${backendHost}/ask/response/stream`;
 
   return (
     <div className="w-screen min-h-screen max-w-full flex flex-col overflow-hidden">
