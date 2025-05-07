@@ -88,7 +88,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
     const hiddenInstruction = "Please provide your full response as a GitHub Flavored Markdown document, only contents , dont wrap the entire thing in a '''markdown''' code"
     const queryToSendToBackend = `${hiddenInstruction}\n\nUser query: ${trimmedInput}`;
     
-    // If we fixed this in the BACKEND - we can go back the non-hidden instruction (WE JUST NEED TO ADD NEW INSTRUCTIONS))
+    // If we fixed this in the BACKEND - we can go back the non-hidden instructions (WE JUST NEED TO ADD NEW INSTRUCTIONS))
     //const queryToSendToBackend = `\n\nUser query: ${trimmedInput}`; // Using direct query
 
     const fetchStream = async (attempt: number): Promise<boolean> => {
