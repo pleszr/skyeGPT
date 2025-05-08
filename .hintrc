@@ -3,6 +3,7 @@
     "development"
   ],
   "hints": {
-    "axe/aria": "off"
+    "axe/aria": "off",
+    "typescript-config/consistent-casing": "off"
   }
 }

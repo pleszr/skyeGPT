@@ -21,7 +21,7 @@ services:
     build:
       context: ./skyegpt-frontend
       dockerfile: Dockerfile
-    container_name: skyegpt-frontend
+      container_name: skyegpt-frontend
     ports:
       - "5173:5173"
 volumes:
