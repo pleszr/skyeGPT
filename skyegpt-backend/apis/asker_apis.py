@@ -97,3 +97,30 @@ async def get_conversation_by_id(
     conversation = await conversation_retriever_service.get_conversation_by_id(str(conversation_id))
     return ConversationResponse(conversation=conversation)
 
+@handle_unknown_errors
+@asker_apis_router.post(
+    "/{conversation}/feedback",
+    summary="Give feedback about a conversation",
+    status_code=status.HTTP_201_CREATED,
+    description="""Creates a feedback about a given conversation. 
+                Feedback can be positive, negative and can contain detailed comment.""",
+    responses={
+        201: {"description": "Feedback created."},
+        404: {"description": "Conversation not found"},
+        500: {"description": message_bundle.INTERNAL_ERROR}
+    }
+)
+async def create_feedback(
+        request: CreateFeedbackRequest,
+        conversation: uuid.UUID = Path(..., description="The unique identifier of the conversation to retrieve."),
+        feedback_service: FeedbackManagerService = Depends(get_feedback_manager_service)
+) -> Response:
+    """
+    Saves the received feedback for the given conversation
+    """
+    vote = request.vote
+    comment = request.comment
+    print(f"Received feedback for conversation_id: {conversation}, vote: {vote}, comment: {comment}")
+    feedback_service.create_feedback()
+
+    return Response(status_code=status.HTTP_201_CREATED)

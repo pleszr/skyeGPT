@@ -18,10 +18,10 @@ services:
       - chroma_data:/chroma/chroma
     restart: unless-stopped
   frontend:
+    container_name: skyegpt-frontend
     build:
       context: ./skyegpt-frontend
       dockerfile: Dockerfile
-      container_name: skyegpt-frontend
     ports:
       - "5173:5173"
 volumes:
