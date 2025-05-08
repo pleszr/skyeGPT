@@ -1,5 +1,6 @@
 services:
   backend:
+    container_name: skyegpt-backend
     build:
       context: ./skyegpt-backend
     ports:

@@ -99,6 +99,12 @@ class ConversationRetrieverService:
         return conversation
 
 
+class FeedbackManagerService:
+    """Provides service to manage feedback. Save, store, retrieve & search"""
+    def create_feedback(self):
+        logger.info('this is where feedback management will be')
+
+
 async def _aggregate_agent_response(question: str, conversation_id: str) -> dict[str, Any]:
     agent_service_model = agent_service.AgentService(
         store_manager,

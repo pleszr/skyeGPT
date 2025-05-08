@@ -77,4 +77,23 @@ class ImportRequest(BaseModel):
         return value
 
 
+class CreateFeedbackRequest(BaseModel):
+    vote: Literal["positive", "negative", "not_specified"] = Field(
+        ...,
+        description="The nature of the feedback",
+        examples=["positive", "negative", "not_specified"],
+    )
+    comment: Optional[str] = Field(
+        description="Comment about the conversation",
+        examples=["This was clearly false, the links are directing me to innoveo.skye.com/docs"],
+        max_length=4000
+    )
+
+    @model_validator(mode='after')
+    def only_accepted_not_specified_if_there_is_a_comment(self):
+        """Validator to ensure not specified is only allowed if there is a comment"""
+
+        if not self.comment and self.vote == "not_specified":
+            raise ValueError("Vote can only be 'not_specified' if there is a comment")
+        return self
 

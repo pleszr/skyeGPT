@@ -1,5 +1,8 @@
 from services.setup_services import IngestionService, DatabaseService
-from services.asker_services import AgentResponseStreamingService, AgentResponseService, ConversationRetrieverService
+from services.asker_services import (AgentResponseStreamingService,
+                                     AgentResponseService,
+                                     ConversationRetrieverService,
+                                     FeedbackManagerService)
 
 
 def get_ingestion_service() -> IngestionService:
@@ -40,3 +43,11 @@ def get_conversation_retriever_service() -> ConversationRetrieverService:
     FastAPI will call this function when a route depends on DatabaseService.
     """
     return ConversationRetrieverService()
+
+
+def get_feedback_manager_service() -> FeedbackManagerService:
+    """
+    Dependency provider for FeedbackManagerService.
+    FastAPI will call this function when a route depends on DatabaseService.
+    """
+    return FeedbackManagerService()

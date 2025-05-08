@@ -1,10 +1,11 @@
 import uuid
-from fastapi import APIRouter, Depends, Path
-from fastapi.responses import StreamingResponse
-from .schemas.requests import ConversationQueryRequest
+from fastapi import APIRouter, Depends, Path, status
+from fastapi.responses import StreamingResponse, Response
+from .schemas.requests import ConversationQueryRequest, CreateFeedbackRequest
 from .schemas.responses import CreateConversationIdResponse, ConversationResponse
 from dependencies import (AgentResponseStreamingService, get_agent_response_stream_service,
-                          ConversationRetrieverService, get_conversation_retriever_service)
+                          ConversationRetrieverService, get_conversation_retriever_service,
+                          FeedbackManagerService, get_feedback_manager_service)
 from common import logger, message_bundle
 from common.decorators import handle_response_stream_errors, handle_unknown_errors
 
@@ -95,3 +96,32 @@ async def get_conversation_by_id(
     logger.info(f"Received request to get conversation with ID: {conversation_id}")
     conversation = await conversation_retriever_service.get_conversation_by_id(str(conversation_id))
     return ConversationResponse(conversation=conversation)
+
+
+@handle_unknown_errors
+@asker_apis_router.post(
+    "/{conversation}/feedback",
+    summary="Give feedback about a conversation",
+    status_code=status.HTTP_201_CREATED,
+    description="""Creates a feedback about a given conversation. 
+                Feedback can be positive, negative and can contain detailed comment.""",
+    responses={
+        201: {"description": "Feedback created."},
+        404: {"description": "Conversation not found"},
+        500: {"description": message_bundle.INTERNAL_ERROR}
+    }
+)
+async def create_conversation(
+        request: CreateFeedbackRequest,
+        conversation: uuid.UUID = Path(..., description="The unique identifier of the conversation to retrieve."),
+        feedback_service: FeedbackManagerService = Depends(get_feedback_manager_service)
+) -> Response:
+    """
+    Saves the received feedback for the given conversation
+    """
+    vote = request.vote
+    comment = request.comment
+    print(f"Received feedback for conversation_id: {conversation}, vote: {vote}, comment: {comment}")
+    feedback_service.create_feedback()
+
+    return Response(status_code=status.HTTP_201_CREATED)
