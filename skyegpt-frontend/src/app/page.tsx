@@ -70,7 +70,7 @@ const HomePage = () => {
           />
         </div>
 
-        <div className="flex md:hidden justify-center py-8">
+        <div className="flex md:hidden justify-center py-8 shrink-0">
           <Image
             src="/logo.png"
             alt="SkyeGPT logo"
@@ -81,14 +81,14 @@ const HomePage = () => {
           />
         </div>
 
-        <div className="flex-1 flex flex-col min-h-0">
-          <div className="flex flex-col pt-2 sm:pt-4 pb-4 sm:pb-6 w-full h-full">
+        <div className="flex-1 flex flex-col min-h-0"> 
+          <div className="flex flex-col min-h-0 pt-2 sm:pt-4 pb-4 sm:pb-6 w-full">
             <div className="flex flex-col h-full">
-              <div className="flex h-[40px] sm:h-[50px] gap-2 sm:gap-3"></div>
+              <div className="flex h-[40px] sm:h-[50px] gap-2 sm:gap-3 shrink-0"></div> 
+              
               <div className="flex-1 bg-white shadow-lg rounded-[40px] p-4 sm:p-6 md:p-8 min-h-0">
-                <div className="h-full">
+                <div className="h-full"> 
                   <ChatBox
-                    title="Ask GPT Chroma"
                     askEndpoint={askEndpointChroma}
                     messages={chromaMessages}
                     setMessages={setChromaMessages}
@@ -98,7 +98,8 @@ const HomePage = () => {
               </div>
             </div>
           </div>
-          <footer className="text-center text-xs sm:text-sm text-gray-600 mt-4 shrink-0 translate-y-[-20px]">
+          
+          <footer className="text-center text-xs sm:text-sm text-gray-600 py-4 shrink-0">
             SkyeGPT can make mistakes. If you find the answer strange, verify the results and give feedback!
           </footer>
         </div>

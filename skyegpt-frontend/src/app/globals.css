@@ -79,8 +79,12 @@ body {
   animation: fadeIn 0.3s ease-in;
 }
 
-.tint-green {
-  filter: brightness(0) saturate(100%) invert(47%) sepia(50%) saturate(500%) hue-rotate(110deg) brightness(90%) contrast(90%);
+.skgpt-tint-green-active {
+  filter: brightness(0) saturate(100%) invert(39%) sepia(97%) saturate(388%) hue-rotate(90deg) brightness(97%) contrast(86%);
+}
+
+.skgpt-tint-red-active {
+  filter: brightness(0) saturate(100%) invert(27%) sepia(70%) saturate(5000%) hue-rotate(335deg) brightness(100%) contrast(100%);
 }
 
 .chatMessages pre {
