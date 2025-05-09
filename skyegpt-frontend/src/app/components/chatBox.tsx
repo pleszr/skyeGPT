@@ -19,7 +19,7 @@ const MAX_RETRIES = 2;
 const INITIAL_TEXTAREA_CONTENT_HEIGHT_PX_STR = '98px';
 const MAX_TEXTAREA_HEIGHT_PX = 98;
 
-const getChunkTextFromSSE = (chunk: any): string => {
+const getChunkTextFromSSE = (chunk: string | number | boolean | { text?: unknown; message?: string; content?: string; response?: string; } | null | undefined): string =>  {
   if (chunk === null || chunk === undefined) return '';
   if (typeof chunk === 'string') return chunk;
   if (typeof chunk === 'object') {
@@ -79,11 +79,11 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
   const textareaResize = useCallback(() => {
     const textarea = textareaRef.current;
     if (textarea) {
-      textarea.style.height = 'auto'; 
+      textarea.style.height = 'auto';
       const newScrollHeight = textarea.scrollHeight;
       textarea.style.height = `${Math.min(newScrollHeight, MAX_TEXTAREA_HEIGHT_PX)}px`;
     }
-  }, []); 
+  }, []);
 
   const sendMessage = useCallback(async () => {
     const trimmedInput = input.trim();
@@ -97,7 +97,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
     setMessages((prev) => addMessage(prev, createUserMessage(trimmedInput)));
     setInput('');
     if (textareaRef.current) {
-        textareaRef.current.value = ''; 
+        textareaRef.current.value = '';
         textareaResize();
     }
     setIsLoading(true);
@@ -111,9 +111,9 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
       return;
     }
 
-    const hiddenInstruction = "Output raw GitHub Flavored Markdown (GFM). Do not wrap the entire response in ```markdown``` fences. Single newlines will be rendered as hard line breaks. Use standard GFM for all elements (headings, lists, paragraphs, etc.), as styling is handled automatically. Do not embed any HTML tags or custom CSS. Use `\n` for newlines.";    
+    const hiddenInstruction = "Output raw GitHub Flavored Markdown (GFM). Do not wrap the entire response in ```markdown``` fences. Single newlines will be rendered as hard line breaks. Use standard GFM for all elements (headings, lists, paragraphs, etc.), as styling is handled automatically. Do not embed any HTML tags or custom CSS. Use `\n` for newlines.";
     const queryToSendToBackend = `${hiddenInstruction}\n\nUser query: ${trimmedInput}`;
-    
+
     let fullMessageTextForCurrentResponse = '';
 
     const fetchStream = async (attempt: number): Promise<boolean> => {
@@ -122,11 +122,11 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
             fullMessageTextForCurrentResponse = '';
             setMessages((prev) => addMessage(prev, createBotMessage('')));
         } else {
-             setMessages((prev) => {
+            setMessages((prev) => {
                 const newMessages = [...prev];
                 const lastMessage = newMessages[newMessages.length - 1];
                 if(lastMessage && lastMessage.sender === 'bot') {
-                    newMessages[newMessages.length - 1] = createBotMessage(''); 
+                    newMessages[newMessages.length - 1] = createBotMessage('');
                     fullMessageTextForCurrentResponse = '';
                 }
                 return newMessages;
@@ -152,7 +152,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
 
         const reader = response.body?.getReader();
         if (!reader) throw new Error('Failed to get stream reader.');
-        
+
         let buffer = '';
 
         while (true) {
@@ -180,11 +180,11 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
                 const newMsgs = [...prevMsgs];
                 const lastMsg = newMsgs[newMsgs.length - 1];
                 if (lastMsg && lastMsg.sender === 'bot' && lastMsg.text !== fullMessageTextForCurrentResponse) {
-                   newMsgs[newMsgs.length - 1] = createBotMessage(fullMessageTextForCurrentResponse);
+                    newMsgs[newMsgs.length - 1] = createBotMessage(fullMessageTextForCurrentResponse);
                 }
                 return newMsgs;
             });
-            return true; 
+            return true;
           }
 
           buffer += new TextDecoder().decode(value);
@@ -219,13 +219,20 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
               }
             }
           }
-           if (streamAbortControllerRef.current?.signal.aborted) break;
+            if (streamAbortControllerRef.current?.signal.aborted) break;
         }
-        return true; 
-      } catch (error: any) {
-        if (error.name === 'AbortError' || error.message === "Stream aborted") {
-          console.log("Fetch aborted by new request.");
-          return true; 
+        return true;
+      } catch (error: unknown)  {
+        if (
+          typeof error === 'object' &&
+          error !== null &&
+          ('name' in error || 'message' in error)
+        ) {
+          const errObj = error as { name?: string; message?: string };
+          if (errObj.name === 'AbortError' || errObj.message === "Stream aborted") {
+            console.log("Fetch aborted by new request.");
+            return true;
+          }
         }
         console.error(`Send message error (attempt ${attempt + 1}/${MAX_RETRIES + 1}):`, error);
         setMessages((prev) => {
@@ -233,7 +240,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
           const lastMessage = newMessages[newMessages.length - 1];
           if (lastMessage?.sender === 'bot') {
             newMessages[newMessages.length - 1] = createBotMessage(
-                 `Error: Could not get a response. ${error instanceof Error ? error.message : ''}${attempt < MAX_RETRIES ? '. Retrying...' : '. Please try again later.'}`
+                `Error: Could not get a response. ${error instanceof Error ? error.message : String(error)}${attempt < MAX_RETRIES ? '. Retrying...' : '. Please try again later.'}`
             );
             fullMessageTextForCurrentResponse = lastMessage.text;
           }
@@ -258,7 +265,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
     }
 
     setIsLoading(false);
-  }, [input, isLoading, setMessages, sendTechnicalMessage, askEndpoint, textareaResize, scrollToBottom]);
+  }, [input, isLoading, setMessages, sendTechnicalMessage, askEndpoint, textareaResize]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -275,8 +282,8 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
     if (textarea) {
       textarea.focus();
       textarea.addEventListener('input', textareaResize);
-      textarea.style.height = INITIAL_TEXTAREA_CONTENT_HEIGHT_PX_STR; 
-      textareaResize(); 
+      textarea.style.height = INITIAL_TEXTAREA_CONTENT_HEIGHT_PX_STR;
+      textareaResize();
     }
     return () => {
       if (textarea) {
@@ -286,7 +293,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
           streamAbortControllerRef.current.abort();
       }
     };
-  }, [textareaResize]); 
+  }, [textareaResize]);
 
   useEffect(() => {
     scrollToBottom();
@@ -439,7 +446,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
         )}
         {messages.map((msg, index) => (
           <MemoizedMessage
-            key={(msg as any).id || index}
+            key={index}
             msg={msg}
             index={index}
             isLastBotMessage={msg.sender === 'bot' && index === messages.length -1 && !isLoading && !streamAbortControllerRef.current?.signal.aborted}
@@ -460,9 +467,9 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
             </div>
           </div>
         )}
-         {isLoading && messages.length === 0 && (
+          {isLoading && messages.length === 0 && (
             <div className="h-full flex items-center justify-center">
-                 <div className="animate-pulse flex space-x-2">
+                <div className="animate-pulse flex space-x-2">
                     <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
                     <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
                     <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
@@ -472,7 +479,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
       </div>
       <div className="flex items-center p-2 sm:p-3 gap-2 sm:gap-3 border-t border-gray-200 bg-white shrink-0">
         <div
-          className="flex-1 bg-gray-100 rounded-[20px] transition-all duration-200 shadow-sm flex items-end" 
+          className="flex-1 bg-gray-100 rounded-[20px] transition-all duration-200 shadow-sm flex items-end"
         >
           <textarea
             ref={textareaRef}
@@ -578,15 +585,15 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
             aria-modal="true"
           >
             <div className="w-full flex justify-between items-center">
-                 <span className="w-6"></span>
-                 <h2 id="confirmation-modal-header" className="text-lg font-semibold text-gray-800 text-center flex-1">{modalHeader}</h2>
-                <button
-                    onClick={handleConfirmationModalClose}
-                    className="text-gray-500 hover:text-gray-700 text-2xl leading-none"
-                    aria-label="Close confirmation"
-                >
-                    &times;
-                </button>
+                <span className="w-6"></span>
+                <h2 id="confirmation-modal-header" className="text-lg font-semibold text-gray-800 text-center flex-1">{confirmationMessage}</h2>
+              <button
+                  onClick={handleConfirmationModalClose}
+                  className="text-gray-500 hover:text-gray-700 text-2xl leading-none"
+                  aria-label="Close confirmation"
+              >
+                  &times;
+              </button>
             </div>
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -631,18 +638,19 @@ const MemoizedMessage = memo(
 
     return (
       <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'}`}>
-        <div
-          className={`p-4 sm:p-5 md:p-6 rounded-[30px] max-w-[90%] sm:max-w-[80%] transition-opacity duration-300 shadow-sm
-            ${ isUser
-                ? 'bg-gradient-to-r from-[#1ea974] to-[#17a267] self-end text-white rounded-br-[0]'
-                : 'bg-[#ececec] text-black self-start rounded-bl-[0]'
-            }`}
-        >
-          {isUser ? (
+        {isUser ? (
+          <div
+            className={`p-4 sm:p-5 md:p-6 rounded-[30px] max-w-[90%] sm:max-w-[80%] transition-opacity duration-300 shadow-sm bg-gradient-to-r from-[#1ea974] to-[#17a267] self-end text-white rounded-br-[0]`}
+          >
             <div className="text-sm sm:text-base whitespace-pre-wrap break-words">{msg.text}</div>
-          ) : (
-            <div className="prose prose-sm sm:prose-base max-w-none text-black break-words">
-               <ReactMarkdown
+          </div>
+        ) : (
+          <div className="self-start flex flex-col w-auto max-w-[90%] sm:max-w-[80%]">
+            <div
+              className={`p-4 sm:p-5 md:p-6 rounded-[30px] transition-opacity duration-300 shadow-sm bg-[#ececec] text-black rounded-bl-[0]`}
+            >
+              <div className="prose prose-sm sm:prose-base max-w-none text-black break-words">
+                <ReactMarkdown
                   remarkPlugins={[remarkGfm, remarkBreaks]}
                   components={{
                     ol: ({ children }) => <ol className="pl-6 sm:pl-8 list-decimal">{children}</ol>,
@@ -670,50 +678,49 @@ const MemoizedMessage = memo(
                 >
                   {msg.text.replace(/\\n/g, '\n')}
                 </ReactMarkdown>
+              </div>
             </div>
-          )}
-        </div>
-        {msg.sender === 'bot' && isLastBotMessage && msg.text.trim() !== '' && (
-          <div className="flex items-center gap-2 justify-end mt-2 w-full self-start max-w-[90%] sm:max-w-[80%]">
-            <button
-              onClick={onPromptFeedback}
-              className="text-xs text-gray-600 hover:text-gray-900 hover:underline transition-colors duration-200"
-              title="Provide detailed feedback"
-              aria-label="Provide detailed feedback for this message"
-            >
-              GIVE FEEDBACK
-            </button>
-            {(['thumbs-up', 'thumbs-down'] as const).map((ratingType) => (
-              <button
-                  key={ratingType}
-                  onClick={() => onRate(ratingType)}
-                  className={`transition-all duration-200 transform hover:scale-125 rounded-full
-                      ${ feedbackType === ratingType ? 'opacity-100' : 'opacity-60 hover:opacity-90'}
-                      ${ feedbackType === ratingType && ratingType === 'thumbs-up' ? 'bg-green-100' : ''}
-                      ${ feedbackType === ratingType && ratingType === 'thumbs-down' ? 'bg-red-100' : ''}
-                  `}
-                  title={ratingType === 'thumbs-up' ? "Helpful" : "Not helpful"}
-                  aria-label={ratingType === 'thumbs-up' ? "Mark as helpful" : "Mark as not helpful"}
-                  aria-pressed={feedbackType === ratingType}
-                  aria-describedby={currentRatingError ? `rating-error-${index}` : undefined}
-              >
-                  <Image
+
+            {isLastBotMessage && msg.text.trim() !== '' && (
+              <div className="flex items-center gap-2 justify-end mt-2">
+                <button
+                  onClick={onPromptFeedback}
+                  className="text-xs text-gray-600 hover:text-gray-900 hover:underline transition-colors duration-200"
+                  title="Provide detailed feedback"
+                  aria-label="Provide detailed feedback for this message"
+                >
+                  GIVE FEEDBACK
+                </button>
+                {(['thumbs-up', 'thumbs-down'] as const).map((ratingType) => (
+                  <button
+                    key={ratingType}
+                    onClick={() => onRate(ratingType)}
+                    className={`transition-all duration-200 transform hover:scale-125 rounded-full ${feedbackType === ratingType ? 'opacity-100' : 'opacity-60 hover:opacity-90'} ${feedbackType === ratingType && ratingType === 'thumbs-up' ? 'bg-green-100' : ''} ${feedbackType === ratingType && ratingType === 'thumbs-down' ? 'bg-red-100' : ''}`}
+                    title={ratingType === 'thumbs-up' ? "Helpful" : "Not helpful"}
+                    aria-label={ratingType === 'thumbs-up' ? "Mark as helpful" : "Mark as not helpful"}
+                    aria-pressed={feedbackType === ratingType}
+                    aria-describedby={currentRatingError ? `rating-error-${index}` : undefined}
+                  >
+                    <Image
                       src={ratingType === 'thumbs-up' ? "/tup.png" : "/tdown.png"}
                       alt={ratingType === 'thumbs-up' ? "Thumbs Up" : "Thumbs Down"}
                       width={16}
                       height={16}
-                      className={`object-contain ${ feedbackType === ratingType && ratingType === 'thumbs-up' ? 'skgpt-tint-green-active' : ''} ${ feedbackType === ratingType && ratingType === 'thumbs-down' ? 'skgpt-tint-red-active' : ''}`}
-                  />
-              </button>
-            ))}
-          </div>
-        )}
-        {msg.sender === 'bot' && isLastBotMessage && currentRatingError && (
-            <div className="w-full flex justify-end mt-1 self-start max-w-[90%] sm:max-w-[80%]">
+                      className={`object-contain ${feedbackType === ratingType && ratingType === 'thumbs-up' ? 'skgpt-tint-green-active' : ''} ${feedbackType === ratingType && ratingType === 'thumbs-down' ? 'skgpt-tint-red-active' : ''}`}
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {isLastBotMessage && currentRatingError && (
+              <div className="flex justify-end mt-1 w-full">
                 <p id={`rating-error-${index}`} className="text-red-500 text-xs" aria-live="polite">
-                    {currentRatingError}
+                  {currentRatingError}
                 </p>
-            </div>
+              </div>
+            )}
+          </div>
         )}
       </div>
     );
