@@ -11,3 +11,5 @@ markdownify==0.14.1
 deepeval==2.6.4
 sseclient-py==1.8.0
 pydantic-ai[logfire]==0.1.2
+pymongo==4.12.1
+dnspython<3.0.0,>=1.16.0
