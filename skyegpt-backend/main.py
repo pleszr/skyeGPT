@@ -6,6 +6,7 @@ from apis import setup_apis_router  # noqa: E402
 from apis import evaluator_apis_router  # noqa: E402
 from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 import signal  # noqa: E402
+from database.mongo_specific import mongo_client
 
 
 app = FastAPI(

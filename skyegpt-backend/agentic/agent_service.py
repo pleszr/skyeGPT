@@ -118,5 +118,5 @@ class AgentService:
         """
         Adds new messages from the agent run to the conversation history store.
         """
-        new_messages = Conversation(run.result.new_messages())
+        new_messages = Conversation(content=run.result.new_messages())
         await self.store_manager.extend_conversation_history(conversation_id, new_messages)

@@ -3,6 +3,7 @@ from common import logger, constants
 from typing import Dict, List, Any
 from common.decorators import handle_store_errors
 from agentic.conversation import Conversation
+from database import documentdb_client
 
 MAX_CONVERSATION_LENGTH = constants.MAX_CONVERSATION_LENGTH
 
@@ -82,6 +83,10 @@ class StoreManager:
                 self._conversation_store[original_conversation_id] = Conversation()
             conversation = self._conversation_store[original_conversation_id]
             conversation.extend(new_conversation)
+            documentdb_client.add_document_to_collection(
+                'skyegpt',
+                'conversations',
+                conversation.dict())
 
     @handle_store_errors
     async def get_conversation_context(self, conversation_id) -> List[Dict[str, Any]]:

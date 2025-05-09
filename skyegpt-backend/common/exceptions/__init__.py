@@ -2,3 +2,4 @@ from .collection_not_found_error import CollectionNotFoundError
 from .store_manager_exception import StoreManagementException
 from .response_generation_error import ResponseGenerationError
 from .usage_limit_exceeded import UsageLimitExceededError
+from .vector_db_error import VectorDBError

@@ -1,17 +1,19 @@
 from pydantic_ai.messages import ModelResponse, ModelRequest
-from typing import List
+from typing import List, Dict
 from common import constants, logger
+import uuid
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
 
 
 @dataclass
 class Conversation:
+    _id: uuid.UUID = field(default_factory=uuid.uuid4)
+    content: List[ModelRequest | ModelResponse] = field(default_factory=list)
     """
     Represents one round of conversation with the agent model.
     Includes, instructions, user prompt, tool calls, tool results, generated response
     """
-    content: List[ModelRequest | ModelResponse] = field(default_factory=list)
 
     def copy(self) -> 'Conversation':
         """
@@ -21,6 +23,9 @@ class Conversation:
 
     def list(self) -> 'List':
         return list(self.content)
+
+    def dict(self) -> Dict:
+        return asdict(self)
 
     def extend(self, conversation: 'Conversation') -> None:
         """
