@@ -7,6 +7,9 @@ import ReactMarkdown from 'react-markdown';
 import remarkBreaks from 'remark-breaks';
 import { debounce } from 'lodash';
 import remarkGfm from 'remark-gfm';
+import { backendHost } from '@/app/utils/sharedConfig';
+
+
 
 export interface ChatBoxProps {
   askEndpoint: string;
@@ -18,6 +21,8 @@ export interface ChatBoxProps {
 const MAX_RETRIES = 2;
 const INITIAL_TEXTAREA_CONTENT_HEIGHT_PX_STR = '98px';
 const MAX_TEXTAREA_HEIGHT_PX = 98;
+
+type FeedbackVote = 'positive' | 'negative' | 'not_specified';
 
 const getChunkTextFromSSE = (chunk: string | number | boolean | { text?: unknown; message?: string; content?: string; response?: string; } | null | undefined): string =>  {
   if (chunk === null || chunk === undefined) return '';
@@ -54,8 +59,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
   const wasNearBottomRef = useRef<boolean>(true);
   const streamAbortControllerRef = useRef<AbortController | null>(null);
 
-  const submitFeedbackEndpoint = process.env.NEXT_PUBLIC_SKYEGPT_SUBMIT_FEEDBACK_ENDPOINT || '/mock/api/submitFeedback';
-  const submitRatingEndpoint = process.env.NEXT_PUBLIC_SKYEGPT_SUBMIT_RATING_ENDPOINT || '/mock/api/submitRating';
+  const conversationFeedbackEndpointTemplate = `${backendHost}/ask/{conversation}/feedback`;
 
   const debouncedScrollToBottom = useMemo(() => debounce(() => {
     if (chatContainerRef.current) {
@@ -303,32 +307,41 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
   const debouncedHandleRating = useMemo(
     () =>
       debounce(async (messageIndex: number, rating: 'thumbs-up' | 'thumbs-down') => {
-        const currentRating = feedbackState[messageIndex];
-        const newRating = currentRating === rating ? null : rating;
-        const previousRatingState = feedbackState[messageIndex];
+        const currentLocalRating = feedbackState[messageIndex];
+        const newLocalRating = currentLocalRating === rating ? null : rating;
+        const previousLocalRatingState = feedbackState[messageIndex];
 
-        setFeedbackState((prev) => ({ ...prev, [messageIndex]: newRating }));
+        setFeedbackState((prev) => ({ ...prev, [messageIndex]: newLocalRating }));
         setRatingError((prev) => ({ ...prev, [messageIndex]: '' }));
 
         const conversationId = localStorage.getItem('chroma_conversation_id');
         if (!conversationId) {
             console.error("Cannot submit rating: chroma_conversation_id is missing.");
             setRatingError((prev) => ({ ...prev, [messageIndex]: 'Session ID missing. Cannot submit rating.' }));
-            setFeedbackState((prev) => ({ ...prev, [messageIndex]: previousRatingState }));
-            return;
-        }
-        if (newRating === null) {
+            setFeedbackState((prev) => ({ ...prev, [messageIndex]: previousLocalRatingState }));
             return;
         }
 
+        if (newLocalRating === null) {
+            return;
+        }
+
+        let vote: FeedbackVote;
+        if (newLocalRating === 'thumbs-up') {
+          vote = 'positive';
+        } else {
+          vote = 'negative';
+        }
+
+        const actualEndpoint = conversationFeedbackEndpointTemplate.replace('{conversation}', conversationId);
+
         try {
-          const response = await fetch(submitRatingEndpoint, {
+          const response = await fetch(actualEndpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              message_index: messageIndex,
-              rating: newRating,
-              chroma_conversation_id: conversationId,
+              vote: vote,
+              comment: "",
             }),
           });
 
@@ -338,7 +351,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
           }
         } catch (error) {
           console.error('Error submitting rating:', error);
-          setFeedbackState((prev) => ({ ...prev, [messageIndex]: previousRatingState }));
+          setFeedbackState((prev) => ({ ...prev, [messageIndex]: previousLocalRatingState }));
           const errorMessage =
             error instanceof Error && error.message.includes('Failed to fetch')
               ? 'Failed to connect to the server.'
@@ -346,7 +359,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
           setRatingError((prev) => ({ ...prev, [messageIndex]: errorMessage }));
         }
       }, 300),
-    [submitRatingEndpoint, feedbackState]
+    [conversationFeedbackEndpointTemplate, feedbackState]
   );
 
   const handleFeedbackPromptClick = useCallback((messageIndex: number) => {
@@ -365,7 +378,11 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
   }, []);
 
   const handleFeedbackSubmit = useCallback(async () => {
-    if (activeMessageIndex === null || !feedbackText.trim()) {
+    if (activeMessageIndex === null) {
+        setSubmitError('No message selected for feedback.');
+        return;
+    }
+    if (!feedbackText.trim()) {
       setFeedbackError('Feedback cannot be empty.');
       return;
     }
@@ -378,19 +395,24 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
         setSubmitError('Session ID missing. Cannot submit feedback.');
         return;
     }
-    const rating = feedbackState[activeMessageIndex] || null;
 
-    const tempSubmittedFeedbackText = feedbackText;
+    let vote: FeedbackVote = 'not_specified';
+    const currentRating = feedbackState[activeMessageIndex];
+    if (currentRating === 'thumbs-up') {
+      vote = 'positive';
+    } else if (currentRating === 'thumbs-down') {
+      vote = 'negative';
+    }
+
+    const actualEndpoint = conversationFeedbackEndpointTemplate.replace('{conversation}', conversationId);
 
     try {
-      const response = await fetch(submitFeedbackEndpoint, {
+      const response = await fetch(actualEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message_index: activeMessageIndex,
-          feedback_text: tempSubmittedFeedbackText,
-          rating,
-          chroma_conversation_id: conversationId,
+          vote: vote,
+          comment: feedbackText.trim(),
         }),
       });
 
@@ -409,7 +431,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
           : (error instanceof Error ? error.message : 'Error submitting feedback.');
       setSubmitError(errorMessage);
     }
-  }, [activeMessageIndex, feedbackText, feedbackState, submitFeedbackEndpoint]);
+  }, [activeMessageIndex, feedbackText, feedbackState, conversationFeedbackEndpointTemplate]);
 
   const handleConfirmationModalClose = useCallback(() => {
     setIsConfirmationModalOpen(false);
@@ -429,7 +451,10 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
 
   const confirmationMessage = useMemo(() => {
     if (activeMessageIndex === null) return 'Feedback Sent!';
-    return feedbackState[activeMessageIndex] === 'thumbs-down' ? 'Issue Report Sent!' : 'Feedback Sent!';
+    const currentRating = feedbackState[activeMessageIndex];
+     if (currentRating === 'thumbs-down') return 'Issue Report Sent!';
+     return 'Feedback Sent!';
+
   }, [activeMessageIndex, feedbackState]);
 
   return (

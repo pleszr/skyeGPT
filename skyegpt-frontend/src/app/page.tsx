@@ -3,11 +3,11 @@
 import Image from 'next/image';
 import React, { useState, useEffect } from 'react';
 import ChatBox from '@/app/components/chatBox';
+import { backendHost } from '@/app/utils/sharedConfig';
 import { Message } from '@/app/utils/messageManager';
 
 const HomePage = () => {
   const [chromaMessages, setChromaMessages] = useState<Message[]>([]);
-  const backendHost = process.env.NEXT_PUBLIC_SKYEGPT_BACKEND_HOST || 'http://localhost:8000';
 
   const createConversation = async () => {
     try {
