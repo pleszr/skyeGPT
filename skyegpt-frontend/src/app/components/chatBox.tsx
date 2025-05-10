@@ -460,7 +460,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
   return (
     <div className={`flex flex-col h-full ${className || ''}`}>
       <div
-        className="chatMessages flex flex-col gap-6 p-4 sm:p-6 md:p-8 overflow-y-auto scroll-smooth bg-white rounded-[20px] h-[60vh] max-h-[60vh] min-h-0"
+        className="chatMessages flex flex-col gap-6 p-4 sm:p-6 md:p-8 overflow-y-auto scroll-smooth bg-white flex-shrink-0  rounded-[20px] h-[60vh] max-h-[90vh] min-h-0"
         ref={chatContainerRef}
       >
         {messages.length === 0 && !isLoading && (
