@@ -24,15 +24,18 @@ type FeedbackVote = 'positive' | 'negative' | 'not_specified';
 const getChunkTextFromSSE = (chunk: string | number | boolean | { text?: unknown; message?: string; content?: string; response?: string; } | null | undefined): string => {
   if (chunk === null || chunk === undefined) return '';
   if (typeof chunk === 'string') {
-    if (/^\s*\d+\.\s*$/.test(chunk)) return '';
-    return chunk.replace(/\n\n+/g, '\n');
+    if (/^\s*\d+\.\s*$/.test(chunk)) return ''; 
+    return chunk
+      .replace(/\n\n+/g, '\n') 
+      .replace(/\n\s*\n/g, '\n') 
+      .replace(/^(\s*[-*])\s+/gm, '  $1 ');
   }
   if (typeof chunk === 'object') {
-    if (typeof chunk.text === 'string') return chunk.text.replace(/\n\n+/g, '\n');
-    if (typeof chunk.message === 'string') return chunk.message.replace(/\n\n+/g, '\n');
-    if (typeof chunk.content === 'string') return chunk.content.replace(/\n\n+/g, '\n');
-    if (typeof chunk.response === 'string') return chunk.response.replace(/\n\n+/g, '\n');
-    if (chunk.text !== undefined) return String(chunk.text).replace(/\n\n+/g, '\n');
+    if (typeof chunk.text === 'string') return chunk.text.replace(/\n\n+/g, '\n').replace(/\n\s*\n/g, '\n').replace(/^(\s*[-*])\s+/gm, '  $1 ');
+    if (typeof chunk.message === 'string') return chunk.message.replace(/\n\n+/g, '\n').replace(/\n\s*\n/g, '\n').replace(/^(\s*[-*])\s+/gm, '  $1 ');
+    if (typeof chunk.content === 'string') return chunk.content.replace(/\n\n+/g, '\n').replace(/\n\s*\n/g, '\n').replace(/^(\s*[-*])\s+/gm, '  $1 ');
+    if (typeof chunk.response === 'string') return chunk.response.replace(/\n\n+/g, '\n').replace(/\n\s*\n/g, '\n').replace(/^(\s*[-*])\s+/gm, '  $1 ');
+    if (chunk.text !== undefined) return String(chunk.text).replace(/\n\n+/g, '\n').replace(/\n\s*\n/g, '\n').replace(/^(\s*[-*])\s+/gm, '  $1 ');
     return '';
   }
   if (typeof chunk === 'number' || typeof chunk === 'boolean') {
@@ -671,14 +674,20 @@ const MemoizedMessage = memo(
     const isUser = msg.sender === 'user';
     
     const markdownContent = msg.text
-      .replace(/\\n/g, '\n') 
-      .replace(/##(\d+)/g, '## $1')
-      // .replace(/\n\n+(\d+\.\s+)/g, '\n$1') 
+      .replace(/\\n/g, '\n')
+      .replace(/##(\d+)/g, '## $1') 
+      // .replace(/\n\n+(\d+\.\s+)/g, '\n$1')
       // .replace(/(\d+\.\s+[^\n]*)\n\n+(\s*[-*]\s+)/g, '$1\n$2') 
+      // .replace(/(\d+\.\s+[^\n]*)\n\n+(\d+\.\s+)/g, '$1\n$2') 
       // .replace(/^\s*(\d+)\.\s*$/gm, '$1. ') 
-      // .replace(/^\s*(\d+)\.\s+/gm, '$1. ');
+      // .replace(/^\s*(\d+)\.\s+/gm, '$1. ') 
+      // .replace(/(\d+\.\s+[^\n]*)\n\s*(\d+\.\s+)/g, '$1\n$2')
+      // .replace(/^(\s*[-*])\s+/gm, '  $1 ')
+      // .replace(/^(\s*\d+\.\s+[^\n]*)\n\s*([-*]\s+)/gm, '$1\n  $2')
+      // .replace(/\n\n+(##\s+)/g, '\n$1') 
+      // .replace(/\n\s*\n+(\s*[-*]\s+)/g, '\n$1');
 
-
+    
     return (
       <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'}`}>
         {isUser ? (
@@ -696,7 +705,16 @@ const MemoizedMessage = memo(
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
                   components={{
-                    ol: ({ children }) => <ol className="pl-6 sm:pl-8 list-decimal">{children}</ol>,
+                    ol: ({ children, ...props }) => {
+                      const mergedChildren = React.Children.toArray(children).reduce<React.ReactNode[]>((acc, child) => {
+                        if (React.isValidElement(child) && child.type === 'li') {
+                          acc.push(child);
+                        }
+                        return acc;
+                      }, []);
+                      console.log(`Rendered <ol> children (Index: ${index}):`, mergedChildren);
+                      return <ol className="pl-6 sm:pl-8 list-decimal" {...props}>{mergedChildren}</ol>;
+                    },
                     ul: ({ children }) => <ul className="pl-6 sm:pl-8 list-disc">{children}</ul>,
                     p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
                     h1: ({ children }) => <h1 className="text-2xl sm:text-3xl font-bold my-3 text-black">{children}</h1>,
@@ -711,7 +729,6 @@ const MemoizedMessage = memo(
                 </ReactMarkdown>
               </div>
             </div>
-
             {showFeedbackControls && msg.text.trim() !== '' && (
               <div className="flex items-center gap-2 justify-end mt-2">
                 <button
@@ -743,7 +760,6 @@ const MemoizedMessage = memo(
                 ))}
               </div>
             )}
-
             {showFeedbackControls && currentRatingError && (
               <div className="flex justify-end mt-1 w-full">
                 <p id={`rating-error-${index}`} className="text-red-500 text-xs" aria-live="polite">
@@ -756,7 +772,7 @@ const MemoizedMessage = memo(
       </div>
     );
   },
-(prevProps, nextProps) => {
+  (prevProps, nextProps) => {
     return (
       prevProps.msg.text === nextProps.msg.text &&
       prevProps.msg.sender === nextProps.msg.sender &&
@@ -767,7 +783,6 @@ const MemoizedMessage = memo(
     );
   }
 );
-
 MemoizedMessage.displayName = 'MemoizedMessage';
 
 export default memo(ChatBox);
