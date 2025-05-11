@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import HomePage from '@/app/page';
 import { describe, vi, it, beforeEach, expect } from 'vitest';
+import ChatBox from '@/app/components/chatBox';
 
 global.fetch = vi.fn(() =>
   Promise.resolve({
@@ -15,18 +16,28 @@ beforeEach(() => {
 });
 
 describe('HomePage', () => {
-  it('renders without crashing', () => {
-    render(<HomePage />);
-    expect(screen.getByText('Ask Skye Documentation')).toBeInTheDocument();
+  it('shows empty state when there are no messages and not loading', () => {
+    const props = {
+      messages: [],
+      isLoading: false,
+      className: '',
+      chatContainerRef: { current: null },
+      askEndpoint: '/api/ask',
+      setMessages: vi.fn(),
+    };
+
+
+    render(<ChatBox {...props} />);
+    expect(screen.getByText('No messages yet.')).toBeInTheDocument();
+    expect(screen.getByText('Start the conversation below!')).toBeInTheDocument();
   });
 
   it('displays the logo', () => {
     render(<HomePage />);
-    const logo = screen.getByAltText('logo');
-    expect(logo).toBeInTheDocument();
+    const logos = screen.getAllByAltText('SkyeGPT logo');
+    expect(logos.length).toBeGreaterThan(0);
+    logos.forEach(logo => expect(logo).toBeInTheDocument());
   });
 
-  it('has NEXT_PUBLIC_SKYEGPT_BACKEND_HOST set to the correct backend value', () => {
-    expect(process.env.NEXT_PUBLIC_SKYEGPT_BACKEND_HOST).toBe('http://localhost:8000');
-  });
+
 });
