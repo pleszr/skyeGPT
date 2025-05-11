@@ -23,7 +23,6 @@ This README explains how to set up and run the SkyeGPT frontend.
   - [layout.tsx](#layouttsx)
   - [page.tsx](#pagetsx)
 - [Notes](#notes)
-- [Credits](#credits)
 
 
 ## Build Options
