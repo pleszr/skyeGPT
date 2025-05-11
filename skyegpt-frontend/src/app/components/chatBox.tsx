@@ -21,21 +21,15 @@ const MAX_TEXTAREA_HEIGHT_PX = 98;
 
 type FeedbackVote = 'positive' | 'negative' | 'not_specified';
 
-const getChunkTextFromSSE = (chunk: string | number | boolean | { text?: unknown; message?: string; content?: string; response?: string; } | null | undefined): string => {
+const getChunkTextFromSSE = (chunk: string | number | boolean | { text?: unknown; message?: string; content?: string; response?: string; } | null | undefined): string =>  {
   if (chunk === null || chunk === undefined) return '';
-  if (typeof chunk === 'string') {
-    if (/^\s*\d+\.\s*$/.test(chunk)) return ''; 
-    return chunk
-      .replace(/\n\n+/g, '\n') 
-      .replace(/\n\s*\n/g, '\n') 
-      .replace(/^(\s*[-*])\s+/gm, '  $1 ');
-  }
+  if (typeof chunk === 'string') return chunk;
   if (typeof chunk === 'object') {
-    if (typeof chunk.text === 'string') return chunk.text.replace(/\n\n+/g, '\n').replace(/\n\s*\n/g, '\n').replace(/^(\s*[-*])\s+/gm, '  $1 ');
-    if (typeof chunk.message === 'string') return chunk.message.replace(/\n\n+/g, '\n').replace(/\n\s*\n/g, '\n').replace(/^(\s*[-*])\s+/gm, '  $1 ');
-    if (typeof chunk.content === 'string') return chunk.content.replace(/\n\n+/g, '\n').replace(/\n\s*\n/g, '\n').replace(/^(\s*[-*])\s+/gm, '  $1 ');
-    if (typeof chunk.response === 'string') return chunk.response.replace(/\n\n+/g, '\n').replace(/\n\s*\n/g, '\n').replace(/^(\s*[-*])\s+/gm, '  $1 ');
-    if (chunk.text !== undefined) return String(chunk.text).replace(/\n\n+/g, '\n').replace(/\n\s*\n/g, '\n').replace(/^(\s*[-*])\s+/gm, '  $1 ');
+    if (typeof chunk.text === 'string') return chunk.text;
+    if (typeof chunk.message === 'string') return chunk.message;
+    if (typeof chunk.content === 'string') return chunk.content;
+    if (typeof chunk.response === 'string') return chunk.response;
+    if (chunk.text !== undefined) return String(chunk.text);
     return '';
   }
   if (typeof chunk === 'number' || typeof chunk === 'boolean') {
