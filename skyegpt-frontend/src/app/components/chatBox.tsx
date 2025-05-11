@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback, memo, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, memo, useMemo, useLayoutEffect } from 'react';
 import Image from 'next/image';
 import { addMessage, createUserMessage, createBotMessage, Message } from '@/app/utils/messageManager';
 import ReactMarkdown from 'react-markdown';
@@ -8,8 +8,6 @@ import remarkBreaks from 'remark-breaks';
 import { debounce } from 'lodash';
 import remarkGfm from 'remark-gfm';
 import { backendHost } from '@/app/utils/sharedConfig';
-
-
 
 export interface ChatBoxProps {
   askEndpoint: string;
@@ -41,7 +39,6 @@ const getChunkTextFromSSE = (chunk: string | number | boolean | { text?: unknown
   return '';
 };
 
-
 const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, className }) => {
   const [input, setInput] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -68,7 +65,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
         behavior: 'smooth',
       });
     }
-  }, 100), []);
+  }, 50), []);
 
   const scrollToBottom = useCallback(() => {
     if (wasNearBottomRef.current) {
@@ -247,6 +244,10 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
                 `Error: Could not get a response. ${error instanceof Error ? error.message : String(error)}${attempt < MAX_RETRIES ? '. Retrying...' : '. Please try again later.'}`
             );
             fullMessageTextForCurrentResponse = lastMessage.text;
+          } else {
+             addMessage(newMessages, createBotMessage(
+                `Error: Could not get a response. ${error instanceof Error ? error.message : String(error)}${attempt < MAX_RETRIES ? '. Retrying...' : '. Please try again later.'}`
+             ));
           }
           return newMessages;
         });
@@ -299,10 +300,20 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
     };
   }, [textareaResize]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
+  useEffect(() => {
+    if (!isLoading && textareaRef.current && !isFeedbackModalOpen && !isConfirmationModalOpen) {
+      const focusTimeoutId = setTimeout(() => {
+        if (textareaRef.current && document.activeElement !== textareaRef.current) {
+          textareaRef.current.focus();
+        }
+      }, 50);
+      return () => clearTimeout(focusTimeoutId);
+    }
+  }, [isLoading, isFeedbackModalOpen, isConfirmationModalOpen]);
 
   const debouncedHandleRating = useMemo(
     () =>
@@ -403,7 +414,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
     } else if (currentRating === 'thumbs-down') {
       vote = 'negative';
     }
-
+    
     const actualEndpoint = conversationFeedbackEndpointTemplate.replace('{conversation}', conversationId);
 
     try {
@@ -438,7 +449,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
     setActiveMessageIndex(null);
     setFeedbackText('');
   }, []);
-
+  
   const modalHeader = useMemo(() => {
     if (activeMessageIndex === null) return 'Share Your Feedback';
     return feedbackState[activeMessageIndex] === 'thumbs-down' ? 'Report an Issue' : 'Share Your Feedback';
@@ -452,15 +463,14 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
   const confirmationMessage = useMemo(() => {
     if (activeMessageIndex === null) return 'Feedback Sent!';
     const currentRating = feedbackState[activeMessageIndex];
-     if (currentRating === 'thumbs-down') return 'Issue Report Sent!';
-     return 'Feedback Sent!';
-
+      if (currentRating === 'thumbs-down') return 'Issue Report Sent!';
+      return 'Feedback Sent!';
   }, [activeMessageIndex, feedbackState]);
 
   return (
     <div className={`flex flex-col h-full ${className || ''}`}>
       <div
-        className="chatMessages flex flex-col gap-6 p-4 sm:p-6 md:p-8 overflow-y-auto scroll-smooth bg-white flex-shrink-0  rounded-[20px] h-[60vh] max-h-[90vh] min-h-0"
+        className="chatMessages flex flex-col gap-6 p-4 sm:p-6 md:p-8 overflow-y-auto scroll-smooth bg-white flex-shrink-0 rounded-[20px] h-[60vh] max-h-[90vh] min-h-0"
         ref={chatContainerRef}
       >
         {messages.length === 0 && !isLoading && (
@@ -474,7 +484,10 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
             key={index}
             msg={msg}
             index={index}
-            isLastBotMessage={msg.sender === 'bot' && index === messages.length -1 && !isLoading && !streamAbortControllerRef.current?.signal.aborted}
+            showFeedbackControls={
+              msg.sender === 'bot' &&
+              (index < messages.length - 1 || (index === messages.length - 1 && !isLoading))
+            }
             feedbackType={feedbackState[index]}
             currentRatingError={ratingError[index]}
             onRate={(rating) => debouncedHandleRating(index, rating)}
@@ -518,6 +531,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
             onInput={textareaResize}
             placeholder="Write your question here..."
             disabled={isLoading}
+            aria-label="Chat input"
           />
         </div>
         <button
@@ -607,9 +621,10 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
             className="bg-white rounded-[20px] shadow-xl p-6 w-full max-w-md flex flex-col gap-4 items-center"
             role="alertdialog"
             aria-labelledby="confirmation-modal-header"
+            aria-describedby="confirmation-modal-description"
             aria-modal="true"
           >
-            <div className="w-full flex justify-between items-center">
+             <div className="w-full flex justify-between items-center">
                 <span className="w-6"></span>
                 <h2 id="confirmation-modal-header" className="text-lg font-semibold text-gray-800 text-center flex-1">{confirmationMessage}</h2>
               <button
@@ -631,15 +646,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
             >
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
             </svg>
-            <p className="text-xl font-bold text-gray-800 text-center">{confirmationMessage}</p>
-            <p className="text-center text-gray-600">Thank you for your input!</p>
-            <button
-                onClick={handleConfirmationModalClose}
-                className="mt-2 px-6 py-2 rounded-full text-white bg-[#1ea974] hover:bg-[#17a267] transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#1ea974] focus:ring-offset-2"
-                aria-label="Close confirmation"
-            >
-                Close
-            </button>
+            <p id="confirmation-modal-description" className="text-center text-gray-600">Thank you for your input!</p>
           </div>
         </div>
       )}
@@ -650,7 +657,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
 interface MemoizedMessageProps {
   msg: Message;
   index: number;
-  isLastBotMessage: boolean;
+  showFeedbackControls: boolean;
   feedbackType: 'thumbs-up' | 'thumbs-down' | null;
   currentRatingError?: string;
   onRate: (rating: 'thumbs-up' | 'thumbs-down') => void;
@@ -658,7 +665,7 @@ interface MemoizedMessageProps {
 }
 
 const MemoizedMessage = memo(
-  ({ msg, index, isLastBotMessage, feedbackType, currentRatingError, onRate, onPromptFeedback }: MemoizedMessageProps) => {
+  ({ msg, index, showFeedbackControls, feedbackType, currentRatingError, onRate, onPromptFeedback }: MemoizedMessageProps) => {
     const isUser = msg.sender === 'user';
 
     return (
@@ -680,24 +687,24 @@ const MemoizedMessage = memo(
                   components={{
                     ol: ({ children }) => <ol className="pl-6 sm:pl-8 list-decimal">{children}</ol>,
                     ul: ({ children }) => <ul className="pl-6 sm:pl-8 list-disc">{children}</ul>,
-                    p: ({ children }) => <p className="mb-2">{children}</p>,
+                    p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
                     h1: ({ children }) => (
-                      <h1 className="text-2xl sm:text-3xl font-bold mb-3 text-black">{children}</h1>
+                      <h1 className="text-2xl sm:text-3xl font-bold my-3 text-black">{children}</h1>
                     ),
                     h2: ({ children }) => (
-                      <h2 className="text-xl sm:text-2xl font-semibold mb-3 text-black">{children}</h2>
+                      <h2 className="text-xl sm:text-2xl font-semibold my-3 text-black">{children}</h2>
                     ),
                     h3: ({ children }) => (
-                      <h3 className="text-lg sm:text-xl font-semibold mb-3 text-black">{children}</h3>
+                      <h3 className="text-lg sm:text-xl font-semibold my-3 text-black">{children}</h3>
                     ),
                     h4: ({ children }) => (
-                      <h4 className="text-base sm:text-lg font-semibold mb-3 text-black">{children}</h4>
+                      <h4 className="text-base sm:text-lg font-semibold my-3 text-black">{children}</h4>
                     ),
                     h5: ({ children }) => (
-                      <h5 className="text-sm sm:text-base font-semibold mb-3 text-black">{children}</h5>
+                      <h5 className="text-sm sm:text-base font-semibold my-3 text-black">{children}</h5>
                     ),
                     h6: ({ children }) => (
-                      <h6 className="text-xs sm:text-sm font-semibold mb-3 text-black">{children}</h6>
+                      <h6 className="text-xs sm:text-sm font-semibold my-3 text-black">{children}</h6>
                     ),
                   }}
                 >
@@ -706,7 +713,7 @@ const MemoizedMessage = memo(
               </div>
             </div>
 
-            {isLastBotMessage && msg.text.trim() !== '' && (
+            {showFeedbackControls && msg.text.trim() !== '' && (
               <div className="flex items-center gap-2 justify-end mt-2">
                 <button
                   onClick={onPromptFeedback}
@@ -720,7 +727,7 @@ const MemoizedMessage = memo(
                   <button
                     key={ratingType}
                     onClick={() => onRate(ratingType)}
-                    className={`transition-all duration-200 transform hover:scale-125 rounded-full ${feedbackType === ratingType ? 'opacity-100' : 'opacity-60 hover:opacity-90'} ${feedbackType === ratingType && ratingType === 'thumbs-up' ? 'bg-green-100' : ''} ${feedbackType === ratingType && ratingType === 'thumbs-down' ? 'bg-red-100' : ''}`}
+                    className={`transition-all duration-200 transform hover:scale-125 rounded-full ${feedbackType === ratingType ? 'opacity-100' : 'opacity-60 hover:opacity-90'}`}
                     title={ratingType === 'thumbs-up' ? "Helpful" : "Not helpful"}
                     aria-label={ratingType === 'thumbs-up' ? "Mark as helpful" : "Mark as not helpful"}
                     aria-pressed={feedbackType === ratingType}
@@ -738,7 +745,7 @@ const MemoizedMessage = memo(
               </div>
             )}
 
-            {isLastBotMessage && currentRatingError && (
+            {showFeedbackControls && currentRatingError && (
               <div className="flex justify-end mt-1 w-full">
                 <p id={`rating-error-${index}`} className="text-red-500 text-xs" aria-live="polite">
                   {currentRatingError}
@@ -755,7 +762,7 @@ const MemoizedMessage = memo(
       prevProps.msg.text === nextProps.msg.text &&
       prevProps.msg.sender === nextProps.msg.sender &&
       prevProps.index === nextProps.index &&
-      prevProps.isLastBotMessage === nextProps.isLastBotMessage &&
+      prevProps.showFeedbackControls === nextProps.showFeedbackControls &&
       prevProps.feedbackType === nextProps.feedbackType &&
       prevProps.currentRatingError === nextProps.currentRatingError
     );
