@@ -35,7 +35,6 @@ const HomePage = () => {
 
   useEffect(() => {
     createConversation();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const askEndpointChroma = `${backendHost}/ask/response/stream`;

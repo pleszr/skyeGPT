@@ -4,7 +4,6 @@ import React, { useState, useEffect, useRef, useCallback, memo, useMemo, useLayo
 import Image from 'next/image';
 import { addMessage, createUserMessage, createBotMessage, Message } from '@/app/utils/messageManager';
 import ReactMarkdown from 'react-markdown';
-import remarkBreaks from 'remark-breaks';
 import { debounce } from 'lodash';
 import remarkGfm from 'remark-gfm';
 import { backendHost } from '@/app/utils/sharedConfig';
@@ -22,15 +21,18 @@ const MAX_TEXTAREA_HEIGHT_PX = 98;
 
 type FeedbackVote = 'positive' | 'negative' | 'not_specified';
 
-const getChunkTextFromSSE = (chunk: string | number | boolean | { text?: unknown; message?: string; content?: string; response?: string; } | null | undefined): string =>  {
+const getChunkTextFromSSE = (chunk: string | number | boolean | { text?: unknown; message?: string; content?: string; response?: string; } | null | undefined): string => {
   if (chunk === null || chunk === undefined) return '';
-  if (typeof chunk === 'string') return chunk;
+  if (typeof chunk === 'string') {
+    if (/^\s*\d+\.\s*$/.test(chunk)) return '';
+    return chunk.replace(/\n\n+/g, '\n');
+  }
   if (typeof chunk === 'object') {
-    if (typeof chunk.text === 'string') return chunk.text;
-    if (typeof chunk.message === 'string') return chunk.message;
-    if (typeof chunk.content === 'string') return chunk.content;
-    if (typeof chunk.response === 'string') return chunk.response;
-    if (chunk.text !== undefined) return String(chunk.text);
+    if (typeof chunk.text === 'string') return chunk.text.replace(/\n\n+/g, '\n');
+    if (typeof chunk.message === 'string') return chunk.message.replace(/\n\n+/g, '\n');
+    if (typeof chunk.content === 'string') return chunk.content.replace(/\n\n+/g, '\n');
+    if (typeof chunk.response === 'string') return chunk.response.replace(/\n\n+/g, '\n');
+    if (chunk.text !== undefined) return String(chunk.text).replace(/\n\n+/g, '\n');
     return '';
   }
   if (typeof chunk === 'number' || typeof chunk === 'boolean') {
@@ -667,6 +669,15 @@ interface MemoizedMessageProps {
 const MemoizedMessage = memo(
   ({ msg, index, showFeedbackControls, feedbackType, currentRatingError, onRate, onPromptFeedback }: MemoizedMessageProps) => {
     const isUser = msg.sender === 'user';
+    
+    const markdownContent = msg.text
+      .replace(/\\n/g, '\n') 
+      .replace(/##(\d+)/g, '## $1')
+      // .replace(/\n\n+(\d+\.\s+)/g, '\n$1') 
+      // .replace(/(\d+\.\s+[^\n]*)\n\n+(\s*[-*]\s+)/g, '$1\n$2') 
+      // .replace(/^\s*(\d+)\.\s*$/gm, '$1. ') 
+      // .replace(/^\s*(\d+)\.\s+/gm, '$1. ');
+
 
     return (
       <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'}`}>
@@ -683,32 +694,20 @@ const MemoizedMessage = memo(
             >
               <div className="prose prose-sm sm:prose-base max-w-none text-black break-words">
                 <ReactMarkdown
-                  remarkPlugins={[remarkGfm, remarkBreaks]}
+                  remarkPlugins={[remarkGfm]}
                   components={{
                     ol: ({ children }) => <ol className="pl-6 sm:pl-8 list-decimal">{children}</ol>,
                     ul: ({ children }) => <ul className="pl-6 sm:pl-8 list-disc">{children}</ul>,
                     p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
-                    h1: ({ children }) => (
-                      <h1 className="text-2xl sm:text-3xl font-bold my-3 text-black">{children}</h1>
-                    ),
-                    h2: ({ children }) => (
-                      <h2 className="text-xl sm:text-2xl font-semibold my-3 text-black">{children}</h2>
-                    ),
-                    h3: ({ children }) => (
-                      <h3 className="text-lg sm:text-xl font-semibold my-3 text-black">{children}</h3>
-                    ),
-                    h4: ({ children }) => (
-                      <h4 className="text-base sm:text-lg font-semibold my-3 text-black">{children}</h4>
-                    ),
-                    h5: ({ children }) => (
-                      <h5 className="text-sm sm:text-base font-semibold my-3 text-black">{children}</h5>
-                    ),
-                    h6: ({ children }) => (
-                      <h6 className="text-xs sm:text-sm font-semibold my-3 text-black">{children}</h6>
-                    ),
+                    h1: ({ children }) => <h1 className="text-2xl sm:text-3xl font-bold my-3 text-black">{children}</h1>,
+                    h2: ({ children }) => <h2 className="text-xl sm:text-2xl font-semibold my-3 text-black">{children}</h2>,
+                    h3: ({ children }) => <h3 className="text-lg sm:text-xl font-semibold my-3 text-black">{children}</h3>,
+                    h4: ({ children }) => <h4 className="text-base sm:text-lg font-semibold my-3 text-black">{children}</h4>,
+                    h5: ({ children }) => <h5 className="text-sm sm:text-base font-semibold my-3 text-black">{children}</h5>,
+                    h6: ({ children }) => <h6 className="text-xs sm:text-sm font-semibold my-3 text-black">{children}</h6>,
                   }}
                 >
-                  {msg.text.replace(/\\n/g, '\n')}
+                  {markdownContent}
                 </ReactMarkdown>
               </div>
             </div>
@@ -757,7 +756,7 @@ const MemoizedMessage = memo(
       </div>
     );
   },
-  (prevProps, nextProps) => {
+(prevProps, nextProps) => {
     return (
       prevProps.msg.text === nextProps.msg.text &&
       prevProps.msg.sender === nextProps.msg.sender &&
