@@ -39,14 +39,14 @@ beforeEach(() => {
 });
 
 describe('ChatBox Component Tests', () => { 
-  it('shows empty state when there are no messages and component is not actively loading', () => {
+  it('we are making sure that the initial message displays when we first load the application', () => {
     const props = getDefaultChatBoxProps({ messages: [] });
     render(<ChatBox {...props} />);
     expect(screen.getByText('No messages yet.')).toBeInTheDocument();
     expect(screen.getByText('Start the conversation below!')).toBeInTheDocument();
   });
 
-  it('enables send button after typing and disables controls during message send', async () => {
+  it('we are making sure that the send button disables during message sending and re-enables it afterward, (checking isLoading)', async () => {
     render(<ChatBox {...getDefaultChatBoxProps()} />);
 
     const textarea = screen.getByPlaceholderText('Write your question here...') as HTMLTextAreaElement;
@@ -76,7 +76,7 @@ describe('ChatBox Component Tests', () => {
     expect(sendButtonAfterClick).toBeDisabled();
   });
 
-  it('displays the logo on HomePage', () => {
+  it('we are making sure that the logo displays on the HomePage', () => {
     render(<HomePage />);
     const logos = screen.getAllByAltText('SkyeGPT logo');
     expect(logos.length).toBeGreaterThan(0);
