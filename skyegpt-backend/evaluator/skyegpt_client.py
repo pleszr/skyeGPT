@@ -1,7 +1,7 @@
 import requests
+import uuid
 
-
-def query_skyegpt(url: str, question: str, conversation_id: str) -> dict:
+def query_skyegpt(url: str, question: str, conversation_id: uuid) -> dict:
     headers = {
         'Content-Type': 'application/json'
     }

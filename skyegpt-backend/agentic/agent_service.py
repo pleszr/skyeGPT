@@ -8,6 +8,7 @@ from .pydantic_ai_specific import agent_factory, decorators
 from . import prompts
 from common import utils, logger, stores
 from .conversation import Conversation
+import uuid
 
 
 class AgentService:
@@ -21,7 +22,7 @@ class AgentService:
 
         self.agent = agent_factory.create_agent_from_prompt_version(self.prompt_version)
 
-    async def stream_agent_response(self, user_question: str, conversation_id: str) -> AsyncGenerator[str, None]:
+    async def stream_agent_response(self, user_question: str, conversation_id: uuid) -> AsyncGenerator[str, None]:
         """
     Streams the agent's response to a user question in real-time.
 
@@ -48,7 +49,7 @@ class AgentService:
     async def _stream_agent_response_pydantic(
             self,
             user_prompt: str,
-            conversation_id: str,
+            conversation_id: uuid,
             message_history: List[ModelRequest | ModelResponse]
     ) -> AsyncGenerator[str, None]:
         """
@@ -95,7 +96,7 @@ class AgentService:
                     if isinstance(event.delta, TextPartDelta):
                         yield event.delta.content_delta
 
-    async def _handle_call_tools_node(self, node: CallToolsNode, run: AgentRun, conversation_id: str):
+    async def _handle_call_tools_node(self, node: CallToolsNode, run: AgentRun, conversation_id: uuid):
         """
         Handles events related to tool calls requested by the agent and appends context to the context store.
         """
@@ -114,7 +115,7 @@ class AgentService:
                     }
                     await self.store_manager.append_conversation_context(conversation_id, current_context)
 
-    async def _add_conversation_to_store(self, run: AgentRun, conversation_id: str):
+    async def _add_conversation_to_store(self, run: AgentRun, conversation_id: uuid):
         """
         Adds new messages from the agent run to the conversation history store.
         """

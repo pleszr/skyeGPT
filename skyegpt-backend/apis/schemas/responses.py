@@ -1,10 +1,11 @@
 from pydantic import BaseModel, Field, ConfigDict
-from typing import Any, Optional, Dict
+from typing import Any, Optional, Dict, List
 from agentic.conversation import Conversation
+import uuid
 
 
 class CreateConversationIdResponse(BaseModel):
-    conversation_id: str = Field(
+    conversation_id: uuid.UUID = Field(
         ...,
         description="The newly generated unique identifier for the conversation thread.",
         examples=["f47ac10b-58cc-4372-a567-0e02b2c3d479"]
@@ -101,6 +102,23 @@ class ConversationResponse(BaseModel):
     Response model for retrieving a conversation
     """
     conversation: Conversation = Field(..., description="The conversation")
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "conversation": ["ModelRequest", "ModelResponse"],
+                }
+            ]
+        }
+    }
+
+
+class ConversationListResponse(BaseModel):
+    """
+    Response model for retrieving a list of conversations
+    """
+    conversations: List[Conversation] = Field(..., description="List of filtered conversation")
 
     model_config = {
         "json_schema_extra": {

@@ -2,6 +2,7 @@ import os
 from pymongo import MongoClient
 from pymongo.collection import Collection
 from typing import Dict, Any
+import uuid
 
 
 MONGO_USERNAME = os.getenv("MONGO_USERNAME", "skyegpt-admin")
@@ -22,8 +23,21 @@ def create_or_get_collection(database_name: str, collection_name: str):
     return database[collection_name]
 
 
-def add_document_to_collection(collection: Collection, document: Dict[str, Any]):
+def add_to_collection(collection: Collection, document: Dict[str, Any]):
     collection.insert_one(document)
 
 
+def upsert_to_collection(collection: Collection, _id: uuid, document: Dict[str, Any]):
+    collection.replace_one({"_id": _id}, document, upsert=True)
 
+
+def find_one_by_id(collection: Collection, _id: uuid):
+    return collection.find_one({"_id": _id})
+
+
+def replace_one_by_id(collection: Collection, _id: uuid, document: Dict[str, Any]):
+    collection.replace_one({"_id": _id}, document, upsert=False)
+
+
+def find_many(collection: Collection, query: dict):
+    return collection.find(query)

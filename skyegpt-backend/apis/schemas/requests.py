@@ -1,6 +1,7 @@
-
-from pydantic import BaseModel, Field, model_validator, ValidationError, field_validator
+from pydantic import BaseModel, Field, model_validator, field_validator
 from typing import Optional, Literal, List
+import uuid
+from common import constants
 
 
 class SkyeVersionRequest(BaseModel):
@@ -19,12 +20,10 @@ class SkyeVersionRequest(BaseModel):
 
 
 class ConversationQueryRequest(BaseModel):
-    conversation_id: str = Field(
+    conversation_id: uuid.UUID = Field(
         ...,
         description="The unique identifier for the conversation thread.",
-        examples=["d290f1ee-6c54-4b01-90e6-d701748f0851"],
-        max_length=36,
-        pattern=r"^[A-Za-z0-9\-]+$"
+        examples=[uuid.uuid4()],
     )
     query: str = Field(
         ...,
@@ -78,7 +77,7 @@ class ImportRequest(BaseModel):
 
 
 class CreateFeedbackRequest(BaseModel):
-    vote: Literal["positive", "negative", "not_specified"] = Field(
+    vote: constants.VoteType = Field(
         ...,
         description="The nature of the feedback",
         examples=["positive", "negative", "not_specified"],

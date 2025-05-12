@@ -1,4 +1,5 @@
 from typing import Generator, AsyncGenerator
+from datetime import datetime, timezone, timedelta
 import os
 import re
 from markdownify import markdownify as md
@@ -49,5 +50,12 @@ def folder_to_dict(path):
 
 
 def generate_local_folder_path_from_skye_version(skye_major_version: str) -> str:
-    return replace_placeholders(constants.SKYE_DOC_LOCAL_FOLDER_LOCATION_TEMPLATE, {"skye_major_version": skye_major_version})
+    return replace_placeholders(
+        constants.SKYE_DOC_LOCAL_FOLDER_LOCATION_TEMPLATE,
+        {"skye_major_version": skye_major_version}
+    )
 
+
+def calculate_utc_x_hours_ago(x_hours: int) -> datetime:
+    now_utc = datetime.now(timezone.utc)
+    return now_utc - timedelta(hours=x_hours)
