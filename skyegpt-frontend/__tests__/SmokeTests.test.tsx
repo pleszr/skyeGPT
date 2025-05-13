@@ -1,12 +1,22 @@
-import { render, screen, act, waitFor, fireEvent } from '@testing-library/react'; 
+import { render, screen, act, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import ChatBox, { ChatBoxProps } from '@/app/components/chatBox';
-import { describe, vi, it, beforeEach, expect, beforeAll } from 'vitest';
 import HomePage from '@/app/page';
+import { describe, vi, it, beforeEach, expect, beforeAll, MockedFunction } from 'vitest';
+import * as chatApiService from '@/app/services/chatApiService';
+import { v4 as uuidv4 } from 'uuid'; 
 
-global.fetch = vi.fn(() => Promise.resolve(new Response(JSON.stringify({ conversation_id: 'mock-id' }), {
-  status: 200,
-  headers: { 'Content-Type': 'application/json' }
-})));
+vi.mock('@/app/services/chatApiService', () => ({
+  createConversationAPI: vi.fn(),
+  fetchChatResponseStreamAPI: vi.fn(),
+  submitFeedbackAPI: vi.fn(),
+  getChunkTextFromSSE: vi.fn(chunk => (typeof chunk === 'string' ? chunk : (chunk as any)?.text || '')),
+}));
+
+const mockedCreateConversationAPI = chatApiService.createConversationAPI as MockedFunction<typeof chatApiService.createConversationAPI>;
+const mockedFetchChatResponseStreamAPI = chatApiService.fetchChatResponseStreamAPI as MockedFunction<typeof chatApiService.fetchChatResponseStreamAPI>;
+
+const MOCK_CONVERSATION_ID: string = uuidv4();
 
 global.AbortController = vi.fn(() => ({
   signal: { aborted: false, addEventListener: vi.fn(), removeEventListener: vi.fn(), dispatchEvent: vi.fn(), onabort: vi.fn() },
@@ -16,70 +26,71 @@ global.AbortController = vi.fn(() => ({
 beforeAll(() => {
   Object.defineProperty(window.HTMLElement.prototype, 'scrollTo', {
     configurable: true,
-    value: function () {},
+    value: vi.fn(),
   });
+  window.alert = vi.fn();
 });
 
-const getDefaultChatBoxProps = (overrideProps: Partial<ChatBoxProps> = {}): ChatBoxProps => ({
-  messages: [],
-  setMessages: vi.fn(),
-  askEndpoint: '/api/ask',
-  className: '',
-  ...overrideProps,
-});
+const getDefaultChatBoxProps = (overrideProps: Partial<ChatBoxProps> = {}): ChatBoxProps => {
+  return {
+    messages: [],
+    setMessages: vi.fn(),
+    className: '',
+    conversationId: MOCK_CONVERSATION_ID,
+    ...overrideProps,
+  };
+};
 
 beforeEach(() => {
   vi.clearAllMocks();
-  global.fetch = vi.fn(() => Promise.resolve(new Response(JSON.stringify({ conversation_id: 'mock-id' }), {
-    status: 200,
-    headers: { 'Content-Type': 'application/json' }
-  })));
-  localStorage.clear();
-  localStorage.setItem('chroma_conversation_id', 'test-smoke-convo-id');
+  localStorage.setItem('conversation_id', MOCK_CONVERSATION_ID);
+  mockedCreateConversationAPI.mockResolvedValue({ conversation_id: MOCK_CONVERSATION_ID });
 });
 
-describe('ChatBox Component Tests', () => { 
-  it('we are making sure that the initial message displays when we first load the application', () => {
+describe('Application Smoke Tests', () => {
+  it('ChatBox renders with initial message when no messages are provided', () => {
     const props = getDefaultChatBoxProps({ messages: [] });
     render(<ChatBox {...props} />);
     expect(screen.getByText('No messages yet.')).toBeInTheDocument();
     expect(screen.getByText('Start the conversation below!')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Write your question here...')).toBeInTheDocument();
+    expect(screen.getByTitle('Send')).toBeInTheDocument();
   });
 
-  it('we are making sure that the send button disables during message sending and re-enables it afterward, (checking isLoading)', async () => {
-    render(<ChatBox {...getDefaultChatBoxProps()} />);
+  it('ChatBox send button becomes enabled on input and disabled during message sending', async () => {
+    mockedFetchChatResponseStreamAPI.mockImplementation(() => {
+      return new Promise(() => {});
+    });
+
+    render(<ChatBox {...getDefaultChatBoxProps()} />); 
 
     const textarea = screen.getByPlaceholderText('Write your question here...') as HTMLTextAreaElement;
-    const sendButtonInitially = screen.getByTitle('Send') as HTMLButtonElement;
+    const sendButton = screen.getByTitle('Send') as HTMLButtonElement;
 
     expect(textarea).not.toBeDisabled();
-    expect(sendButtonInitially).toBeDisabled();
+    expect(sendButton).toBeDisabled();
 
-    fireEvent.change(textarea, { target: { value: 'SkyeGPT' } });
+    await userEvent.type(textarea, 'SkyeGPT');
+    await waitFor(() => expect(sendButton).not.toBeDisabled());
 
+    await userEvent.click(sendButton);
     await waitFor(() => {
-      const sendButtonAfterTyping = screen.getByTitle('Send') as HTMLButtonElement;
-      expect(sendButtonAfterTyping).not.toBeDisabled();
+      expect(textarea).toBeDisabled();
+      expect(sendButton).toBeDisabled();
     });
-
-    global.fetch = vi.fn(() => new Promise<Response>(() => {}));
-
-    const sendButtonEnabled = screen.getByTitle('Send') as HTMLButtonElement;
-    await act(async () => {
-      sendButtonEnabled.click();
-    });
-
-    const textareaAfterClick = screen.getByPlaceholderText('Write your question here...') as HTMLTextAreaElement;
-    const sendButtonAfterClick = screen.getByTitle('Send') as HTMLButtonElement;
-
-    expect(textareaAfterClick).toBeDisabled();
-    expect(sendButtonAfterClick).toBeDisabled();
   });
 
-  it('we are making sure that the logo displays on the HomePage', () => {
+  it('HomePage renders, displays logo, and initializes conversation with the mock ID', async () => {
     render(<HomePage />);
+    
+    await waitFor(() => {
+      expect(mockedCreateConversationAPI).toHaveBeenCalled();
+    });
+
     const logos = screen.getAllByAltText('SkyeGPT logo');
     expect(logos.length).toBeGreaterThan(0);
     logos.forEach(logo => expect(logo).toBeInTheDocument());
+    
+    expect(localStorage.getItem('conversation_id')).toBe(MOCK_CONVERSATION_ID);
   });
 });

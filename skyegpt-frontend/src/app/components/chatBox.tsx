@@ -6,39 +6,28 @@ import { addMessage, createUserMessage, createBotMessage, Message } from '@/app/
 import ReactMarkdown from 'react-markdown';
 import { debounce } from 'lodash';
 import remarkGfm from 'remark-gfm';
-import { backendHost } from '@/app/utils/sharedConfig';
+import {
+  fetchChatResponseStreamAPI,
+  submitFeedbackAPI,
+  getChunkTextFromSSE,
+  FeedbackVotePayload,
+  AskStreamPayload
+} from '@/app/services/chatApiService'; 
 
 export interface ChatBoxProps {
-  askEndpoint: string;
   messages: Message[];
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
   className?: string;
+  conversationId: string | null; 
 }
 
 const MAX_RETRIES = 2;
 const INITIAL_TEXTAREA_CONTENT_HEIGHT_PX_STR = '98px';
 const MAX_TEXTAREA_HEIGHT_PX = 98;
 
-type FeedbackVote = 'positive' | 'negative' | 'not_specified';
 
-const getChunkTextFromSSE = (chunk: string | number | boolean | { text?: unknown; message?: string; content?: string; response?: string; } | null | undefined): string =>  {
-  if (chunk === null || chunk === undefined) return '';
-  if (typeof chunk === 'string') return chunk;
-  if (typeof chunk === 'object') {
-    if (typeof chunk.text === 'string') return chunk.text;
-    if (typeof chunk.message === 'string') return chunk.message;
-    if (typeof chunk.content === 'string') return chunk.content;
-    if (typeof chunk.response === 'string') return chunk.response;
-    if (chunk.text !== undefined) return String(chunk.text);
-    return '';
-  }
-  if (typeof chunk === 'number' || typeof chunk === 'boolean') {
-    return String(chunk);
-  }
-  return '';
-};
 
-const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, className }) => {
+const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, conversationId }) => {
   const [input, setInput] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState<boolean>(false);
@@ -54,8 +43,6 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const wasNearBottomRef = useRef<boolean>(true);
   const streamAbortControllerRef = useRef<AbortController | null>(null);
-
-  const conversationFeedbackEndpointTemplate = `${backendHost}/ask/{conversation}/feedback`;
 
   const debouncedScrollToBottom = useMemo(() => debounce(() => {
     if (chatContainerRef.current) {
@@ -89,6 +76,8 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
     const trimmedInput = input.trim();
     if (!trimmedInput || isLoading) return;
 
+    setIsLoading(true);
+
     if (streamAbortControllerRef.current) {
         streamAbortControllerRef.current.abort();
     }
@@ -100,15 +89,12 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
         textareaRef.current.value = '';
         textareaResize();
     }
-    setIsLoading(true);
     wasNearBottomRef.current = true;
 
-    const conversationId = localStorage.getItem('conversation_id');
-
-    if (!conversationId) {
-      await sendTechnicalMessage('Error: Conversation ID not found. Please refresh or try again.');
-      setIsLoading(false);
-      return;
+    if (!conversationId) { 
+     await sendTechnicalMessage('Error: Conversation ID not available. Please refresh or try again.');
+     setIsLoading(false);
+     return;
     }
 
     const hiddenInstruction = "Output raw GitHub Flavored Markdown (GFM). Do not wrap the entire response in ```markdown``` fences. Single newlines will be rendered as hard line breaks. Use standard GFM for all elements (headings, lists, paragraphs, etc.), as styling is handled automatically. Do not embed any HTML tags or custom CSS. Use `\n` for newlines.";
@@ -133,32 +119,23 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
             });
         }
 
-        const response = await fetch(askEndpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'text/event-stream',
-          },
-          body: JSON.stringify({
-            conversation_id: conversationId,
-            query: queryToSendToBackend,
-          }),
-          signal: streamAbortControllerRef.current?.signal,
-        });
+        const payload: AskStreamPayload = {
+          conversation_id: conversationId,
+          query: queryToSendToBackend,
+        };
 
-        if (!response.ok) {
-          throw new Error(`Server error: ${response.status} ${response.statusText}`);
-        }
+        const response = await fetchChatResponseStreamAPI(payload, streamAbortControllerRef.current!.signal);
+
 
         const reader = response.body?.getReader();
-        if (!reader) throw new Error('Failed to get stream reader.');
+        if (!reader) throw new Error('Failed to get stream reader from response.');
 
         let buffer = '';
 
         while (true) {
           if (streamAbortControllerRef.current?.signal.aborted) {
             reader.cancel();
-            throw new Error("Stream aborted");
+            throw new Error("Stream aborted"); 
           }
           const { value, done } = await reader.read();
           if (done) {
@@ -170,13 +147,12 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
                   newMessages[newMessages.length - 1] = createBotMessage(
                     `No response received from the server${attempt < MAX_RETRIES ? '. Retrying...' : '. Please try again.'}`
                   );
-                  fullMessageTextForCurrentResponse = lastMessage.text;
                 }
                 return newMessages;
               });
               return false;
             }
-            setMessages((prevMsgs) => {
+             setMessages((prevMsgs) => {
                 const newMsgs = [...prevMsgs];
                 const lastMsg = newMsgs[newMsgs.length - 1];
                 if (lastMsg && lastMsg.sender === 'bot' && lastMsg.text !== fullMessageTextForCurrentResponse) {
@@ -184,7 +160,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
                 }
                 return newMsgs;
             });
-            return true;
+            return true; 
           }
 
           buffer += new TextDecoder().decode(value);
@@ -200,6 +176,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
                 try {
                   parsedChunk = JSON.parse(dataStr);
                 } catch {
+
                   parsedChunk = dataStr.trim() ? { text: dataStr } : null;
                 }
                 const chunkText = getChunkTextFromSSE(parsedChunk);
@@ -219,9 +196,10 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
               }
             }
           }
-            if (streamAbortControllerRef.current?.signal.aborted) break;
+          if (streamAbortControllerRef.current?.signal.aborted) break;
         }
-        return true;
+
+        return false;
       } catch (error: unknown)  {
         if (
           typeof error === 'object' &&
@@ -230,25 +208,26 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
         ) {
           const errObj = error as { name?: string; message?: string };
           if (errObj.name === 'AbortError' || errObj.message === "Stream aborted") {
-            return true;
+            console.log("Stream fetch aborted as expected.");
+            return true; 
           }
         }
+        console.error('Error fetching stream:', error);
         setMessages((prev) => {
           const newMessages = [...prev];
-          const lastMessage = newMessages[newMessages.length - 1];
-          if (lastMessage?.sender === 'bot') {
-            newMessages[newMessages.length - 1] = createBotMessage(
+          const lastMessageIndex = newMessages.length - 1;
+          if (lastMessageIndex >=0 && newMessages[lastMessageIndex]?.sender === 'bot') {
+            newMessages[lastMessageIndex] = createBotMessage(
                 `Error: Could not get a response. ${error instanceof Error ? error.message : String(error)}${attempt < MAX_RETRIES ? '. Retrying...' : '. Please try again later.'}`
             );
-            fullMessageTextForCurrentResponse = lastMessage.text;
           } else {
              addMessage(newMessages, createBotMessage(
                 `Error: Could not get a response. ${error instanceof Error ? error.message : String(error)}${attempt < MAX_RETRIES ? '. Retrying...' : '. Please try again later.'}`
-             ));
+            ));
           }
           return newMessages;
         });
-        return false;
+        return false; 
       }
     };
 
@@ -256,7 +235,8 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
     let success = false;
     while (attempt <= MAX_RETRIES && !success) {
       if(streamAbortControllerRef.current?.signal.aborted) {
-          break;
+        console.log("Aborting sendMessage sequence.");
+        break;
       }
       success = await fetchStream(attempt);
       if (!success && attempt < MAX_RETRIES && !streamAbortControllerRef.current?.signal.aborted) {
@@ -266,7 +246,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
     }
 
     setIsLoading(false);
-  }, [input, isLoading, setMessages, sendTechnicalMessage, askEndpoint, textareaResize]);
+  }, [input, isLoading, setMessages, sendTechnicalMessage, textareaResize, conversationId]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -282,9 +262,9 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
     const textarea = textareaRef.current;
     if (textarea) {
       textarea.focus();
-      textarea.addEventListener('input', textareaResize);
       textarea.style.height = INITIAL_TEXTAREA_CONTENT_HEIGHT_PX_STR;
-      textareaResize();
+      textareaResize(); 
+      textarea.addEventListener('input', textareaResize);
     }
     return () => {
       if (textarea) {
@@ -306,7 +286,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
         if (textareaRef.current && document.activeElement !== textareaRef.current) {
           textareaRef.current.focus();
         }
-      }, 50);
+      }, 50); 
       return () => clearTimeout(focusTimeoutId);
     }
   }, [isLoading, isFeedbackModalOpen, isConfirmationModalOpen]);
@@ -321,7 +301,6 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
         setFeedbackState((prev) => ({ ...prev, [messageIndex]: newLocalRating }));
         setRatingError((prev) => ({ ...prev, [messageIndex]: '' }));
 
-        const conversationId = localStorage.getItem('conversation_id');
         if (!conversationId) {
             console.error("Cannot submit rating: conversation_id is missing.");
             setRatingError((prev) => ({ ...prev, [messageIndex]: 'Session ID missing. Cannot submit rating.' }));
@@ -333,40 +312,26 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
             return;
         }
 
-        let vote: FeedbackVote;
+        let vote: FeedbackVotePayload;
         if (newLocalRating === 'thumbs-up') {
           vote = 'positive';
-        } else {
+        } else { 
           vote = 'negative';
         }
 
-        const actualEndpoint = conversationFeedbackEndpointTemplate.replace('{conversation}', conversationId);
-
         try {
-          const response = await fetch(actualEndpoint, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              vote: vote,
-              comment: "",
-            }),
-          });
-
-          if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(`Server error: ${response.status} - ${errorData.message || response.statusText}`);
-          }
+          await submitFeedbackAPI(conversationId, { vote: vote, comment: "" });
         } catch (error) {
           console.error('Error submitting rating:', error);
-          setFeedbackState((prev) => ({ ...prev, [messageIndex]: previousLocalRatingState }));
+          setFeedbackState((prev) => ({ ...prev, [messageIndex]: previousLocalRatingState })); 
           const errorMessage =
-            error instanceof Error && error.message.includes('Failed to fetch')
+            error instanceof Error && error.message.includes('Failed to connect') 
               ? 'Failed to connect to the server.'
               : (error instanceof Error ? error.message : 'Error submitting rating.');
           setRatingError((prev) => ({ ...prev, [messageIndex]: errorMessage }));
         }
       }, 300),
-    [conversationFeedbackEndpointTemplate, feedbackState]
+    [feedbackState, conversationId] 
   );
 
   const handleFeedbackPromptClick = useCallback((messageIndex: number) => {
@@ -379,7 +344,6 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
 
   const handleFeedbackModalClose = useCallback(() => {
     setIsFeedbackModalOpen(false);
-    setFeedbackText('');
     setFeedbackError('');
     setSubmitError('');
   }, []);
@@ -396,14 +360,13 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
     setFeedbackError('');
     setSubmitError('');
 
-    const conversationId = localStorage.getItem('conversation_id');
     if (!conversationId) {
         console.error("Cannot submit feedback: conversation_id is missing.");
         setSubmitError('Session ID missing. Cannot submit feedback.');
         return;
     }
 
-    let vote: FeedbackVote = 'not_specified';
+    let vote: FeedbackVotePayload = 'not_specified';
     const currentRating = feedbackState[activeMessageIndex];
     if (currentRating === 'thumbs-up') {
       vote = 'positive';
@@ -411,38 +374,26 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
       vote = 'negative';
     }
     
-    const actualEndpoint = conversationFeedbackEndpointTemplate.replace('{conversation}', conversationId);
-
     try {
-      const response = await fetch(actualEndpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          vote: vote,
-          comment: feedbackText.trim(),
-        }),
+      await submitFeedbackAPI(conversationId, {
+        vote: vote,
+        comment: feedbackText.trim(),
       });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(`Server error: ${response.status} - ${errorData.message || response.statusText}`);
-      }
-
       setIsFeedbackModalOpen(false);
       setIsConfirmationModalOpen(true);
     } catch (error) {
       console.error('Error submitting feedback:', error);
       const errorMessage =
-        error instanceof Error && error.message.includes('Failed to fetch')
+        error instanceof Error && error.message.includes('Failed to connect')
           ? 'Failed to connect to the server.'
           : (error instanceof Error ? error.message : 'Error submitting feedback.');
       setSubmitError(errorMessage);
     }
-  }, [activeMessageIndex, feedbackText, feedbackState, conversationFeedbackEndpointTemplate]);
+  }, [activeMessageIndex, feedbackText, feedbackState, conversationId]);
 
   const handleConfirmationModalClose = useCallback(() => {
     setIsConfirmationModalOpen(false);
-    setActiveMessageIndex(null);
+    setActiveMessageIndex(null); 
     setFeedbackText('');
   }, []);
   
@@ -457,11 +408,13 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
   }, [activeMessageIndex, feedbackState]);
 
   const confirmationMessage = useMemo(() => {
-    if (activeMessageIndex === null) return 'Feedback Sent!';
-    const currentRating = feedbackState[activeMessageIndex];
+    if (activeMessageIndex === null && !isConfirmationModalOpen) return 'Feedback Sent!';
+    if(activeMessageIndex === null && isConfirmationModalOpen) return 'Feedback Sent!';
+
+    const currentRating = feedbackState[activeMessageIndex!]; 
       if (currentRating === 'thumbs-down') return 'Issue Report Sent!';
       return 'Feedback Sent!';
-  }, [activeMessageIndex, feedbackState]);
+  }, [activeMessageIndex, feedbackState, isConfirmationModalOpen]);
 
   return (
     <div className={`flex flex-col h-full ${className || ''}`}>
@@ -477,7 +430,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
         )}
         {messages.map((msg, index) => (
           <MemoizedMessage
-            key={index}
+            key={index} 
             msg={msg}
             index={index}
             showFeedbackControls={
@@ -519,12 +472,12 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
             ref={textareaRef}
             rows={1}
             className="border-none text-sm sm:text-base text-black resize-none bg-transparent w-full py-2 px-3 font-[Poppins] placeholder:text-gray-500 focus:outline-none"
-            style={{ minHeight: INITIAL_TEXTAREA_CONTENT_HEIGHT_PX_STR }}
+            style={{ minHeight: INITIAL_TEXTAREA_CONTENT_HEIGHT_PX_STR }} 
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             onPaste={textareaResize}
-            onInput={textareaResize}
+            onInput={textareaResize} 
             placeholder="Write your question here..."
             disabled={isLoading}
             aria-label="Chat input"
@@ -540,9 +493,10 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
           <Image
             src="/button.png"
             alt="Send"
-            width={120}
+            width={120} 
             height={120}
             quality={100}
+            style ={{ width: 'auto', height: 'auto' }}
             priority
             className="object-contain"
           />
@@ -620,7 +574,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
             aria-describedby="confirmation-modal-description"
             aria-modal="true"
           >
-             <div className="w-full flex justify-between items-center">
+              <div className="w-full flex justify-between items-center">
                 <span className="w-6"></span>
                 <h2 id="confirmation-modal-header" className="text-lg font-semibold text-gray-800 text-center flex-1">{confirmationMessage}</h2>
               <button
@@ -666,21 +620,10 @@ const MemoizedMessage = memo(
     
     const markdownContent = msg.text
       .replace(/\\n/g, '\n')
-      .replace(/##(\d+)/g, '## $1') 
-      // .replace(/\n\n+(\d+\.\s+)/g, '\n$1')
-      // .replace(/(\d+\.\s+[^\n]*)\n\n+(\s*[-*]\s+)/g, '$1\n$2') 
-      // .replace(/(\d+\.\s+[^\n]*)\n\n+(\d+\.\s+)/g, '$1\n$2') 
-      // .replace(/^\s*(\d+)\.\s*$/gm, '$1. ') 
-      // .replace(/^\s*(\d+)\.\s+/gm, '$1. ') 
-      // .replace(/(\d+\.\s+[^\n]*)\n\s*(\d+\.\s+)/g, '$1\n$2')
-      // .replace(/^(\s*[-*])\s+/gm, '  $1 ')
-      // .replace(/^(\s*\d+\.\s+[^\n]*)\n\s*([-*]\s+)/gm, '$1\n  $2')
-      // .replace(/\n\n+(##\s+)/g, '\n$1') 
-      // .replace(/\n\s*\n+(\s*[-*]\s+)/g, '\n$1');
+      .replace(/##(\d+)/g, '## $1');
 
-    
     return (
-      <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'}`}>
+      <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} w-full`}>
         {isUser ? (
           <div
             className={`p-4 sm:p-5 md:p-6 rounded-[30px] max-w-[90%] sm:max-w-[80%] transition-opacity duration-300 shadow-sm bg-gradient-to-r from-[#1ea974] to-[#17a267] self-end text-white rounded-br-[0]`}
@@ -705,7 +648,11 @@ const MemoizedMessage = memo(
                       }, []);
                       return <ol className="pl-6 sm:pl-8 list-decimal" {...props}>{mergedChildren}</ol>;
                     },
-                    ul: ({ children }) => <ul className="pl-6 sm:pl-8 list-disc">{children}</ul>,
+                    ul: ({ node, className, children, ...props }) => (
+                    <ul className={`pl-10 sm:pl-12 list-disc ${className || ''}`} {...props}>
+                      {children}
+                    </ul>
+                  ),
                     p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
                     h1: ({ children }) => <h1 className="text-2xl sm:text-3xl font-bold my-3 text-black">{children}</h1>,
                     h2: ({ children }) => <h2 className="text-xl sm:text-2xl font-semibold my-3 text-black">{children}</h2>,
@@ -719,8 +666,8 @@ const MemoizedMessage = memo(
                 </ReactMarkdown>
               </div>
             </div>
-            {showFeedbackControls && msg.text.trim() !== '' && (
-              <div className="flex items-center gap-2 justify-end mt-2">
+            {showFeedbackControls && msg.text.trim() !== '' && !msg.text.startsWith("Error:") && !msg.text.startsWith("No response received") && (
+              <div className="flex items-center justify-end mt-2">
                 <button
                   onClick={onPromptFeedback}
                   className="text-xs text-gray-600 hover:text-gray-900 hover:underline transition-colors duration-200"
@@ -733,7 +680,7 @@ const MemoizedMessage = memo(
                   <button
                     key={ratingType}
                     onClick={() => onRate(ratingType)}
-                    className={`transition-all duration-200 transform hover:scale-125 rounded-full ${feedbackType === ratingType ? 'opacity-100' : 'opacity-60 hover:opacity-90'}`}
+                    className={`transition-all duration-200 transform hover:scale-125 rounded-full p-1 ${feedbackType === ratingType ? 'opacity-100' : 'opacity-60 hover:opacity-90'}`}
                     title={ratingType === 'thumbs-up' ? "Helpful" : "Not helpful"}
                     aria-label={ratingType === 'thumbs-up' ? "Mark as helpful" : "Mark as not helpful"}
                     aria-pressed={feedbackType === ratingType}
@@ -744,6 +691,9 @@ const MemoizedMessage = memo(
                       alt={ratingType === 'thumbs-up' ? "Thumbs Up" : "Thumbs Down"}
                       width={16}
                       height={16}
+                      style={{ width: 'auto', height: 'auto' }}
+                      priority
+                      quality={100}
                       className={`object-contain ${feedbackType === ratingType && ratingType === 'thumbs-up' ? 'skgpt-tint-green-active' : ''} ${feedbackType === ratingType && ratingType === 'thumbs-down' ? 'skgpt-tint-red-active' : ''}`}
                     />
                   </button>
