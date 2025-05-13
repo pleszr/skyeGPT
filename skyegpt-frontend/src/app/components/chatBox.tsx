@@ -195,44 +195,21 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
         }
 
         console.error('Error fetching stream:', error);
-        let detailedErrorMessage = "Could not get a response. Please try again later.";
-        if (error instanceof Error) {
-            detailedErrorMessage = error.message;
-            const errorMsgString = error.message;
-            const jsonStartMatch = errorMsgString.match(/-\s*(\{.*)/);
-            if (jsonStartMatch && jsonStartMatch[1]) {
-                const potentialJsonString = jsonStartMatch[1];
-                try {
-                    const parsedBody = JSON.parse(potentialJsonString);
-                    if (parsedBody.message && typeof parsedBody.message === 'string') {
-                        detailedErrorMessage = parsedBody.message;
-                    } else if (parsedBody.detail && typeof parsedBody.detail === 'string') {
-                        detailedErrorMessage = parsedBody.detail;
-                    }
-                    const statusCodeMatch = errorMsgString.match(/\b(4\d{2}|5\d{2})\b/);
-                    if (statusCodeMatch && !detailedErrorMessage.toLowerCase().includes("status " + statusCodeMatch[0]) && !detailedErrorMessage.startsWith(`(Error ${statusCodeMatch[0]})`)) {
-                        detailedErrorMessage = `(Error ${statusCodeMatch[0]}) ${detailedErrorMessage}`;
-                    }
-                } catch (e) {
-                }
-            }
-        } else {
-            detailedErrorMessage = String(error);
-        }
+        const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred. Please try again.";
 
         setMessages((prev) => {
           const newMessages = [...prev];
           const lastMessageIndex = newMessages.length - 1;
           if (lastMessageIndex >=0 && newMessages[lastMessageIndex]?.sender === 'bot') {
-            newMessages[lastMessageIndex] = createBotMessage(`Error: ${detailedErrorMessage}`);
+            newMessages[lastMessageIndex] = createBotMessage(`Error: ${errorMessage}`);
           } else {
-             addMessage(newMessages, createBotMessage(`Error: ${detailedErrorMessage}`));
+             addMessage(newMessages, createBotMessage(`Error: ${errorMessage}`));
           }
           return newMessages;
         });
         return false;
       }
-      return false; 
+      return false;
     };
     
     await fetchStreamSingleAttempt();
@@ -418,7 +395,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
             key={index}
             msg={msg}
             index={index}
-            isLoading={isLoading} 
+            isLoading={isLoading}
             showFeedbackControls={
               msg.sender === 'bot' &&
               (index < messages.length - 1 || (index === messages.length - 1 && !isLoading))
@@ -661,8 +638,6 @@ const MemoizedMessage = memo(
                     h4: ({ children }) => <h4 className="text-base sm:text-lg font-semibold my-3 text-black">{children}</h4>,
                     h5: ({ children }) => <h5 className="text-sm sm:text-base font-semibold my-3 text-black">{children}</h5>,
                     h6: ({ children }) => <h6 className="text-xs sm:text-sm font-semibold my-3 text-black">{children}</h6>,
-
-                    
                     table: ({ children }) => (
                       <div className="overflow-x-auto w-full">
                         <table className="min-w-full border-collapse border border-gray-300 text-xs sm:text-sm">
