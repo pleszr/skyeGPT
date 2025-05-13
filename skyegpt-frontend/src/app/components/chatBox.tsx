@@ -12,20 +12,17 @@ import {
   getChunkTextFromSSE,
   FeedbackVotePayload,
   AskStreamPayload
-} from '@/app/services/chatApiService'; 
+} from '@/app/services/chatApiService';
 
 export interface ChatBoxProps {
   messages: Message[];
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
   className?: string;
-  conversationId: string | null; 
+  conversationId: string | null;
 }
 
-const MAX_RETRIES = 2;
 const INITIAL_TEXTAREA_CONTENT_HEIGHT_PX_STR = '98px';
 const MAX_TEXTAREA_HEIGHT_PX = 98;
-
-
 
 const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, conversationId }) => {
   const [input, setInput] = useState<string>('');
@@ -55,7 +52,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
 
   const scrollToBottom = useCallback(() => {
     if (wasNearBottomRef.current) {
-        debouncedScrollToBottom();
+      debouncedScrollToBottom();
     }
   }, [debouncedScrollToBottom]);
 
@@ -79,88 +76,70 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
     setIsLoading(true);
 
     if (streamAbortControllerRef.current) {
-        streamAbortControllerRef.current.abort();
+      streamAbortControllerRef.current.abort();
     }
     streamAbortControllerRef.current = new AbortController();
 
     setMessages((prev) => addMessage(prev, createUserMessage(trimmedInput)));
     setInput('');
     if (textareaRef.current) {
-        textareaRef.current.value = '';
-        textareaResize();
+      textareaRef.current.value = '';
+      textareaResize();
     }
     wasNearBottomRef.current = true;
 
-    if (!conversationId) { 
-     await sendTechnicalMessage('Error: Conversation ID not available. Please refresh or try again.');
-     setIsLoading(false);
-     return;
+    if (!conversationId) {
+      await sendTechnicalMessage('Error: Conversation ID not available. Please refresh or try again.');
+      setIsLoading(false);
+      return;
     }
 
-    const hiddenInstruction = "Output raw GitHub Flavored Markdown (GFM). Do not wrap the entire response in ```markdown``` fences. Single newlines will be rendered as hard line breaks. Use standard GFM for all elements (headings, lists, paragraphs, etc.), as styling is handled automatically. Do not embed any HTML tags or custom CSS. Use `\n` for newlines.";
+    const hiddenInstruction: string = "Output:GitHubFlavoredMarkdown. No ```markdown``` fences. standard GFM for all elements";
     const queryToSendToBackend = `${hiddenInstruction}\n\nUser query: ${trimmedInput}`;
-
     let fullMessageTextForCurrentResponse = '';
 
-    const fetchStream = async (attempt: number): Promise<boolean> => {
-      try {
-        if (attempt === 0) {
-            fullMessageTextForCurrentResponse = '';
-            setMessages((prev) => addMessage(prev, createBotMessage('')));
-        } else {
-            setMessages((prev) => {
-                const newMessages = [...prev];
-                const lastMessage = newMessages[newMessages.length - 1];
-                if(lastMessage && lastMessage.sender === 'bot') {
-                    newMessages[newMessages.length - 1] = createBotMessage('');
-                    fullMessageTextForCurrentResponse = '';
-                }
-                return newMessages;
-            });
-        }
+    const fetchStreamSingleAttempt = async (): Promise<boolean> => {
+      fullMessageTextForCurrentResponse = '';
+      setMessages((prev) => addMessage(prev, createBotMessage('')));
 
+      try {
         const payload: AskStreamPayload = {
           conversation_id: conversationId,
           query: queryToSendToBackend,
         };
 
         const response = await fetchChatResponseStreamAPI(payload, streamAbortControllerRef.current!.signal);
-
-
         const reader = response.body?.getReader();
         if (!reader) throw new Error('Failed to get stream reader from response.');
 
         let buffer = '';
-
         while (true) {
           if (streamAbortControllerRef.current?.signal.aborted) {
             reader.cancel();
-            throw new Error("Stream aborted"); 
+            throw new Error("Stream aborted");
           }
           const { value, done } = await reader.read();
           if (done) {
             if (!fullMessageTextForCurrentResponse.trim()) {
               setMessages((prev) => {
                 const newMessages = [...prev];
-                const lastMessage = newMessages[newMessages.length - 1];
-                if (lastMessage?.sender === 'bot') {
-                  newMessages[newMessages.length - 1] = createBotMessage(
-                    `No response received from the server${attempt < MAX_RETRIES ? '. Retrying...' : '. Please try again.'}`
-                  );
+                const lastMessageIndex = newMessages.length - 1;
+                if (lastMessageIndex >= 0 && newMessages[lastMessageIndex].sender === 'bot') {
+                  newMessages[lastMessageIndex] = createBotMessage("No response received from the server. Please try again.");
                 }
                 return newMessages;
               });
               return false;
             }
-             setMessages((prevMsgs) => {
-                const newMsgs = [...prevMsgs];
-                const lastMsg = newMsgs[newMsgs.length - 1];
-                if (lastMsg && lastMsg.sender === 'bot' && lastMsg.text !== fullMessageTextForCurrentResponse) {
-                    newMsgs[newMsgs.length - 1] = createBotMessage(fullMessageTextForCurrentResponse);
-                }
-                return newMsgs;
+            setMessages((prevMsgs) => {
+              const newMsgs = [...prevMsgs];
+              const lastMsgIndex = newMsgs.length - 1;
+              if (lastMsgIndex >=0 && newMsgs[lastMsgIndex].sender === 'bot' && newMsgs[lastMsgIndex].text !== fullMessageTextForCurrentResponse) {
+                newMsgs[lastMsgIndex] = createBotMessage(fullMessageTextForCurrentResponse);
+              }
+              return newMsgs;
             });
-            return true; 
+            return true;
           }
 
           buffer += new TextDecoder().decode(value);
@@ -176,19 +155,18 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
                 try {
                   parsedChunk = JSON.parse(dataStr);
                 } catch {
-
                   parsedChunk = dataStr.trim() ? { text: dataStr } : null;
                 }
                 const chunkText = getChunkTextFromSSE(parsedChunk);
                 if (chunkText) {
                   fullMessageTextForCurrentResponse += chunkText;
                   setMessages((prevMsgs) => {
-                      const newMsgs = [...prevMsgs];
-                      const lastMsg = newMsgs[newMsgs.length - 1];
-                      if (lastMsg && lastMsg.sender === 'bot') {
-                          newMsgs[newMsgs.length - 1] = createBotMessage(fullMessageTextForCurrentResponse);
-                      }
-                      return newMsgs;
+                    const newMsgs = [...prevMsgs];
+                    const lastMsgIndex = newMsgs.length - 1;
+                    if (lastMsgIndex >=0 && newMsgs[lastMsgIndex].sender === 'bot') {
+                      newMsgs[lastMsgIndex] = createBotMessage(fullMessageTextForCurrentResponse);
+                    }
+                    return newMsgs;
                   });
                 }
               } catch (e) {
@@ -198,53 +176,66 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
           }
           if (streamAbortControllerRef.current?.signal.aborted) break;
         }
-
-        return false;
-      } catch (error: unknown)  {
+      } catch (error: unknown) {
         if (
           typeof error === 'object' &&
           error !== null &&
-          ('name' in error || 'message' in error)
+          (('name' in error && (error as {name: string}).name === 'AbortError') || ('message' in error && (error as {message: string}).message === "Stream aborted"))
         ) {
-          const errObj = error as { name?: string; message?: string };
-          if (errObj.name === 'AbortError' || errObj.message === "Stream aborted") {
-            console.log("Stream fetch aborted as expected.");
-            return true; 
-          }
+          console.log("Stream fetch aborted by user action.");
+          setMessages(prev => {
+            const newMessages = [...prev];
+            const lastMessageIndex = newMessages.length - 1;
+            if (lastMessageIndex >=0 && newMessages[lastMessageIndex].sender === 'bot' && newMessages[lastMessageIndex].text === '') {
+                 newMessages[lastMessageIndex] = createBotMessage("Request cancelled.");
+            }
+            return newMessages;
+          });
+          return false; 
         }
+
         console.error('Error fetching stream:', error);
+        let detailedErrorMessage = "Could not get a response. Please try again later.";
+        if (error instanceof Error) {
+            detailedErrorMessage = error.message;
+            const errorMsgString = error.message;
+            const jsonStartMatch = errorMsgString.match(/-\s*(\{.*)/);
+            if (jsonStartMatch && jsonStartMatch[1]) {
+                const potentialJsonString = jsonStartMatch[1];
+                try {
+                    const parsedBody = JSON.parse(potentialJsonString);
+                    if (parsedBody.message && typeof parsedBody.message === 'string') {
+                        detailedErrorMessage = parsedBody.message;
+                    } else if (parsedBody.detail && typeof parsedBody.detail === 'string') {
+                        detailedErrorMessage = parsedBody.detail;
+                    }
+                    const statusCodeMatch = errorMsgString.match(/\b(4\d{2}|5\d{2})\b/);
+                    if (statusCodeMatch && !detailedErrorMessage.toLowerCase().includes("status " + statusCodeMatch[0]) && !detailedErrorMessage.startsWith(`(Error ${statusCodeMatch[0]})`)) {
+                        detailedErrorMessage = `(Error ${statusCodeMatch[0]}) ${detailedErrorMessage}`;
+                    }
+                } catch (e) {
+                }
+            }
+        } else {
+            detailedErrorMessage = String(error);
+        }
+
         setMessages((prev) => {
           const newMessages = [...prev];
           const lastMessageIndex = newMessages.length - 1;
           if (lastMessageIndex >=0 && newMessages[lastMessageIndex]?.sender === 'bot') {
-            newMessages[lastMessageIndex] = createBotMessage(
-                `Error: Could not get a response. ${error instanceof Error ? error.message : String(error)}${attempt < MAX_RETRIES ? '. Retrying...' : '. Please try again later.'}`
-            );
+            newMessages[lastMessageIndex] = createBotMessage(`Error: ${detailedErrorMessage}`);
           } else {
-             addMessage(newMessages, createBotMessage(
-                `Error: Could not get a response. ${error instanceof Error ? error.message : String(error)}${attempt < MAX_RETRIES ? '. Retrying...' : '. Please try again later.'}`
-            ));
+             addMessage(newMessages, createBotMessage(`Error: ${detailedErrorMessage}`));
           }
           return newMessages;
         });
-        return false; 
+        return false;
       }
+      return false; 
     };
-
-    let attempt = 0;
-    let success = false;
-    while (attempt <= MAX_RETRIES && !success) {
-      if(streamAbortControllerRef.current?.signal.aborted) {
-        console.log("Aborting sendMessage sequence.");
-        break;
-      }
-      success = await fetchStream(attempt);
-      if (!success && attempt < MAX_RETRIES && !streamAbortControllerRef.current?.signal.aborted) {
-        await new Promise((resolve) => setTimeout(resolve, 1000 * (attempt + 1)));
-      }
-      attempt++;
-    }
-
+    
+    await fetchStreamSingleAttempt();
     setIsLoading(false);
   }, [input, isLoading, setMessages, sendTechnicalMessage, textareaResize, conversationId]);
 
@@ -263,15 +254,15 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
     if (textarea) {
       textarea.focus();
       textarea.style.height = INITIAL_TEXTAREA_CONTENT_HEIGHT_PX_STR;
-      textareaResize(); 
+      textareaResize();
       textarea.addEventListener('input', textareaResize);
     }
     return () => {
       if (textarea) {
         textarea.removeEventListener('input', textareaResize);
       }
-      if(streamAbortControllerRef.current){
-          streamAbortControllerRef.current.abort();
+      if (streamAbortControllerRef.current) {
+        streamAbortControllerRef.current.abort();
       }
     };
   }, [textareaResize]);
@@ -286,7 +277,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
         if (textareaRef.current && document.activeElement !== textareaRef.current) {
           textareaRef.current.focus();
         }
-      }, 50); 
+      }, 50);
       return () => clearTimeout(focusTimeoutId);
     }
   }, [isLoading, isFeedbackModalOpen, isConfirmationModalOpen]);
@@ -302,20 +293,20 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
         setRatingError((prev) => ({ ...prev, [messageIndex]: '' }));
 
         if (!conversationId) {
-            console.error("Cannot submit rating: conversation_id is missing.");
-            setRatingError((prev) => ({ ...prev, [messageIndex]: 'Session ID missing. Cannot submit rating.' }));
-            setFeedbackState((prev) => ({ ...prev, [messageIndex]: previousLocalRatingState }));
-            return;
+          console.error("Cannot submit rating: conversation_id is missing.");
+          setRatingError((prev) => ({ ...prev, [messageIndex]: 'conversation_id missing. Cannot submit rating.' }));
+          setFeedbackState((prev) => ({ ...prev, [messageIndex]: previousLocalRatingState }));
+          return;
         }
 
         if (newLocalRating === null) {
-            return;
+          return;
         }
 
         let vote: FeedbackVotePayload;
         if (newLocalRating === 'thumbs-up') {
           vote = 'positive';
-        } else { 
+        } else {
           vote = 'negative';
         }
 
@@ -323,15 +314,15 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
           await submitFeedbackAPI(conversationId, { vote: vote, comment: "" });
         } catch (error) {
           console.error('Error submitting rating:', error);
-          setFeedbackState((prev) => ({ ...prev, [messageIndex]: previousLocalRatingState })); 
+          setFeedbackState((prev) => ({ ...prev, [messageIndex]: previousLocalRatingState }));
           const errorMessage =
-            error instanceof Error && error.message.includes('Failed to connect') 
+            error instanceof Error && error.message.includes('Failed to connect')
               ? 'Failed to connect to the server.'
               : (error instanceof Error ? error.message : 'Error submitting rating.');
           setRatingError((prev) => ({ ...prev, [messageIndex]: errorMessage }));
         }
       }, 300),
-    [feedbackState, conversationId] 
+    [feedbackState, conversationId]
   );
 
   const handleFeedbackPromptClick = useCallback((messageIndex: number) => {
@@ -350,8 +341,8 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
 
   const handleFeedbackSubmit = useCallback(async () => {
     if (activeMessageIndex === null) {
-        setSubmitError('No message selected for feedback.');
-        return;
+      setSubmitError('No message selected for feedback.');
+      return;
     }
     if (!feedbackText.trim()) {
       setFeedbackError('Feedback cannot be empty.');
@@ -361,9 +352,9 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
     setSubmitError('');
 
     if (!conversationId) {
-        console.error("Cannot submit feedback: conversation_id is missing.");
-        setSubmitError('Session ID missing. Cannot submit feedback.');
-        return;
+      console.error("Cannot submit feedback: conversation_id is missing.");
+      setSubmitError('Session ID missing. Cannot submit feedback.');
+      return;
     }
 
     let vote: FeedbackVotePayload = 'not_specified';
@@ -373,7 +364,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
     } else if (currentRating === 'thumbs-down') {
       vote = 'negative';
     }
-    
+
     try {
       await submitFeedbackAPI(conversationId, {
         vote: vote,
@@ -393,10 +384,10 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
 
   const handleConfirmationModalClose = useCallback(() => {
     setIsConfirmationModalOpen(false);
-    setActiveMessageIndex(null); 
+    setActiveMessageIndex(null);
     setFeedbackText('');
   }, []);
-  
+
   const modalHeader = useMemo(() => {
     if (activeMessageIndex === null) return 'Share Your Feedback';
     return feedbackState[activeMessageIndex] === 'thumbs-down' ? 'Report an Issue' : 'Share Your Feedback';
@@ -409,11 +400,11 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
 
   const confirmationMessage = useMemo(() => {
     if (activeMessageIndex === null && !isConfirmationModalOpen) return 'Feedback Sent!';
-    if(activeMessageIndex === null && isConfirmationModalOpen) return 'Feedback Sent!';
+    if (activeMessageIndex === null && isConfirmationModalOpen) return 'Feedback Sent!';
 
-    const currentRating = feedbackState[activeMessageIndex!]; 
-      if (currentRating === 'thumbs-down') return 'Issue Report Sent!';
-      return 'Feedback Sent!';
+    const currentRating = feedbackState[activeMessageIndex!];
+    if (currentRating === 'thumbs-down') return 'Issue Report Sent!';
+    return 'Feedback Sent!';
   }, [activeMessageIndex, feedbackState, isConfirmationModalOpen]);
 
   return (
@@ -422,17 +413,12 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
         className="chatMessages flex flex-col gap-6 p-4 sm:p-6 md:p-8 overflow-y-auto scroll-smooth bg-white flex-shrink-0 rounded-[20px] h-[60vh] max-h-[90vh] min-h-0"
         ref={chatContainerRef}
       >
-        {messages.length === 0 && !isLoading && (
-          <div className="h-full flex flex-col items-center justify-center text-center text-gray-400 text-sm p-4">
-            <span>No messages yet.</span>
-            <span>Start the conversation below!</span>
-          </div>
-        )}
         {messages.map((msg, index) => (
           <MemoizedMessage
-            key={index} 
+            key={index}
             msg={msg}
             index={index}
+            isLoading={isLoading} 
             showFeedbackControls={
               msg.sender === 'bot' &&
               (index < messages.length - 1 || (index === messages.length - 1 && !isLoading))
@@ -443,25 +429,25 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
             onPromptFeedback={() => handleFeedbackPromptClick(index)}
           />
         ))}
-        {isLoading && messages.length > 0 && messages[messages.length -1]?.sender === 'user' && !messages[messages.length -1]?.text.includes("Error:") && !messages[messages.length -1]?.text.includes("No response received") && (
+        {isLoading && messages.length > 0 && messages[messages.length -1]?.sender === 'user' && (
           <div className="self-start max-w-[90%] sm:max-w-[80%] flex flex-col">
             <div className="p-4 sm:p-5 md:p-6 rounded-[30px] bg-[#ececec] text-black rounded-tr-[30px] rounded-bl-[0] shadow-sm">
-                <div className="animate-pulse flex space-x-2">
-                    <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
-                </div>
+              <div className="animate-pulse flex space-x-2">
+                <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+              </div>
             </div>
           </div>
         )}
-          {isLoading && messages.length === 0 && (
-            <div className="h-full flex items-center justify-center">
-                <div className="animate-pulse flex space-x-2">
-                    <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
-                </div>
+        {isLoading && messages.length === 0 && (
+          <div className="h-full flex items-center justify-center">
+            <div className="animate-pulse flex space-x-2">
+              <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+              <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+              <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
             </div>
+          </div>
         )}
       </div>
       <div className="flex items-center p-2 sm:p-3 gap-2 sm:gap-3 border-t border-gray-200 bg-white shrink-0">
@@ -472,12 +458,12 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
             ref={textareaRef}
             rows={1}
             className="border-none text-sm sm:text-base text-black resize-none bg-transparent w-full py-2 px-3 font-[Poppins] placeholder:text-gray-500 focus:outline-none"
-            style={{ minHeight: INITIAL_TEXTAREA_CONTENT_HEIGHT_PX_STR }} 
+            style={{ minHeight: INITIAL_TEXTAREA_CONTENT_HEIGHT_PX_STR }}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             onPaste={textareaResize}
-            onInput={textareaResize} 
+            onInput={textareaResize}
             placeholder="Write your question here..."
             disabled={isLoading}
             aria-label="Chat input"
@@ -493,7 +479,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
           <Image
             src="/button.png"
             alt="Send"
-            width={120} 
+            width={120}
             height={120}
             quality={100}
             style ={{ width: 'auto', height: 'auto' }}
@@ -574,15 +560,15 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
             aria-describedby="confirmation-modal-description"
             aria-modal="true"
           >
-              <div className="w-full flex justify-between items-center">
-                <span className="w-6"></span>
-                <h2 id="confirmation-modal-header" className="text-lg font-semibold text-gray-800 text-center flex-1">{confirmationMessage}</h2>
+            <div className="w-full flex justify-between items-center">
+              <span className="w-6"></span>
+              <h2 id="confirmation-modal-header" className="text-lg font-semibold text-gray-800 text-center flex-1">{confirmationMessage}</h2>
               <button
-                  onClick={handleConfirmationModalClose}
-                  className="text-gray-500 hover:text-gray-700 text-2xl leading-none"
-                  aria-label="Close confirmation"
+                onClick={handleConfirmationModalClose}
+                className="text-gray-500 hover:text-gray-700 text-2xl leading-none"
+                aria-label="Close confirmation"
               >
-                  &times;
+                &times;
               </button>
             </div>
             <svg
@@ -607,6 +593,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
 interface MemoizedMessageProps {
   msg: Message;
   index: number;
+  isLoading: boolean;
   showFeedbackControls: boolean;
   feedbackType: 'thumbs-up' | 'thumbs-down' | null;
   currentRatingError?: string;
@@ -615,9 +602,23 @@ interface MemoizedMessageProps {
 }
 
 const MemoizedMessage = memo(
-  ({ msg, index, showFeedbackControls, feedbackType, currentRatingError, onRate, onPromptFeedback }: MemoizedMessageProps) => {
+  ({ msg, index, isLoading, showFeedbackControls, feedbackType, currentRatingError, onRate, onPromptFeedback }: MemoizedMessageProps) => {
     const isUser = msg.sender === 'user';
-    
+
+    if (msg.sender === 'bot' && msg.text === '' && isLoading) {
+      return (
+        <div className="self-start flex flex-col w-auto max-w-[90%] sm:max-w-[80%]">
+          <div className="p-4 sm:p-5 md:p-6 rounded-[30px] bg-[#ececec] text-black rounded-bl-[0] shadow-sm">
+            <div className="animate-pulse flex space-x-2">
+              <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+              <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+              <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     const markdownContent = msg.text
       .replace(/\\n/g, '\n')
       .replace(/##(\d+)/g, '## $1');
@@ -649,10 +650,10 @@ const MemoizedMessage = memo(
                       return <ol className="pl-6 sm:pl-8 list-decimal" {...props}>{mergedChildren}</ol>;
                     },
                     ul: ({ node, className, children, ...props }) => (
-                    <ul className={`pl-10 sm:pl-12 list-disc ${className || ''}`} {...props}>
-                      {children}
-                    </ul>
-                  ),
+                      <ul className={`pl-10 sm:pl-12 list-disc ${className || ''}`} {...props}>
+                        {children}
+                      </ul>
+                    ),
                     p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
                     h1: ({ children }) => <h1 className="text-2xl sm:text-3xl font-bold my-3 text-black">{children}</h1>,
                     h2: ({ children }) => <h2 className="text-xl sm:text-2xl font-semibold my-3 text-black">{children}</h2>,
@@ -660,13 +661,32 @@ const MemoizedMessage = memo(
                     h4: ({ children }) => <h4 className="text-base sm:text-lg font-semibold my-3 text-black">{children}</h4>,
                     h5: ({ children }) => <h5 className="text-sm sm:text-base font-semibold my-3 text-black">{children}</h5>,
                     h6: ({ children }) => <h6 className="text-xs sm:text-sm font-semibold my-3 text-black">{children}</h6>,
+
+                    
+                    table: ({ children }) => (
+                      <div className="overflow-x-auto w-full">
+                        <table className="min-w-full border-collapse border border-gray-300 text-xs sm:text-sm">
+                          {children}
+                        </table>
+                      </div>
+                    ),
+                    th: ({ children }) => (
+                      <th className="border border-gray-300 bg-gray-100 px-2 sm:px-4 py-2 text-left font-semibold text-black whitespace-nowrap">
+                        <span className="block truncate">{children}</span>
+                      </th>
+                    ),
+                    td: ({ children }) => (
+                      <td className="border border-gray-300 px-2 sm:px-4 py-2 text-black whitespace-nowrap">
+                        <span className="block truncate">{children}</span>
+                      </td>
+                    ),
                   }}
                 >
                   {markdownContent}
                 </ReactMarkdown>
               </div>
             </div>
-            {showFeedbackControls && msg.text.trim() !== '' && !msg.text.startsWith("Error:") && !msg.text.startsWith("No response received") && (
+            {showFeedbackControls && msg.text.trim() !== '' && !msg.text.startsWith("Error:") && !msg.text.startsWith("No response received") && !msg.text.startsWith("Request cancelled") && (
               <div className="flex items-center justify-end mt-2">
                 <button
                   onClick={onPromptFeedback}
@@ -717,6 +737,7 @@ const MemoizedMessage = memo(
       prevProps.msg.text === nextProps.msg.text &&
       prevProps.msg.sender === nextProps.msg.sender &&
       prevProps.index === nextProps.index &&
+      prevProps.isLoading === nextProps.isLoading &&
       prevProps.showFeedbackControls === nextProps.showFeedbackControls &&
       prevProps.feedbackType === nextProps.feedbackType &&
       prevProps.currentRatingError === nextProps.currentRatingError
