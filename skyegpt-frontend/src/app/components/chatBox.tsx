@@ -103,7 +103,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
     setIsLoading(true);
     wasNearBottomRef.current = true;
 
-    const conversationId = localStorage.getItem('chroma_conversation_id');
+    const conversationId = localStorage.getItem('conversation_id');
 
     if (!conversationId) {
       await sendTechnicalMessage('Error: Conversation ID not found. Please refresh or try again.');
@@ -230,11 +230,9 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
         ) {
           const errObj = error as { name?: string; message?: string };
           if (errObj.name === 'AbortError' || errObj.message === "Stream aborted") {
-            console.log("Fetch aborted by new request.");
             return true;
           }
         }
-        console.error(`Send message error (attempt ${attempt + 1}/${MAX_RETRIES + 1}):`, error);
         setMessages((prev) => {
           const newMessages = [...prev];
           const lastMessage = newMessages[newMessages.length - 1];
@@ -258,7 +256,6 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
     let success = false;
     while (attempt <= MAX_RETRIES && !success) {
       if(streamAbortControllerRef.current?.signal.aborted) {
-          console.log("Send message loop aborted.");
           break;
       }
       success = await fetchStream(attempt);
@@ -324,9 +321,9 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
         setFeedbackState((prev) => ({ ...prev, [messageIndex]: newLocalRating }));
         setRatingError((prev) => ({ ...prev, [messageIndex]: '' }));
 
-        const conversationId = localStorage.getItem('chroma_conversation_id');
+        const conversationId = localStorage.getItem('conversation_id');
         if (!conversationId) {
-            console.error("Cannot submit rating: chroma_conversation_id is missing.");
+            console.error("Cannot submit rating: conversation_id is missing.");
             setRatingError((prev) => ({ ...prev, [messageIndex]: 'Session ID missing. Cannot submit rating.' }));
             setFeedbackState((prev) => ({ ...prev, [messageIndex]: previousLocalRatingState }));
             return;
@@ -399,9 +396,9 @@ const ChatBox: React.FC<ChatBoxProps> = ({ askEndpoint, messages, setMessages, c
     setFeedbackError('');
     setSubmitError('');
 
-    const conversationId = localStorage.getItem('chroma_conversation_id');
+    const conversationId = localStorage.getItem('conversation_id');
     if (!conversationId) {
-        console.error("Cannot submit feedback: chroma_conversation_id is missing.");
+        console.error("Cannot submit feedback: conversation_id is missing.");
         setSubmitError('Session ID missing. Cannot submit feedback.');
         return;
     }
@@ -706,7 +703,6 @@ const MemoizedMessage = memo(
                         }
                         return acc;
                       }, []);
-                      console.log(`Rendered <ol> children (Index: ${index}):`, mergedChildren);
                       return <ol className="pl-6 sm:pl-8 list-decimal" {...props}>{mergedChildren}</ol>;
                     },
                     ul: ({ children }) => <ul className="pl-6 sm:pl-8 list-disc">{children}</ul>,

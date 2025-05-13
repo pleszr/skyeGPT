@@ -7,7 +7,7 @@ import { backendHost } from '@/app/utils/sharedConfig';
 import { Message } from '@/app/utils/messageManager';
 
 const HomePage = () => {
-  const [chromaMessages, setChromaMessages] = useState<Message[]>([]);
+  const [Messages, setMessages] = useState<Message[]>([]);
 
   const createConversation = async () => {
     try {
@@ -24,11 +24,9 @@ const HomePage = () => {
       }
 
       const data = await response.json();
-      console.log('Conversation created', data.conversation_id);
-      localStorage.setItem('chroma_conversation_id', data.conversation_id);
+      localStorage.setItem('conversation_id', data.conversation_id);
 
     } catch (error) {
-      console.error('Error creating conversation:', error);
       alert('Failed to create conversation. Please try again.');
     }
   };
@@ -37,7 +35,7 @@ const HomePage = () => {
     createConversation();
   }, []);
 
-  const askEndpointChroma = `${backendHost}/ask/response/stream`;
+  const askEndpoint = `${backendHost}/ask/response/stream`;
 
   return (
     <div className="w-screen min-h-screen max-w-full flex flex-col overflow-hidden bg-gray-50"> 
@@ -94,10 +92,10 @@ const HomePage = () => {
               <div className="flex-1 bg-white shadow-lg rounded-[30px] sm:rounded-[40px] p-0 min-h-0 overflow-hidden"> 
                 <div className="h-full"> 
                   <ChatBox
-                    askEndpoint={askEndpointChroma}
-                    messages={chromaMessages}
-                    setMessages={setChromaMessages}
-                    className="gptChroma" 
+                    askEndpoint={askEndpoint}
+                    messages={Messages}
+                    setMessages={setMessages}
+                    className="gpt" 
                   />
                 </div>
               </div>
