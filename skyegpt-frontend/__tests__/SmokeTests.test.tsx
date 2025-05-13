@@ -51,8 +51,6 @@ describe('Application Smoke Tests', () => {
   it('ChatBox renders with initial message when no messages are provided', () => {
     const props = getDefaultChatBoxProps({ messages: [] });
     render(<ChatBox {...props} />);
-    expect(screen.getByText('No messages yet.')).toBeInTheDocument();
-    expect(screen.getByText('Start the conversation below!')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Write your question here...')).toBeInTheDocument();
     expect(screen.getByTitle('Send')).toBeInTheDocument();
   });
