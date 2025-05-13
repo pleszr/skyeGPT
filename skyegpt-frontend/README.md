@@ -168,6 +168,7 @@ Here’s the folder and file structure of the `skyegpt-frontend` project:
     - `layout.tsx` (Root layout)
     - `page.tsx` (Main page, HomePage)
 
+---
 
 ### `chatBox.tsx`
 
@@ -186,6 +187,7 @@ This is the main chat interface component. It handles user input, displays messa
   - `debouncedHandleRating`: Handles thumbs-up/down ratings with a delay to avoid rapid clicks.
   - `scrollToBottom`: Smoothly scrolls to the latest message.
 
+---
 
 ### `chatApiService.ts`
 
@@ -196,7 +198,7 @@ This module provides API interaction utilities for the chat functionality. (Back
 - defines data interfaces
 - functions for creating conversations, streaming messages, and submitting feedback. 
 
----
+
 
 - **Backend URLs**
   - `API_BASE_URL`: Root URL for the backend.
@@ -204,7 +206,7 @@ This module provides API interaction utilities for the chat functionality. (Back
   - `ASK_STREAM_URL`: `POST /ask/response/stream`
   - `getConversationFeedbackUrl(conversationId)`: Constructs feedback endpoint URL for a given conversation.
 
-
+---
 
 // FOR TESTING - NOT USED
 ### ~~`submitFeedback/route.tsx`~~
@@ -219,6 +221,8 @@ This module provides API interaction utilities for the chat functionality. (Back
 - ~~**GET Request**:~~  
   ~~Returns all stored feedback entries.~~  
 
+---
+
 ### ~~`submitRating/route.tsx`~~
 
 ~~This is a mock API route for submitting thumbs-up/down ratings.~~
@@ -231,6 +235,7 @@ This module provides API interaction utilities for the chat functionality. (Back
 - ~~**GET Request**:~~  
   ~~Returns all stored ratings.~~
 
+---
 
 ### `messageManager.ts`
 
@@ -241,12 +246,16 @@ Utility functions for managing chat messages.
   - `createUserMessage`: Creates a user message object.
   - `createBotMessage`: Creates a bot message object.
 
+---
+
 ### `sharedConfig.ts`
 
 Stores the backend host URL.
 
 - **Content**:
   - `backendHost`: Uses environment variable `NEXT_PUBLIC_SKYEGPT_BACKEND_HOST` or defaults to `http://localhost:8000`.
+
+---
 
 ### `layout.tsx`
 
@@ -256,6 +265,8 @@ The root layout for the app.
   - Uses the Poppins font from Google Fonts.
   - Sets metadata (title and description).
   - Applies global CSS.
+
+---
 
 ### `page.tsx`
 
@@ -267,10 +278,6 @@ The main page of the app.
   - Renders the `ChatBox` component for the chat interface.
   - Includes a footer with a note about verifying answers.
 
-## Notes
+---
 
-- The frontend uses **Next.js** for server-side rendering and **Tailwind CSS** for styling.
-- The chat supports **Markdown** formatting for bot responses.
-- Feedback and ratings are stored in memory (mock API) and not persisted (currently not used).
-- Always verify Node.js and npm versions before starting development.
-- Use the provided commands to avoid setup issues.
+
