@@ -99,6 +99,3 @@ def _handle_value_error(collection_name: str, e: ValueError):
     error_message = f'Collection {collection_name} not found'
     logger.error(error_message)
     raise CollectionNotFoundError(error_message) from e
-
-
-# TODO add query

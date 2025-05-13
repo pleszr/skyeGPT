@@ -1,8 +1,8 @@
-from data_ingestion.scrapers.save_skye_documentation import download_skye_documentation_from_s3
-from data_ingestion.scrapers.save_innoveo_partner_hub import download_innoveo_partner_hub
+from data_ingestion.scrapers import save_skye_documentation
+from data_ingestion.scrapers import save_innoveo_partner_hub
 from common import logger, utils, constants
 from database import vectordb_client
-from common.exceptions import ResponseGenerationError
+from common.exceptions import VectorDBError, CollectionNotFoundError
 from data_ingestion.persister import markdown_2_vector_db
 
 
@@ -10,6 +10,8 @@ class IngestionService:
     """
     Service responsible for handling data-ingestion related operations.
     """
+
+    # noinspection PyMethodMayBeStatic
     def download_skye_documentation_to_server(self, version: str) -> dict:
         """
         Orchestrates the downloading of Skye documentation to the server.
@@ -27,7 +29,7 @@ class IngestionService:
         """
         logger.info(f"IngestionService: Attempting download for version {version}")
         try:
-            result = download_skye_documentation_from_s3(version)
+            result = save_skye_documentation.download_skye_documentation_from_s3(version)
             logger.info(f"IngestionService: Download successful for version {version}")
             return result
         except FileNotFoundError as e:
@@ -37,6 +39,7 @@ class IngestionService:
             logger.exception(f"IngestionService: Unexpected error downloading version {version}", exc_info=True)
             raise e
 
+    # noinspection PyMethodMayBeStatic
     def download_iph_to_server(self) -> dict:
         """Orchestrates the downloading of Innoveo Partner Hub to the server.
 
@@ -50,13 +53,14 @@ class IngestionService:
         """
         logger.info(f"IngestionService: Attempting to download IPH")
         try:
-            result = download_innoveo_partner_hub()
+            result = save_innoveo_partner_hub.download_innoveo_partner_hub()
             logger.info(f"IngestionService: Download successful for IPH")
             return result
         except Exception as e:
             logger.exception(f"IngestionService: Unexpected error downloading IPH")
             raise e
 
+    # noinspection PyMethodMayBeStatic
     def import_skyedoc(self, skye_major_version: str, markdown_headers: list):
         """Orchestrates the importing of Skyedoc to the retriever database from local storage.
 
@@ -77,6 +81,7 @@ class IngestionService:
             logger.exception(f"IngestionService: Unexpected error importing SkyeDoc version ${skye_major_version}")
             raise e
 
+    # noinspection PyMethodMayBeStatic
     def import_iph(self, markdown_headers: list) -> None:
         """Orchestrates the importing of Innoveo Partner Hub to the retriever database from local storage.
 
@@ -99,6 +104,8 @@ class IngestionService:
 
 class DatabaseService:
     """Service responsible for handling database collection operations."""
+
+    # noinspection PyMethodMayBeStatic
     def delete_collection(self, collection_name: str):
         """
         Orchestrates the deletion of a database collection.
@@ -114,13 +121,14 @@ class DatabaseService:
         try:
             vectordb_client.delete_collection(collection_name)
             logger.info(f"DatabaseService: Deletion successful for collection '{collection_name}'")
-        except ResponseGenerationError as e:
-            logger.info(f"DatabaseService: Collection '{collection_name}' not found for deletion.", exc_info=True)
+        except CollectionNotFoundError as e:
+            logger.info(f"DatabaseService: Collection '{collection_name}' was not found.", exc_info=True)
             raise e
-        except Exception as e:
-            logger.error(f"DatabaseService: Unexpected error deleting collection '{collection_name}'", exc_info=True)
+        except VectorDBError as e:
+            logger.exception(f"DatabaseService: Unexpected error deleting collection '{collection_name}'")
             raise e
 
+    # noinspection PyMethodMayBeStatic
     def number_of_documents_in_collection(self, collection_name: str):
         """
         Returns the number of documents in a given collection
@@ -137,7 +145,7 @@ class DatabaseService:
             number_of_documents = vectordb_client.number_of_documents_in_collection(collection_name)
             logger.info(f"DatabaseService: Number of collections in {collection_name}: {number_of_documents}")
             return number_of_documents
-        except ResponseGenerationError as e:
+        except VectorDBError as e:
             logger.exception(f"DatabaseService: Collection '{collection_name}' not found for deletion.")
             raise e
         except Exception as e:

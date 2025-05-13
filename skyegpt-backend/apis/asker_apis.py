@@ -4,9 +4,9 @@ from fastapi import APIRouter, Depends, Path, status, Query
 from fastapi.responses import StreamingResponse, Response
 from .schemas.requests import ConversationQueryRequest, CreateFeedbackRequest
 from .schemas.responses import CreateConversationIdResponse, ConversationResponse, ConversationListResponse
-from dependencies import (AgentResponseStreamingService, get_agent_response_stream_service,
-                          ConversationRetrieverService, get_conversation_retriever_service,
-                          FeedbackManagerService, get_feedback_manager_service)
+from services.dependencies import (AgentResponseStreamingService, get_agent_response_stream_service,
+                                   ConversationRetrieverService, get_conversation_retriever_service,
+                                   FeedbackManagerService, get_feedback_manager_service)
 from common import logger, message_bundle
 from common.decorators import handle_response_stream_errors, handle_unknown_errors
 

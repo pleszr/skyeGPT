@@ -42,5 +42,3 @@ def mock_completions_chunk_generator(
             ]
         )
         yield chunk
-
-
