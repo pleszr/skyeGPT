@@ -3,72 +3,77 @@
 import Image from 'next/image';
 import React, { useState, useEffect } from 'react';
 import ChatBox from '@/app/components/chatBox';
-import { backendHost } from '@/app/utils/sharedConfig';
 import { Message } from '@/app/utils/messageManager';
+import { createConversationAPI, ConversationResponse } from '@/app/services/chatApiService';
 
 const HomePage = () => {
-  const [Messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
 
-  const createConversation = async () => {
+  const initializeConversation = async () => {
     try {
-      const response = await fetch(`${backendHost}/ask/conversation`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-      });
 
-      if (!response.ok) {
-        throw new Error(`Could not create new conversation: ${response.status}`);
+      const data: ConversationResponse = await createConversationAPI();
+      setCurrentConversationId(data.conversation_id);
+      console.log("New conversation created", data.conversation_id);
+
+     } catch (error) {
+        console.error('Failed to initialize conversation:', error);
+        alert(`Failed to start a new chat session. Please try refreshing the page. Error: ${error instanceof Error ? error.message : String(error)}`);
       }
 
-      const data = await response.json();
-      localStorage.setItem('conversation_id', data.conversation_id);
 
-    } catch (error) {
-      alert('Failed to create conversation. Please try again.');
-    }
+      // IN CASE WE WANT TO REUSE THE CONVERSATION IDs
+      // let currentConversationId = localStorage.getItem('conversation_id');
+    //   if (!currentConversationId) { 
+    //     console.log("No conversation ID found, creating a new one...");
+    //     const data: ConversationResponse = await createConversationAPI();
+    //     localStorage.setItem('conversation_id', data.conversation_id);
+    //     currentConversationId = data.conversation_id;
+    //     console.log("New conversation created:", data.conversation_id);
+    //   } else {
+    //     console.log("Using existing conversation ID:", currentConversationId);
+    //   }
+    // } catch (error) {
+    //   console.error('Failed to initialize conversation:', error);
+    //   alert(`Failed to start a new chat session. Please try refreshing the page. Error: ${error instanceof Error ? error.message : String(error)}`);
+    // }
   };
 
   useEffect(() => {
-    createConversation();
+    initializeConversation();
   }, []);
 
-  const askEndpoint = `${backendHost}/ask/response/stream`;
 
   return (
-    <div className="w-screen min-h-screen max-w-full flex flex-col overflow-hidden bg-gray-50"> 
+    <div className="w-screen min-h-screen max-w-full flex flex-col overflow-hidden bg-gray-50">
       <div className="flex-1 md:items-center flex flex-col md:flex-row mx-auto w-full max-w-[1530px] px-4 sm:px-8 md:px-12 overflow-hidden">
-        
-        <div className="hidden md:flex flex-col items-center justify-start w-[200px] md:w-[300px] py-4 md:py-8 px-2 relative shrink-0 space-y-4 md:space-y-6"> 
-          
-          <div className="w-full flex justify-center flex-shrink-0 px-4"> 
+
+        <div className="hidden md:flex flex-col items-center justify-start w-[200px] md:w-[300px] py-4 md:py-8 px-2 relative shrink-0 space-y-4 md:space-y-6">
+          <div className="w-full flex justify-center flex-shrink-0 px-4">
             <Image
               src="/logo.png"
               alt="SkyeGPT logo"
-              width={191} 
-              height={149} 
+              width={191}
+              height={149}
               className="object-contain w-auto h-full max-w-[60%] sm:max-w-[50%] md:max-w-[291px] max-h-[15vh]"
             />
           </div>
-
-          <div className="w-full flex justify-center flex-shrink-0 px-4"> 
+          <div className="w-full flex justify-center flex-shrink-0 px-4">
             <Image
               src="/gears.png"
               alt="Gears"
-              width={267} 
-              height={380} 
+              width={267}
+              height={380}
               className="object-contain w-auto h-full max-w-[50%] sm:max-w-[40%] md:max-w-[200px] max-h-[30vh]"
             />
           </div>
-          
           <div className="w-full flex justify-center flex-shrink-0 min-h-0 items-end px-4">
             <Image
               src="/robot.png"
               alt="Robot"
               width={300}
-              height={300} 
+              height={300}
               priority
               className="object-contain w-auto h-full max-w-[90%] md:max-w-full max-h-[35vh] md:max-h-[40vh] relative -mr-4 md:-mr-19"
             />
@@ -78,30 +83,28 @@ const HomePage = () => {
         <div className="flex md:hidden justify-center py-6 sm:py-8 shrink-0">
           <Image
             src="/logo.png"
-            alt="SkyeGPT logo"
+            alt="SkyeGPT mobile logo"
             width={191}
             height={149}
             className="w-auto h-auto max-w-[150px] max-h-[100px] sm:max-h-[120px]"
           />
         </div>
 
-        <div className="flex-1 flex flex-col min-h-0 pb-4 md:pb-0"> 
-          <div className="flex flex-col min-h-0 pt-0 sm:pt-2 md:pt-15 pb-4 sm:pb-6 w-full h-full"> 
+        <div className="flex-1 flex flex-col min-h-0 pb-4 md:pb-0">
+          <div className="flex flex-col min-h-0 pt-0 sm:pt-2 md:pt-15 pb-4 sm:pb-6 w-full h-full">
             <div className="flex flex-col ">
-              
-              <div className="flex-1 bg-white shadow-lg rounded-[30px] sm:rounded-[40px] p-0 min-h-0 overflow-hidden"> 
-                <div className="h-full"> 
+              <div className="flex-1 bg-white shadow-lg rounded-[30px] sm:rounded-[40px] p-0 min-h-0 overflow-hidden">
+                <div className="h-full">
                   <ChatBox
-                    askEndpoint={askEndpoint}
-                    messages={Messages}
+                    messages={messages}
                     setMessages={setMessages}
-                    className="gpt" 
+                    className="gpt"
+                    conversationId={currentConversationId}
                   />
                 </div>
               </div>
             </div>
           </div>
-          
           <footer className="text-center text-xs sm:text-sm text-gray-600 py-3 sm:py-4 shrink-0">
             SkyeGPT can make mistakes. If you find the answer strange, verify the results and give feedback!
           </footer>

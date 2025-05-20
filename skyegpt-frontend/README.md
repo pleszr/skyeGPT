@@ -16,6 +16,7 @@ This README explains how to set up and run the SkyeGPT frontend.
 - [Start Development](#start-development)
 - [Project Structure](#project-structure)
   - [chatBox.tsx](#chatboxtsx)
+  - [chatApiService.ts](#chatapiservicets)
   - ~~[submitFeedback/route.tsx](#submitfeedbackroutetsx)~~
   - ~~[submitRating/route.tsx](#submitratingroutetsx)~~
   - [messageManager.ts](#messagemanagerts)
@@ -27,8 +28,8 @@ This README explains how to set up and run the SkyeGPT frontend.
 
 ## Build Options
 
-1. **Local** (for development, with HRM)
-2. **Docker** (For PROD readiness, for perform PROD-like testing. no hot-reload, HRM)
+1. **Local** (for development, with HMR)
+2. **Docker** (For PROD readiness, for perform PROD-like testing. no hot-reload, HMR)
 
 ## Set Up Your Environment  [**Local**]
 
@@ -91,7 +92,7 @@ npm -v
 ```
 
 ## Set Up Your Environment  [**Docker**]
-! Suitable For PROD readiness, for perform PROD-like testing. (no hot-reload, HRM)
+! Suitable For PROD readiness, for perform PROD-like testing. (no hot-reload, HMR)
 
 #### With Docker-Compose
 
@@ -160,11 +161,14 @@ Here’s the folder and file structure of the `skyegpt-frontend` project:
     - `utils/` (Utility functions)
       - `messageManager.ts` (Handles messages)
       - `sharedConfig.ts` (Backend host config)
+    - `services/` (Services)
+      - `chatApiService.ts` (Backend APIs)
     - `favicon.ico` (Site icon)
     - `globals.css` (Global styles)
     - `layout.tsx` (Root layout)
     - `page.tsx` (Main page, HomePage)
 
+---
 
 ### `chatBox.tsx`
 
@@ -183,6 +187,26 @@ This is the main chat interface component. It handles user input, displays messa
   - `debouncedHandleRating`: Handles thumbs-up/down ratings with a delay to avoid rapid clicks.
   - `scrollToBottom`: Smoothly scrolls to the latest message.
 
+---
+
+### `chatApiService.ts`
+
+
+This module provides API interaction utilities for the chat functionality. (Backend URLS)
+
+- It centralizes backend endpoints
+- defines data interfaces
+- functions for creating conversations, streaming messages, and submitting feedback. 
+
+
+
+- **Backend URLs**
+  - `API_BASE_URL`: Root URL for the backend.
+  - `CREATE_CONVERSATION_URL`: `POST /ask/conversation`
+  - `ASK_STREAM_URL`: `POST /ask/response/stream`
+  - `getConversationFeedbackUrl(conversationId)`: Constructs feedback endpoint URL for a given conversation.
+
+---
 
 // FOR TESTING - NOT USED
 ### ~~`submitFeedback/route.tsx`~~
@@ -197,6 +221,8 @@ This is the main chat interface component. It handles user input, displays messa
 - ~~**GET Request**:~~  
   ~~Returns all stored feedback entries.~~  
 
+---
+
 ### ~~`submitRating/route.tsx`~~
 
 ~~This is a mock API route for submitting thumbs-up/down ratings.~~
@@ -209,6 +235,7 @@ This is the main chat interface component. It handles user input, displays messa
 - ~~**GET Request**:~~  
   ~~Returns all stored ratings.~~
 
+---
 
 ### `messageManager.ts`
 
@@ -219,12 +246,16 @@ Utility functions for managing chat messages.
   - `createUserMessage`: Creates a user message object.
   - `createBotMessage`: Creates a bot message object.
 
+---
+
 ### `sharedConfig.ts`
 
 Stores the backend host URL.
 
 - **Content**:
   - `backendHost`: Uses environment variable `NEXT_PUBLIC_SKYEGPT_BACKEND_HOST` or defaults to `http://localhost:8000`.
+
+---
 
 ### `layout.tsx`
 
@@ -234,6 +265,8 @@ The root layout for the app.
   - Uses the Poppins font from Google Fonts.
   - Sets metadata (title and description).
   - Applies global CSS.
+
+---
 
 ### `page.tsx`
 
@@ -245,10 +278,6 @@ The main page of the app.
   - Renders the `ChatBox` component for the chat interface.
   - Includes a footer with a note about verifying answers.
 
-## Notes
+---
 
-- The frontend uses **Next.js** for server-side rendering and **Tailwind CSS** for styling.
-- The chat supports **Markdown** formatting for bot responses.
-- Feedback and ratings are stored in memory (mock API) and not persisted (currently not used).
-- Always verify Node.js and npm versions before starting development.
-- Use the provided commands to avoid setup issues.
+
