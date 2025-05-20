@@ -1,5 +1,6 @@
 from common import utils, logger, constants, message_bundle
-from agentic import agent_service, prompts
+from agentic import prompts
+from agentic.agent_service import AgentService
 from agentic.feedback import Feedback
 from typing import AsyncGenerator, Optional, Any, List
 from common.stores import StoreManager
@@ -43,7 +44,7 @@ class AgentResponseStreamingService:
             ResponseGenerationError: Errors related generation the response
         """
         logger.info(f"Asker service stream_agent_response started")
-        agent_service_model = agent_service.AgentService(store_manager, prompts.responder_openai_v4_openai_template)
+        agent_service_model = AgentService(store_manager, prompts.responder_openai_v4_openai_template)
 
         agent_response_stream = await agent_service_model.stream_agent_response(question, conversation_id)
         formatted_stream = utils.async_format_to_sse(agent_response_stream)
@@ -92,7 +93,7 @@ class AggregatedAgentResponseService:
     # noinspection PyMethodMayBeStatic
     async def _aggregate_agent_response(self, question: str, conversation_id: uuid) -> dict[str, Any]:
         """Helper method to convert the streamed agent response to an aggregated string"""
-        agent_service_model = agent_service.AgentService(
+        agent_service_model = AgentService(
             store_manager,
             prompts.responder_openai_v4_openai_template
         )
@@ -134,7 +135,7 @@ class ConversationRetrieverService:
 
 
 class FeedbackManagerService:
-    """Provides service to manage feedback. Save, store, retrieve & search"""
+    """Provides services to manage feedback."""
     # noinspection PyMethodMayBeStatic
     def create_feedback(self, conversation_id: uuid, vote: constants.VoteType, comment: str) -> None:
         """Creates Feedback object and attaches it to related conversation"""
@@ -148,6 +149,9 @@ class FeedbackManagerService:
 def _find_conversation(conversation_id: uuid) -> Conversation:
     """Helper method to retrieve conversation from document db"""
     conversation = documentdb_client.find_conversation_by_id(conversation_id)
+    logger.info(f'jajam {conversation}')
     if conversation is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=message_bundle.CONVERSATION_NOT_FOUND)
     return conversation
+
+

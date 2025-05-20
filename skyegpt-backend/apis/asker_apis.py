@@ -77,7 +77,7 @@ async def create_conversation() -> CreateConversationIdResponse:
 
 @handle_unknown_errors
 @asker_apis_router.get(
-    "/conversation/{conversation_id}",
+    "/conversations/{conversation_id}",
     summary="Get a conversation by its ID",
     description="Retrieves the details and messages of a specific conversation using its ID from the URL path.",
     response_model=ConversationResponse,

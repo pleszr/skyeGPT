@@ -1,9 +1,10 @@
 from common.exceptions import VectorDBError, CollectionNotFoundError
-from common import logger
+from common import logger, constants
 from chromadb.errors import ChromaError
 from functools import wraps
 from .chroma_specific import chroma_client
 from typing import List, Mapping, Union
+from chromadb import QueryResult
 
 
 def convert_chroma_error_to_vectordb_error(func):
@@ -93,9 +94,41 @@ def add_to_collection(
         _handle_value_error(collection_name, e)
 
 
+def find_related_documents_to_query(query: str):
+    collection_name = constants.SKYE_DOC_COLLECTION_NAME
+    collection = chroma_client.get_collection_by_name(collection_name)
+    number_of_results = constants.VECTOR_NUMBER_OF_RESULTS
+
+    result =  chroma_client.find_k_nearest_neighbour(collection, query, number_of_results)
+    return structure_result_as_pair(result)
+
+
+def structure_result_as_pair(result: QueryResult):
+    documents = result.get("documents") or []
+    metadatas = result.get("metadatas") or []
+
+    documents = _flatten_list(documents)
+    metadatas = _flatten_list(metadatas)
+
+    paired_list =  _pair_document_with_metadata(documents, metadatas)
+    return {"documents": paired_list}
+
+def _flatten_list(nested_list: list):
+    if nested_list and isinstance(nested_list[0], list):
+        return nested_list[0]
+
+def _pair_document_with_metadata(documents: list, metadatas: list):
+    return [
+        {"document": doc, "metadata": meta}
+        for doc, meta in zip(documents, metadatas)
+    ]
+
+
 def _handle_value_error(collection_name: str, e: ValueError):
     """Chroma returns ValueError when a collection is not found. This helper method catches it
     and raises SkyeGPT-specific CollectionNotFoundError"""
     error_message = f'Collection {collection_name} not found'
     logger.error(error_message)
     raise CollectionNotFoundError(error_message) from e
+
+

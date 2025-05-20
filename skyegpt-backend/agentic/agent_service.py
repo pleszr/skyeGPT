@@ -2,7 +2,7 @@ from typing import AsyncGenerator, List
 from pydantic_ai import Agent
 from pydantic_ai.messages import (PartDeltaEvent, TextPartDelta, PartStartEvent,
                                   FunctionToolCallEvent, FunctionToolResultEvent,
-                                  TextPart, ToolCallPart, ModelResponse, ModelRequest)
+                                  TextPart, ToolCallPart, ModelRequest, ModelResponse)
 from pydantic_ai.agent import AgentRun, CallToolsNode, ModelRequestNode
 from .pydantic_ai_specific import agent_factory, decorators
 from . import prompts
@@ -19,7 +19,6 @@ class AgentService:
     ):
         self.store_manager = store_manager
         self.prompt_version = prompt_version
-
         self.agent = agent_factory.create_agent_from_prompt_version(self.prompt_version)
 
     async def stream_agent_response(self, user_question: str, conversation_id: uuid) -> AsyncGenerator[str, None]:
@@ -43,7 +42,7 @@ class AgentService:
     """
         user_prompt = self._construct_user_prompt(user_question)
         existing_conversation = await self.store_manager.get_conversation_by_id(conversation_id)
-        return self._stream_agent_response_pydantic(user_prompt, conversation_id, existing_conversation.content)
+        return self._stream_agent_response_pydantic(user_prompt, conversation_id, existing_conversation.contents)
 
     @decorators.handle_pydantic_response_errors
     async def _stream_agent_response_pydantic(
@@ -77,7 +76,8 @@ class AgentService:
         prompt_template = self.prompt_version.prompt_template
         return utils.replace_placeholders(prompt_template, {"user_question": user_question})
 
-    async def _handle_model_request_node(self, node: ModelRequestNode, run: AgentRun):
+    @staticmethod
+    async def _handle_model_request_node(node: ModelRequestNode, run: AgentRun):
         """
         Handles streaming events from a model request node. Processes events from the language model, yielding
         text content as it becomes available.
@@ -119,5 +119,6 @@ class AgentService:
         """
         Adds new messages from the agent run to the conversation history store.
         """
-        new_messages = Conversation(content=run.result.new_messages())
+        new_messages = Conversation(contents=run.result.new_messages())
+        new_messages.archive_tool_output()
         await self.store_manager.extend_conversation_history(conversation_id, new_messages)

@@ -25,20 +25,26 @@ async def test_create_conversation_happy_path(mock_uuid4):
 
 @pytest.mark.asyncio
 async def test_get_conversation_by_id_happy_path():
+    # setup static data
     test_conv_id = sample_objects.sample_uuid
 
+    # setup mocks
     expected_conversation = sample_objects.sample_conversation
     mock_retriever_service = MagicMock()
     mock_retriever_service.get_conversation_by_id = AsyncMock(return_value=expected_conversation)
 
+    # act
     response = await get_conversation_by_id(
         conversation_id=test_conv_id,
         conversation_retriever_service=mock_retriever_service
     )
 
-    mock_retriever_service.get_conversation_by_id.assert_called_once_with(test_conv_id)
+    # assert result
     assert isinstance(response, ConversationResponse), "Response should be an instance of ConversationResponse"
     assert response.conversation == sample_objects.sample_conversation
+
+    # assert calls
+    mock_retriever_service.get_conversation_by_id.assert_called_once_with(test_conv_id)
 
 
 @pytest.mark.asyncio

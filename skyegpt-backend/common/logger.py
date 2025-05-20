@@ -17,7 +17,6 @@ logfire.configure(environment=environment)
 def trace(message: str, **kwargs):
     logfire.trace(message, **kwargs)
 
-
 def debug(message: str, **kwargs):
     logfire.debug(message, **kwargs)
 

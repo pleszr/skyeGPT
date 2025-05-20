@@ -2,16 +2,17 @@ import chromadb
 from functools import wraps
 from typing import Optional
 from chromadb.errors import NotFoundError
-from chromadb import Collection
+from chromadb import Collection, QueryResult
 from datetime import datetime
-from common.exceptions import ResponseGenerationError
+from common.exceptions import ResponseGenerationError, CollectionNotFoundError
 import os
-from common.exceptions import CollectionNotFoundError
+from common import constants
+import json
 
 CHROMA_HOST = os.getenv('CHROMA_HOST', 'chroma')
 CHROMA_PORT = os.getenv('CHROMA_PORT', 8000)
 
-_chroma_client: Optional[chromadb.HttpClient]
+_chroma_client: Optional[chromadb.HttpClient] = None
 
 
 def _init_client():
@@ -81,6 +82,12 @@ def delete_collection(collection_name: str):
 
 
 @ensure_client
+def find_k_nearest_neighbour(collection: Collection, query: str, k: int) -> QueryResult:
+    results = collection.query(query_texts=[query], n_results=k)
+    return results
+
+
+@ensure_client
 def add_to_collection(
         collection,
         documents,
@@ -102,11 +109,3 @@ def verify_if_collection_exists(
         return True
     else:
         return False
-
-
-@ensure_client
-def set_chroma_client(
-        client
-):
-    global _chroma_client
-    _chroma_client = client

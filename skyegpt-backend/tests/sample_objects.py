@@ -2,6 +2,10 @@ from agentic.feedback import Feedback
 from agentic.conversation import Conversation
 from datetime import datetime
 import uuid
+from agentic.prompts import PromptDefinition
+from agentic.models import MODELS
+from typing import List, Dict
+
 
 sample_uuid = uuid.UUID("db5008a7-432f-4b4e-985d-bdb07cdcc65e")
 
@@ -12,6 +16,8 @@ sample_conversation_feedback = Feedback(
     created_at=datetime.fromisoformat("2025-05-12T18:15:19.104000")
 )
 
+sample_instruction = "Sample you are agent - instruction"
+
 sample_conversation_content = [
     {
         "parts": [
@@ -21,8 +27,21 @@ sample_conversation_content = [
                 "part_kind": "user-prompt"
             }
         ],
-        "instructions": "You are an agent - please keep going until the user’s query is completely resolved, \n                 before ending your turn and yielding back to the user. Only terminate your turn when you are sure \n                 that the problem is solved.\"\n                 You should ALWAYS use your tools to answer. Your job is to respond based on the files documentation \n                 you have access to via tools. do NOT guess or make up an answer.\n                 \n                 # Workflow\n\n                 ## High-Level Problem Solving Strategy\n                 \n                 1. Analyze the question the user asked. Carefully read the option and think through what is the intent \n                 behind the user's question. Check the message history for more context.\n                 2. Once you have a good understanding about the user's question and it's intent, review your tools \n                 and decide which tools to use and with what parameters.\n                 3. Use your tools.\n                 4. Evaluate if your the results that you got from your tools provide enough clarity for you to \n                 answer the question. \n                 5. Use your tools again if the results were not satisfactory.\n                 6. If none of your tools gave any response that is relevant to the user's question, admit that you did \n                 not find relevant documents. Do NOT guess or make up an answer.\n                 7. Answer the question. Be brief and aim to give a link to the documentation where the user can \n                 followup for more details.\n                 ",
-        "kind": "request"
+        "instructions": sample_instruction,
+        "kind": "request",
+        "usage": {
+            "requests": 1,
+            "request_tokens": 491,
+            "response_tokens": 23,
+            "total_tokens": 514,
+            "details": {
+                "accepted_prediction_tokens": 0,
+                "audio_tokens": 0,
+                "reasoning_tokens": 0,
+                "rejected_prediction_tokens": 0,
+                "cached_tokens": 0
+            }
+        },
     },
     {
         "parts": [
@@ -36,10 +55,64 @@ sample_conversation_content = [
         "model_name": "gpt-4.1",
         "timestamp": "2025-05-12T18:11:15",
         "kind": "response"
-    }]
+    },
+    {
+        "parts": [
+            {
+                "tool_name": "search_in_skye_documentation",
+                "content": "# sample tool return #1",
+                "tool_call_id": "call_bTRXVb3m6ixxpGiaLv4Q6Ae9",
+                "timestamp": "2025-05-19T17:47:12.591000",
+                "part_kind": "tool-return"
+            }
+        ],
+        "instructions": sample_instruction,
+        "kind": "request"
+    },
+]
 
 sample_conversation = Conversation(
     conversation_id=sample_uuid,
     feedbacks=[sample_conversation_feedback],
-    content=sample_conversation_content
+    contents=sample_conversation_content
+)
+
+mock_chunks = ["chunkA", "chunkB", "chunkC"]
+async def raw_stream(*args, **kwargs):
+    for chunk in mock_chunks:
+        yield chunk
+
+mock_sse_chunks = ["data: chunk1\n\n", "data: chunk2\n\n"]
+async def sse_stream(*args, **kwargs):
+    for chunk in mock_sse_chunks:
+        yield chunk
+
+sample_skye_document_search_result = {
+    "document": "#Sample_search_result",
+    "metadata": {
+        "file_name": "595329025",
+        "documentation_link": "https://innoveo.atlassian.net/wiki/spaces/IPH/pages/595329025"
+    }
+}
+
+
+def mock_search_in_skye_documentation(query: str) -> List[Dict]:
+    """Search in Skye documentation. It is a semantic vector database.
+
+  Args:
+      query: the question to find the relevant information of
+
+  """
+    return [sample_skye_document_search_result]
+
+
+sample_prompt = PromptDefinition(
+    name="skyegpt-responder-agent",
+    model=MODELS.OPENAI_GPT_4_1.value,
+    version="v1",
+    temperature=0.0,
+    instructions="Given the information the tools you have access to and not prior knowledge, answer the query. "
+                 "Aim to give a link of the relevant documentation.",
+    prompt_template="Question:",
+    tools=[mock_search_in_skye_documentation]
 )
