@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+from typing import List
 
 
 def mock_assistant_chunk_generator(
@@ -42,3 +43,11 @@ def mock_completions_chunk_generator(
             ]
         )
         yield chunk
+
+
+def convert_array_to_see(chunks: List[str]):
+    formatted_list = []
+    for chunk in chunks:
+        formatted_chunk = f"data: {chunk}\n\n"
+        formatted_list.append(formatted_chunk)
+    return formatted_list

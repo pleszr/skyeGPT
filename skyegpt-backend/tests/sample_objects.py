@@ -78,9 +78,14 @@ sample_conversation = Conversation(
 )
 
 mock_chunks = ["chunkA", "chunkB", "chunkC"]
-async def raw_stream(*args, **kwargs):
+async def async_raw_stream(*args, **kwargs):
     for chunk in mock_chunks:
         yield chunk
+
+def raw_stream(*args, **kwargs):
+    for chunk in mock_chunks:
+        yield chunk
+
 
 mock_sse_chunks = ["data: chunk1\n\n", "data: chunk2\n\n"]
 async def sse_stream(*args, **kwargs):

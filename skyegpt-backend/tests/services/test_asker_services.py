@@ -58,7 +58,7 @@ async def test_aggregated_agent_response_with_context_happy_path(
 
     # setup mocks
     agent_service_instance = MagicMock()
-    agent_service_instance.stream_agent_response = AsyncMock(side_effect=sample_objects.raw_stream)
+    agent_service_instance.stream_agent_response = AsyncMock(side_effect=sample_objects.async_raw_stream)
     mock_agent_service_class.return_value = agent_service_instance
 
     expected_context = [{"turn": 1, "text": "hello"}]
