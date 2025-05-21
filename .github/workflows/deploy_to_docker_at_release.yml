@@ -1,10 +1,9 @@
-name: Run unit tests and deploy to Docker repo
+name: Release - push to repo
 
 on:
-  pull_request:
-    branches: [ "main" ]
-  push:
-    branches: [ "main" ]
+  release:
+    types:
+      - published
 
 jobs:
   run_backend_unit_tests:
