@@ -59,6 +59,8 @@ def test_replace_placeholders():
     # assert result
     assert expected_text == actual_text
 
+
+
 def test_folder_to_dict(tmp_path):
 
     # setup static data
@@ -86,7 +88,8 @@ def test_folder_to_dict(tmp_path):
         ],
     }
     #os.listdir doesn't have a guaranteed order. if you face issues with it sort the tree on both actual and expected
-    assert actual_tree == expected_tree
+    assert test_utils._sort_tree(actual_tree) == test_utils._sort_tree(expected_tree)
+
 
 def test_generate_local_folder_path_from_skye_version(monkeypatch):
     # setup static
@@ -98,7 +101,6 @@ def test_generate_local_folder_path_from_skye_version(monkeypatch):
     # assert result
     expected_path = "/docs/v5"
     assert actual_path == expected_path
-
 
 
 @patch("common.utils.datetime")
