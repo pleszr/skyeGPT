@@ -1,3 +1,5 @@
+from typing import Literal, TypeAlias
+
 # API
 MEDIA_TYPE_SSE = "text/event-stream"
 
@@ -12,3 +14,10 @@ MAX_CONVERSATION_LENGTH = 20
 
 # RETRIEVER
 VECTOR_NUMBER_OF_RESULTS = 10
+
+# Document DB
+DOCUMENT_DB_NAME = "skyegpt"
+CONVERSATIONS_COLLECTION_NAME = 'conversations'
+
+# Type Alias
+VoteType: TypeAlias = Literal["positive", "negative", "not_specified"]

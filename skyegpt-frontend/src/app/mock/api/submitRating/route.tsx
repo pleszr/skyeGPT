@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 interface Rating {
   message_index: number;
   rating: 'thumbs-up' | 'thumbs-down';
-  chroma_conversation_id: string;
+  conversation_id: string;
   timestamp: string;
 }
 
@@ -13,14 +13,14 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
-    const requiredFields = ['message_index', 'rating', 'chroma_conversation_id'];
+    const requiredFields = ['message_index', 'rating', 'conversation_id'];
     for (const field of requiredFields) {
       if (!(field in body)) {
         return NextResponse.json({ error: `Missing required field: ${field}` }, { status: 400 });
       }
     }
 
-    const { message_index, rating, chroma_conversation_id } = body;
+    const { message_index, rating, conversation_id } = body;
 
     if (!Number.isInteger(message_index)) {
       return NextResponse.json({ error: 'message_index must be an integer' }, { status: 400 });
@@ -32,9 +32,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (typeof chroma_conversation_id !== 'string' || !chroma_conversation_id.trim()) {
+    if (typeof conversation_id !== 'string' || !conversation_id.trim()) {
       return NextResponse.json(
-        { error: 'chroma_conversation_id must be a non-empty string' },
+        { error: 'conversation_id must be a non-empty string' },
         { status: 400 }
       );
     }
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
     const ratingEntry: Rating = {
       message_index,
       rating,
-      chroma_conversation_id,
+      conversation_id,
       timestamp: new Date().toISOString(),
     };
 

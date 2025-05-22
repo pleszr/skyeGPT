@@ -1,6 +1,5 @@
 from functools import wraps
 from fastapi import status, HTTPException
-import asyncio
 from fastapi.responses import StreamingResponse
 from common import logger, message_bundle, constants
 from common.exceptions import StoreManagementException, ResponseGenerationError, UsageLimitExceededError

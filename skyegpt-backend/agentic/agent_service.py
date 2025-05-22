@@ -2,12 +2,13 @@ from typing import AsyncGenerator, List
 from pydantic_ai import Agent
 from pydantic_ai.messages import (PartDeltaEvent, TextPartDelta, PartStartEvent,
                                   FunctionToolCallEvent, FunctionToolResultEvent,
-                                  TextPart, ToolCallPart, ModelResponse, ModelRequest)
+                                  TextPart, ToolCallPart, ModelRequest, ModelResponse)
 from pydantic_ai.agent import AgentRun, CallToolsNode, ModelRequestNode
 from .pydantic_ai_specific import agent_factory, decorators
 from . import prompts
 from common import utils, logger, stores
 from .conversation import Conversation
+import uuid
 
 
 class AgentService:
@@ -18,10 +19,9 @@ class AgentService:
     ):
         self.store_manager = store_manager
         self.prompt_version = prompt_version
-
         self.agent = agent_factory.create_agent_from_prompt_version(self.prompt_version)
 
-    async def stream_agent_response(self, user_question: str, conversation_id: str) -> AsyncGenerator[str, None]:
+    async def stream_agent_response(self, user_question: str, conversation_id: uuid) -> AsyncGenerator[str, None]:
         """
     Streams the agent's response to a user question in real-time.
 
@@ -42,13 +42,13 @@ class AgentService:
     """
         user_prompt = self._construct_user_prompt(user_question)
         existing_conversation = await self.store_manager.get_conversation_by_id(conversation_id)
-        return self._stream_agent_response_pydantic(user_prompt, conversation_id, existing_conversation.content)
+        return self._stream_agent_response_pydantic(user_prompt, conversation_id, existing_conversation.contents)
 
     @decorators.handle_pydantic_response_errors
     async def _stream_agent_response_pydantic(
             self,
             user_prompt: str,
-            conversation_id: str,
+            conversation_id: uuid,
             message_history: List[ModelRequest | ModelResponse]
     ) -> AsyncGenerator[str, None]:
         """
@@ -76,7 +76,8 @@ class AgentService:
         prompt_template = self.prompt_version.prompt_template
         return utils.replace_placeholders(prompt_template, {"user_question": user_question})
 
-    async def _handle_model_request_node(self, node: ModelRequestNode, run: AgentRun):
+    @staticmethod
+    async def _handle_model_request_node(node: ModelRequestNode, run: AgentRun):
         """
         Handles streaming events from a model request node. Processes events from the language model, yielding
         text content as it becomes available.
@@ -95,7 +96,7 @@ class AgentService:
                     if isinstance(event.delta, TextPartDelta):
                         yield event.delta.content_delta
 
-    async def _handle_call_tools_node(self, node: CallToolsNode, run: AgentRun, conversation_id: str):
+    async def _handle_call_tools_node(self, node: CallToolsNode, run: AgentRun, conversation_id: uuid):
         """
         Handles events related to tool calls requested by the agent and appends context to the context store.
         """
@@ -114,9 +115,10 @@ class AgentService:
                     }
                     await self.store_manager.append_conversation_context(conversation_id, current_context)
 
-    async def _add_conversation_to_store(self, run: AgentRun, conversation_id: str):
+    async def _add_conversation_to_store(self, run: AgentRun, conversation_id: uuid):
         """
         Adds new messages from the agent run to the conversation history store.
         """
-        new_messages = Conversation(run.result.new_messages())
+        new_messages = Conversation(contents=run.result.new_messages())
+        new_messages.archive_tool_output()
         await self.store_manager.extend_conversation_history(conversation_id, new_messages)

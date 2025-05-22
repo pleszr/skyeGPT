@@ -1,8 +1,11 @@
 import asyncio
+import uuid
+
 from common import logger, constants
 from typing import Dict, List, Any
 from common.decorators import handle_store_errors
 from agentic.conversation import Conversation
+from database import documentdb_client
 
 MAX_CONVERSATION_LENGTH = constants.MAX_CONVERSATION_LENGTH
 
@@ -37,19 +40,16 @@ class StoreManager:
         """
         if self._initialized:
             return
-
-        self._conversation_store: Dict[str, Conversation] = {}
         self._conversation_context_store: Dict[str, List[Dict[str, Any]]] = {}
-
-        self._conversation_store_lock = asyncio.Lock()
         self._conversation_context_store_lock = asyncio.Lock()
 
         self._initialized = True
 
     @handle_store_errors
-    async def get_conversation_by_id(self, conversation_id) -> Conversation:
+    async def get_conversation_by_id(self, conversation_id: uuid) -> Conversation:
         """
-        Retrieves the conversation by conversation_id.
+        Retrieves the conversation by conversation_id from document database
+        OR creates a new, empty one with conversation_id.
 
         Args:
             conversation_id: The unique identifier for the conversation.
@@ -60,15 +60,16 @@ class StoreManager:
 
         Raises StoreManagementException for invalid inputs or internal errors
         """
-        logger.info(f"Getting conversation with id {conversation_id}")
+        logger.info(f"Retrieving conversation with id {conversation_id}")
         self._handle_empty_key(conversation_id)
-        async with self._conversation_store_lock:
-            return self._conversation_store.get(conversation_id, Conversation()).copy()
+
+        found_conversation = documentdb_client.find_conversation_by_id(conversation_id)
+        return found_conversation or Conversation(conversation_id=conversation_id)
 
     @handle_store_errors
-    async def extend_conversation_history(self, original_conversation_id: str, new_conversation: Conversation):
+    async def extend_conversation_history(self, original_conversation_id: uuid, new_conversation: Conversation):
         """
-        Extends new messages to a conversation's history and trims it if necessary. Thread safe.
+        Extends new messages to a conversation's history and trims it if necessary.
 
         Args:
             original_conversation_id: The unique identifier for the conversation.
@@ -77,11 +78,10 @@ class StoreManager:
         Raises StoreManagementException for invalid inputs or internal errors
         """
         logger.info(f"Extending conversation history with conversation id: {original_conversation_id}")
-        async with self._conversation_store_lock:
-            if original_conversation_id not in self._conversation_store:
-                self._conversation_store[original_conversation_id] = Conversation()
-            conversation = self._conversation_store[original_conversation_id]
-            conversation.extend(new_conversation)
+
+        conversation = await self.get_conversation_by_id(original_conversation_id)
+        conversation.extend(new_conversation)
+        documentdb_client.upsert_conversation(conversation.conversation_id, conversation)
 
     @handle_store_errors
     async def get_conversation_context(self, conversation_id) -> List[Dict[str, Any]]:
@@ -103,7 +103,7 @@ class StoreManager:
             return list(self._conversation_context_store.get(conversation_id, []))
 
     @handle_store_errors
-    async def append_conversation_context(self, conversation_id: str, context: Dict[str, Any]):
+    async def append_conversation_context(self, conversation_id: uuid, context: Dict[str, Any]):
         """
         Appends a new context dictionary to the context list for a conversation. Thread safe.
         Args:

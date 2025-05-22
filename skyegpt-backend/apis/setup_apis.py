@@ -1,9 +1,9 @@
 from fastapi import APIRouter, status, HTTPException, Depends
 from fastapi.responses import Response
 from common import logger
-from dependencies import get_ingestion_service, get_database_service
+from services.dependencies import get_ingestion_service, get_database_service
 from services.setup_services import IngestionService, DatabaseService
-from common.exceptions import ResponseGenerationError
+from common.exceptions import CollectionNotFoundError
 from .schemas.requests import SkyeVersionRequest, ImportRequest
 from .schemas.responses import DownloadResponse, ImportResponse
 from common.decorators import handle_unknown_errors
@@ -35,7 +35,7 @@ async def download_skye_documentation(
         tree_structure = ingestion_service.download_skye_documentation_to_server(skye_major_version)
         return DownloadResponse(folder_content=tree_structure)
     except FileNotFoundError as file_not_found_error:
-        error_message = f"Version {skye_major_version} does not exist in S3 bucket"
+        error_message = message_bundle.VERSION_DOES_NOT_EXISTS
         logger.info(error_message, error=file_not_found_error)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error_message)
 
@@ -75,10 +75,8 @@ async def delete_collection(collection_name: str, db_service: DatabaseService = 
     try:
         db_service.delete_collection(collection_name)
         return Response(status_code=status.HTTP_204_NO_CONTENT)
-    except ResponseGenerationError as value_error:
-        error_message = f"Tried to delete {collection_name}, but it doesn't exist"
-        logger.info(error_message, error=value_error)
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=error_message)
+    except CollectionNotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=message_bundle.COLLECTION_NOT_FOUND)
 
 
 @handle_unknown_errors

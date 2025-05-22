@@ -1,5 +1,4 @@
 # Custom
-.chroma
 .env
 chroma/
 tests/chroma
@@ -9,6 +8,7 @@ skyegpt-backend/chroma/
 skyegpt-backend/Tests/chroma/
 *.sqlite3
 content/
+content_backup/
 .idea/
 .DS_Store
 settings/

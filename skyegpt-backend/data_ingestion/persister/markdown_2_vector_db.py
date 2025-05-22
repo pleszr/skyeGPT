@@ -1,7 +1,7 @@
 from langchain_text_splitters import MarkdownHeaderTextSplitter
 from pathlib import Path
 from typing import List
-from retriever import db_client
+from database import vectordb_client
 import uuid
 import os
 import time
@@ -14,8 +14,8 @@ def scan_and_import_markdowns_from_folder(
         collection_name: str,
         folder_path: str,
         markdown_split_headers: List[str]
-) -> None :
-    db_client.create_collection_if_needed(collection_name)
+) -> None:
+    vectordb_client.create_collection_if_needed(collection_name)
 
     batch_size = int(os.getenv("RAG_BATCH_SIZE"))
     queue = mp.Queue()
@@ -41,7 +41,7 @@ def scan_and_import_markdowns_from_folder(
 
     join_process(consumer_process)
 
-    number_of_documents = db_client.number_of_documents_in_collection(collection_name)
+    number_of_documents = vectordb_client.number_of_documents_in_collection(collection_name)
     print(f"Elapsed seconds: {time.time()-start_time:.0f} Record count: {number_of_documents}")
 
 
@@ -137,7 +137,6 @@ def _chroma_import_consumer(
         collection_name,
         queue
 ):
-    collection = db_client.get_collection_by_name(collection_name)
     batch_number = 0
     while True:
         batch_number += 1
@@ -149,8 +148,8 @@ def _chroma_import_consumer(
         metadatas = batch["metadatas"]
         ids = batch["ids"]
         print(f"Saving batch: {batch_number} with {len(ids)} documents")
-        db_client.add_to_collection(
-            collection,
+        vectordb_client.add_to_collection(
+            collection_name=collection_name,
             documents=documents,
             metadatas=metadatas,
             ids=ids

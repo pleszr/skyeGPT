@@ -9,22 +9,37 @@ services:
       - skyegpt-backend/.env
     depends_on:
       - chroma
+      - mongo
   chroma:
     image: chromadb/chroma:1.0.8
-    container_name: chroma
+    container_name: skyegpt-chroma
     ports:
       - "8001:8000"
     volumes:
       - chroma_data:/chroma/chroma
     restart: unless-stopped
+
   frontend:
+    container_name: skyegpt-frontend
     build:
       context: ./skyegpt-frontend
       dockerfile: Dockerfile
-      container_name: skyegpt-frontend
     ports:
       - "5173:5173"
+  
+  mongo:
+    image: mongo:8.0.9
+    container_name: skyegpt-mongo
+    ports:
+      - "27017:27017" 
+    volumes:
+      - mongo_data:/data/db 
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: skyegpt-admin 
+      MONGO_INITDB_ROOT_PASSWORD: TODO 
+    restart: unless-stopped
 volumes:
   pgdata: {}
   node_modules: {}
   chroma_data: {}
+  mongo_data: {}

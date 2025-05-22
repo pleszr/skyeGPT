@@ -1,40 +1,53 @@
+"""Utility helpers for SkyeGPT."""
 from typing import Generator, AsyncGenerator
+from datetime import datetime, timezone, timedelta
 import os
 import re
-from markdownify import markdownify as md
+from markdownify import markdownify
 from . import constants
+from common import message_bundle
 
 
-def convert_html_to_md(
-        html_content: str
-) -> str:
-    return md(html_content, heading_style="ATX")
+def convert_html_to_md(html_content: str) -> str:
+    """Convert HTML text to Markdown using markdownify."""
+    return markdownify(html_content, heading_style="ATX")
 
 
-def format_to_sse(
-        chunks: Generator[str, None, None]
-) -> Generator[str, None, None]:
+def format_to_sse(chunks: Generator[str, None, None]) -> Generator[str, None, None]:
+    """Takes a generator and formats a stream to match SEE standard.
+    Example: yield1, yield2 -> data: yield1\n\n, data: yield2\n\n
+    """
     for chunk in chunks:
         chunk = chunk.replace("\n", "\\n")
         yield f"data: {chunk}\n\n"
 
 
-async def async_format_to_sse(
-        chunks: AsyncGenerator[str, None]
-) -> AsyncGenerator[str, None]:
+async def async_format_to_sse(chunks: AsyncGenerator[str, None]) -> AsyncGenerator[str, None]:
+    """Asynchronous variant of `format_to_sse` yielding SSE‑formatted chunks."""
     async for chunk in chunks:
         chunk = chunk.replace("\n", "\\n")
         yield f"data: {chunk}\n\n"
 
 
 def replace_placeholders(template: str, values: dict[str, str]) -> str:
+    """Replace {{placeholder}} tokens in *template* using values from *values*.
+    Missing keys are substituted with the message bundle: 'VALUE_NOT_FOUND'
+
+    Args:
+        template: a text that contains placeholders within {{}}
+        values: a dict that contains placeholder_key (without the {{}}) and the value it should be replace to
+    """
     def replacer(match):
         key = match.group(1).strip()
-        return values.get(key, 'VALUE NOT FOUND')
+        return values.get(key, message_bundle.VALUE_NOT_FOUND)
     return re.sub(r'{{(.*?)}}', replacer, template)
 
 
 def folder_to_dict(path):
+    """Recursively walk *path* and return a nested dict describing the folder tree.
+
+    Useful for lightweight JSON serialisation of directory structures.
+    """
     tree = {"name": os.path.basename(path), "type": "folder", "children": []}
     try:
         for entry in os.listdir(path):
@@ -49,5 +62,11 @@ def folder_to_dict(path):
 
 
 def generate_local_folder_path_from_skye_version(skye_major_version: str) -> str:
-    return replace_placeholders(constants.SKYE_DOC_LOCAL_FOLDER_LOCATION_TEMPLATE, {"skye_major_version": skye_major_version})
+    """Render the configured docs folder path for a given Skye major version."""
+    return replace_placeholders(constants.SKYE_DOC_LOCAL_FOLDER_LOCATION_TEMPLATE,{"skye_major_version": skye_major_version})
 
+
+def calculate_utc_x_hours_ago(x_hours: int) -> datetime:
+    """Return the UTC datetime representing *x_hours* ago from now."""
+    now_utc = datetime.now(timezone.utc)
+    return now_utc - timedelta(hours=x_hours)

@@ -1,11 +1,12 @@
 import uuid
-from fastapi import APIRouter, Depends, Path, status
+from typing import Optional
+from fastapi import APIRouter, Depends, Path, status, Query
 from fastapi.responses import StreamingResponse, Response
 from .schemas.requests import ConversationQueryRequest, CreateFeedbackRequest
-from .schemas.responses import CreateConversationIdResponse, ConversationResponse
-from dependencies import (AgentResponseStreamingService, get_agent_response_stream_service,
-                          ConversationRetrieverService, get_conversation_retriever_service,
-                          FeedbackManagerService, get_feedback_manager_service)
+from .schemas.responses import CreateConversationIdResponse, ConversationResponse, ConversationListResponse
+from services.dependencies import (AgentResponseStreamingService, get_agent_response_stream_service,
+                                   ConversationRetrieverService, get_conversation_retriever_service,
+                                   FeedbackManagerService, get_feedback_manager_service)
 from common import logger, message_bundle
 from common.decorators import handle_response_stream_errors, handle_unknown_errors
 
@@ -69,14 +70,14 @@ async def create_conversation() -> CreateConversationIdResponse:
     Generates and returns a new UUID V4 as a conversation ID.
     """
     logger.info("Received request to create a new conversation")
-    conversation_id = str(uuid.uuid4())
+    conversation_id = uuid.uuid4()
     logger.info(f"Generated new conversation_id: {conversation_id}")
     return CreateConversationIdResponse(conversation_id=conversation_id)
 
 
 @handle_unknown_errors
 @asker_apis_router.get(
-    "/conversation/{conversation_id}",
+    "/conversations/{conversation_id}",
     summary="Get a conversation by its ID",
     description="Retrieves the details and messages of a specific conversation using its ID from the URL path.",
     response_model=ConversationResponse,
@@ -94,6 +95,56 @@ async def get_conversation_by_id(
         conversation_retriever_service: ConversationRetrieverService = Depends(get_conversation_retriever_service)
 ) -> ConversationResponse:
     logger.info(f"Received request to get conversation with ID: {conversation_id}")
-    conversation = await conversation_retriever_service.get_conversation_by_id(str(conversation_id))
+    conversation = await conversation_retriever_service.get_conversation_by_id(conversation_id)
     return ConversationResponse(conversation=conversation)
 
+
+@handle_unknown_errors
+@asker_apis_router.get(
+    "/conversations",
+    summary="Get conversations based on filter(s)",
+    description="Retrieves conversations based on the given filter(s)",
+    response_model=ConversationListResponse,
+    responses={
+        200: {"description": "Conversation retrieved successfully."},
+        500: {"description": message_bundle.INTERNAL_ERROR}
+    }
+)
+async def get_conversations_by_filter(
+        feedback_within_hours: Optional[int] = Query(
+            None,
+            description="If provided, only return the conversation if it has feedback in the last X hours.",
+            ge=1
+        ),
+        conversation_retriever_service: ConversationRetrieverService = Depends(get_conversation_retriever_service)
+) -> ConversationListResponse:
+    conversations = conversation_retriever_service.find_conversations_by_feedback_created_since(feedback_within_hours)
+    return ConversationListResponse(conversations=conversations)
+
+
+@handle_unknown_errors
+@asker_apis_router.post(
+    "/{conversation}/feedback",
+    summary="Give feedback about a conversation",
+    status_code=status.HTTP_201_CREATED,
+    description="""Creates a feedback about a given conversation. 
+                Feedback can be positive, negative and can contain detailed comment.""",
+    responses={
+        201: {"description": "Feedback created."},
+        404: {"description": message_bundle.CONVERSATION_NOT_FOUND},
+        500: {"description": message_bundle.INTERNAL_ERROR}
+    }
+)
+async def create_feedback(
+        request: CreateFeedbackRequest,
+        conversation: uuid.UUID = Path(..., description="The unique identifier of the conversation to retrieve."),
+        feedback_service: FeedbackManagerService = Depends(get_feedback_manager_service)
+) -> Response:
+    """
+    Saves the received feedback for the given conversation
+    """
+    vote = request.vote
+    comment = request.comment
+    print(f"Received feedback for conversation_id: {conversation}, vote: {vote}, comment: {comment}")
+    feedback_service.create_feedback(conversation, vote, comment)
+    return Response(status_code=status.HTTP_201_CREATED)

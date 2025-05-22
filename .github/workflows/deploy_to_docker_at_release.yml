@@ -1,10 +1,9 @@
-name: Run unit tests and deploy to Docker repo
+name: Release - push to repo
 
 on:
-  pull_request:
-    branches: [ "main" ]
-  push:
-    branches: [ "main" ]
+  release:
+    types:
+      - published
 
 jobs:
   run_backend_unit_tests:
@@ -19,7 +18,6 @@ jobs:
     - run: cd skyegpt-backend && PYTHONPATH=$(pwd) pytest tests
 
   deploy_backend_to_docker_repo:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: run_backend_unit_tests
     runs-on: ubuntu-latest
     steps:
@@ -47,7 +45,7 @@ jobs:
           push: true
           tags: |
             rplesz/skyegpt-backend:latest
-            rplesz/skyegpt-backend:${{ github.run_id }}
+            rplesz/skyegpt-backend:${{ github.event.release.tag_name }}
   
   run_frontend_unit_tests:
     runs-on: ubuntu-latest
@@ -65,7 +63,6 @@ jobs:
           NEXT_PUBLIC_SKYEGPT_BACKEND_HOST: 'http://localhost:8000'
 
   deploy_frontend_to_docker_repo:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: run_frontend_unit_tests
     runs-on: ubuntu-latest
     steps:
@@ -93,5 +90,5 @@ jobs:
           push: true
           tags: |
             rplesz/skyegpt-frontend:latest
-            rplesz/skyegpt-frontend:${{ github.run_id }}
+            rplesz/skyegpt-frontend:${{ github.event.release.tag_name }}
 
