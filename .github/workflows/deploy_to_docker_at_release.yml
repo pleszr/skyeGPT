@@ -88,6 +88,8 @@ jobs:
           file: ./skyegpt-frontend/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
+          build-args: |
+            NEXT_PUBLIC_SKYEGPT_BACKEND_HOST=http://skyegpt01.dev.innoveo.cloud
           tags: |
             rplesz/skyegpt-frontend:latest
             rplesz/skyegpt-frontend:${{ github.event.release.tag_name }}
