@@ -1,5 +1,35 @@
 @import "tailwindcss";
 
+@keyframes analyzing-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+.analyzing-shimmer {
+  background: linear-gradient(
+    90deg,
+    #b3a8ae 0%,
+    #484749 10%,
+    #252728 20%,
+    #9b9e9d 30%,
+    #1ea974 45%,   
+    #17a267 55%,   
+    #e0e0e0 65%,  
+    #484749 75%,
+    #b3a8ae 85%,
+    #ccc3c8 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: analyzing-shimmer 2s linear infinite;
+}
+
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
@@ -45,6 +75,9 @@ body {
     width: 80px !important; 
   }
 
+  .skgpt-version-selector{
+    left: 15px
+  }
 
   .skgpt-input-textarea {
     font-size: 0.875rem;
