@@ -1,4 +1,5 @@
 from typing import Literal, TypeAlias
+from enum import Enum
 
 # API
 MEDIA_TYPE_SSE = "text/event-stream"
@@ -21,3 +22,13 @@ CONVERSATIONS_COLLECTION_NAME = 'conversations'
 
 # Type Alias
 VoteType: TypeAlias = Literal["positive", "negative", "not_specified"]
+
+
+class PromptUseCase(str, Enum):
+    dynamic_loading_text = "dynamic_loading_text"
+    response_generator = "response_generator"
+
+
+class SseEventTypes(str, Enum):
+    dynamic_loading_text = "dynamic_loading_text"
+    streamed_response = "streamed_response"

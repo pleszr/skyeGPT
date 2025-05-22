@@ -1,23 +1,28 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from pydantic import BaseModel, Field
 from .models import MODELS
-from typing import Callable, List
+from typing import Callable, List, Optional, Any
 from . import tools
+from common.constants import PromptUseCase
 
 
 class PromptDefinition(BaseModel):
     name: str
+    use_case: PromptUseCase
     version: str
     model: MODELS
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     temperature: float
-    instructions: str
-    prompt_template: str
-    tools: List[Callable]
+    output_type: Optional[Any] = Field(default=str)
+    instructions: Optional[str] = Field(default=None)
+    system_prompt: Optional[str] = Field(default=None)
+    prompt_template: Optional[str] = Field(default=None)
+    tools: List[Callable] = Field(default=[])
 
 
 responder_openai_v1 = PromptDefinition(
     name="skyegpt-responder-agent",
+    use_case=PromptUseCase.response_generator,
     model=MODELS.OPENAI_GPT_4_1.value,
     version="v1",
     temperature=0.0,
@@ -29,6 +34,7 @@ responder_openai_v1 = PromptDefinition(
 
 responder_openai_v2 = PromptDefinition(
     name="skyegpt-responder-agent",
+    use_case=PromptUseCase.response_generator,
     model=MODELS.OPENAI_GPT_4_1.value,
     version="v2",
     temperature=0.0,
@@ -41,6 +47,7 @@ responder_openai_v2 = PromptDefinition(
 
 responder_openai_v3 = PromptDefinition(
     name="skyegpt-responder-agent",
+    use_case=PromptUseCase.response_generator,
     version="v3",
     model=MODELS.OPENAI_GPT_4_1.value,
     temperature=0.0,
@@ -58,6 +65,7 @@ responder_openai_v3 = PromptDefinition(
 responder_openai_v4_openai_template = PromptDefinition(
     # https://cookbook.openai.com/examples/gpt4-1_prompting_guide
     name="skyegpt-responder-agent",
+    use_case=PromptUseCase.response_generator,
     model=MODELS.OPENAI_GPT_4_1,
     version="v4",
     temperature=0.0,
@@ -89,4 +97,27 @@ responder_openai_v4_openai_template = PromptDefinition(
     Use your tools to check the documentation. User's question: {{user_question}}
     """,
     tools=[tools.search_in_skye_documentation]
+)
+
+loading_text_generator_v1 = PromptDefinition(
+    name="skyegpt-dynamic_loading_text_generator_agent",
+    use_case=PromptUseCase.dynamic_loading_text,
+    model=MODELS.OPENAI_GPT_3_5,
+    version="v1",
+    temperature=0.0,
+    output_type=List[str],
+    system_prompt="""
+    Suggest 5 next-step prompts as a JSON array. They will be used as texts in the loading animation. 
+    Your job is NOT to answer the question but to respond with 5 steps that you would take. 
+    Available tools: search in Innoveo Skye's documentation, search or Innoveo Partner Hub confluence. 
+    
+    Example:
+    [
+        "Searching Innoveo Skye documentation how to add a multibrick...", 
+        "Filtering out non relevant results. User meant multibrick not brickmulti...", 
+        "Looking for examples on multibrick operations on Innoveo Partner Hub confluence...", 
+        "Verifying output quality, cross checking possible hallucinations...", 
+        "Now I know everything about multibricks. Time to answer!"
+        ]
+    """,
 )

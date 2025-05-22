@@ -31,7 +31,7 @@ def test_format_to_see_chunk():
     # setup static data
     raw_stream = sample_objects.raw_stream()
     # act
-    formatted_stream_output = list(utils.format_to_sse(raw_stream))
+    formatted_stream_output = list(utils.format_stream_to_sse(raw_stream))
     # assert result
     expected = test_utils.convert_array_to_see(sample_objects.mock_chunks)
     assert formatted_stream_output==expected

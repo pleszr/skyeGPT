@@ -1,11 +1,26 @@
 from pydantic_ai import Agent
 from ..prompts import PromptDefinition
 
+
 def create_agent_from_prompt_version(prompt_version: PromptDefinition) -> Agent:
-    return Agent(
-        model=prompt_version.model,
-        instrument=True,
-        instructions=prompt_version.instructions,
-        model_settings={'temperature': prompt_version.temperature},
-        tools=prompt_version.tools
-    )
+    agent_kwargs = {
+        "model": prompt_version.model,
+        "instrument": True,
+        "instructions": prompt_version.instructions,
+        "model_settings": {'temperature': prompt_version.temperature},
+        "output_type": prompt_version.output_type,
+        "tools": prompt_version.tools,
+    }
+
+    optional_fields = {
+        "system_prompt": prompt_version.system_prompt,
+        "instructions": prompt_version.instructions,
+        "output_type": prompt_version.output_type,
+        "tools": prompt_version.tools,
+    }
+
+    for key, value in optional_fields.items():
+        if value is not None:
+            agent_kwargs[key] = value
+
+    return Agent(**agent_kwargs)

@@ -8,6 +8,9 @@ from agentic.conversation import Conversation
 from fastapi import HTTPException, status
 import uuid
 from database import documentdb_client
+from agentic.dynamic_loading_text_service import DynamicLoadingTextService
+from common.constants import SseEventTypes
+import json
 
 
 store_manager = StoreManager()
@@ -22,7 +25,7 @@ class AgentResponseStreamingService:
     specifically Server-Sent Events (SSE).
     """
     # noinspection PyMethodMayBeStatic
-    async def stream_agent_response(self, question: str, conversation_id: uuid) -> AsyncGenerator[str, None]:
+    async def stream_agent_response(self, user_question: str, conversation_id: uuid) -> AsyncGenerator[str, None]:
         """
         Streams AI responses for a given question and conversation ID, formatted as SSE.
 
@@ -31,7 +34,7 @@ class AgentResponseStreamingService:
         and yields the resulting response chunks formatted as Server-Sent Events.
 
         Args:
-            question: The user's question or prompt for the AI agent.
+            user_question: The user's question or prompt for the AI agent.
             conversation_id: The unique identifier for the ongoing conversation
                 to maintain context.
 
@@ -43,15 +46,25 @@ class AgentResponseStreamingService:
             UsageLimitExceededError: Error raised when a Model's usage exceeds the specified limits.
             ResponseGenerationError: Errors related generation the response
         """
+        logger.info("Asker service dynamic text generation started")
+
+        yield await self._get_dynamic_loading_texts(user_question)
+
         logger.info(f"Asker service stream_agent_response started")
         agent_service_model = AgentService(store_manager, prompts.responder_openai_v4_openai_template)
 
-        agent_response_stream = await agent_service_model.stream_agent_response(question, conversation_id)
-        formatted_stream = utils.async_format_to_sse(agent_response_stream)
+        agent_response_stream = await agent_service_model.stream_agent_response(user_question, conversation_id)
+        formatted_stream = utils.async_format_to_sse(agent_response_stream, SseEventTypes.streamed_response)
 
         async for item in formatted_stream:
             yield item
         logger.info(f"Asker service stream_agent_response finished")
+
+    @staticmethod
+    async def _get_dynamic_loading_texts(user_question: str):
+        dynamic_loading_text_service = DynamicLoadingTextService(prompts.loading_text_generator_v1)
+        dynamic_text = await dynamic_loading_text_service.generate_dynamic_loading_text(user_question)
+        return utils.format_str_to_sse(json.dumps(dynamic_text), constants.SseEventTypes.dynamic_loading_text)
 
 
 class AggregatedAgentResponseService:
@@ -149,9 +162,6 @@ class FeedbackManagerService:
 def _find_conversation(conversation_id: uuid) -> Conversation:
     """Helper method to retrieve conversation from document db"""
     conversation = documentdb_client.find_conversation_by_id(conversation_id)
-    logger.info(f'jajam {conversation}')
     if conversation is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=message_bundle.CONVERSATION_NOT_FOUND)
     return conversation
-
-
