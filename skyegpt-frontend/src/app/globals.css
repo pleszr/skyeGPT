@@ -9,19 +9,7 @@
   }
 }
 .analyzing-shimmer {
-  background: linear-gradient(
-    90deg,
-    #b3a8ae 0%,
-    #484749 10%,
-    #252728 20%,
-    #9b9e9d 30%,
-    #1ea974 45%,   
-    #17a267 55%,   
-    #e0e0e0 65%,  
-    #484749 75%,
-    #b3a8ae 85%,
-    #ccc3c8 100%
-  );
+  background: linear-gradient(90deg, #818181 0%, #C3C3C3 100%);
   background-size: 200% 100%;
   -webkit-background-clip: text;
   background-clip: text;
@@ -94,6 +82,9 @@ body {
   .custom-width {
     width: 100%;
     max-width: 100%;
+  }
+  .skgpt-version-selector{
+    top: 0px
   }
 }
 

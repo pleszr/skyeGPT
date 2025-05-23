@@ -34,6 +34,8 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
   const [submitError, setSubmitError] = useState<string>('');
   const [ratingError, setRatingError] = useState<{ [key: number]: string }>({});
   const [feedbackState, setFeedbackState] = useState<{ [key: number]: 'thumbs-up' | 'thumbs-down' | null }>({});
+  const [dynamicLoadingTexts, setDynamicLoadingTexts] = useState<string[]>([]);
+  const [currentTextIndex, setCurrentTextIndex] = useState<number>(0);
 
   const [activeMessageIndex, setActiveMessageIndex] = useState<number | null>(null);
 
@@ -41,6 +43,11 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const wasNearBottomRef = useRef<boolean>(true);
   const streamAbortControllerRef = useRef<AbortController | null>(null);
+
+  const filterDynamicLoadingText = (text: string): boolean => {
+    const lowerText = text.toLowerCase();
+    return !lowerText.includes('github flavored markdown') && !lowerText.includes('markdown fences');
+  };
 
   const debouncedScrollToBottom = useMemo(() => debounce(() => {
     if (chatContainerRef.current) {
@@ -75,6 +82,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
       streamAbortControllerRef.current.abort();
     }
     setIsLoading(false);
+    setDynamicLoadingTexts([]);
 
     setMessages(prev => {
       const newMessages = [...prev];
@@ -98,6 +106,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
     if (!trimmedInput || isLoading) return;
 
     setIsLoading(true);
+    setDynamicLoadingTexts([]);
 
     if (streamAbortControllerRef.current) {
       streamAbortControllerRef.current.abort();
@@ -153,6 +162,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
                 }
                 return newMessages;
               });
+              setDynamicLoadingTexts([]);
               return false;
             }
             setMessages((prevMsgs) => {
@@ -163,6 +173,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
               }
               return newMsgs;
             });
+            setDynamicLoadingTexts([]);
             return true;
           }
 
@@ -181,24 +192,40 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
                 } catch {
                   parsedChunk = dataStr.trim() ? { text: dataStr } : null;
                 }
-                const chunkText = getChunkTextFromSSE(parsedChunk);
-                if (chunkText) {
-                  fullMessageTextForCurrentResponse += chunkText;
-                  setMessages((prevMsgs) => {
-                    const newMsgs = [...prevMsgs];
-                    const lastMsgIndex = newMsgs.length - 1;
-                    if (lastMsgIndex >= 0 && newMsgs[lastMsgIndex].sender === 'bot') {
-                      newMsgs[lastMsgIndex] = createBotMessage(fullMessageTextForCurrentResponse);
+                if (parsedChunk && Array.isArray(parsedChunk)) {
+                  const filteredTexts = parsedChunk.filter(filterDynamicLoadingText);
+                  if (filteredTexts.length > 0) {
+                    setDynamicLoadingTexts(filteredTexts);
+                  }
+                } else if (parsedChunk && typeof parsedChunk === 'object' && 'dynamic_loading_text' in parsedChunk) {
+                  const texts = parsedChunk.dynamic_loading_text;
+                  if (Array.isArray(texts)) {
+                    const filteredTexts = texts.filter(filterDynamicLoadingText);
+                    if (filteredTexts.length > 0) {
+                      setDynamicLoadingTexts(filteredTexts);
                     }
-                    return newMsgs;
-                  });
+                  } else if (typeof texts === 'string' && filterDynamicLoadingText(texts)) {
+                    setDynamicLoadingTexts([texts]);
+                  }
+                } else {
+                  const chunkText = getChunkTextFromSSE(parsedChunk);
+                  if (chunkText) {
+                    fullMessageTextForCurrentResponse += chunkText;
+                    setMessages((prevMsgs) => {
+                      const newMsgs = [...prevMsgs];
+                      const lastMsgIndex = newMsgs.length - 1;
+                      if (lastMsgIndex >= 0 && newMsgs[lastMsgIndex].sender === 'bot') {
+                        newMsgs[lastMsgIndex] = createBotMessage(fullMessageTextForCurrentResponse);
+                      }
+                      return newMsgs;
+                    });
+                  }
                 }
               } catch (e) {
                 console.warn('Invalid SSE chunk processing error:', e, 'Original line:', line);
               }
             }
           }
-          if (streamAbortControllerRef.current?.signal.aborted) break;
         }
       } catch (error: unknown) {
         if (
@@ -222,6 +249,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
             }
             return newMessages;
           });
+          setDynamicLoadingTexts([]);
           return false;
         }
 
@@ -238,9 +266,9 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
           }
           return newMessages;
         });
+        setDynamicLoadingTexts([]);
         return false;
       }
-      return false;
     };
 
     await fetchStreamSingleAttempt();
@@ -272,8 +300,22 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
       if (streamAbortControllerRef.current) {
         streamAbortControllerRef.current.abort();
       }
+      setDynamicLoadingTexts([]);
     };
   }, [textareaResize]);
+
+  useEffect(() => {
+    if (!isLoading || dynamicLoadingTexts.length === 0) {
+      setCurrentTextIndex(0);
+      return;
+    }
+
+    const interval = setInterval(() => {
+      setCurrentTextIndex((prev) => (prev + 1) % dynamicLoadingTexts.length);
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [isLoading, dynamicLoadingTexts]);
 
   useLayoutEffect(() => {
     scrollToBottom();
@@ -415,7 +457,6 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
     return 'Feedback Sent!';
   }, [activeMessageIndex, feedbackState, isConfirmationModalOpen]);
 
-
   return (
     <div className={`flex flex-col h-full ${className || ''}`}>
       <div
@@ -447,9 +488,15 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
           && (
             <div className="self-start max-w-[90%] sm:max-w-[80%] flex flex-col">
               <div className="contents p-4 sm:p-5 md:p-6 rounded-[30px] bg-[#ececec] text-black rounded-tr-[30px] rounded-bl-[0] shadow-sm">
-                <div className=" flex items-center space-x-2">
-                  <span className=" text-yellow-400 animate-pulse">✨</span>
-                  <span className=" text-sm font-bold analyzing-shimmer">Analyzing...</span>
+                <div className="flex items-center space-x-2">
+                  <span className="text-yellow-400 animate-pulse">✨</span>
+                  {dynamicLoadingTexts.length > 0 ? (
+                    <span className="text-sm font-bold analyzing-shimmer">
+                      {dynamicLoadingTexts[currentTextIndex]}
+                    </span>
+                  ) : (
+                    <span className="text-sm font-bold analyzing-shimmer">Analyzing...</span>
+                  )}
                 </div>
               </div>
             </div>
@@ -457,9 +504,15 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
         )}
         {isLoading && messages.length === 0 && (
           <div className="flex items-center justify-center h-full">
-            <div className="contents flex items-center space-x-2">
-              <span className="contents text-yellow-400 animate-pulse text-xl">✨</span>
-              <span className="contents text-sm font-bold analyzing-shimmer">Analyzing...</span>
+            <div className="flex items-center space-x-2">
+              <span className="text-yellow-400 animate-pulse text-xl">✨</span>
+              {dynamicLoadingTexts.length > 0 ? (
+                <span className="text-sm font-bold analyzing-shimmer">
+                  {dynamicLoadingTexts[currentTextIndex]}
+                </span>
+              ) : (
+                <span className="text-sm font-bold analyzing-shimmer">Analyzing...</span>
+              )}
             </div>
           </div>
         )}
@@ -484,23 +537,23 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
           />
         </div>
         <button
-        className="skgpt-btn sendBtn p-0 border-none bg-transparent cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center shrink-0 hover:opacity-80 transition-opacity"
-        onClick={isLoading ? handleStopStreaming : sendMessage}
-        disabled={!isLoading && !input.trim()} 
-        title={isLoading ? "Stop" : "Send"}
-        aria-label={isLoading ? "Stop message" : "Send message"}
-      >
-        <Image
-          src={isLoading ? "/stop.png" : "/button.png"}
-          alt={isLoading ? "Stop" : "Send"}
-          width={120}
-          height={120}
-          quality={100}
-          style={{ width: 'auto', height: 'auto' }}
-          priority
-          className="object-contain"
-        />
-      </button>
+          className="skgpt-btn sendBtn p-0 border-none bg-transparent cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center shrink-0 hover:opacity-80 transition-opacity"
+          onClick={isLoading ? handleStopStreaming : sendMessage}
+          disabled={!isLoading && !input.trim()}
+          title={isLoading ? "Stop" : "Send"}
+          aria-label={isLoading ? "Stop message" : "Send message"}
+        >
+          <Image
+            src={isLoading ? "/stop.png" : "/button.png"}
+            alt={isLoading ? "Stop" : "Send"}
+            width={120}
+            height={120}
+            quality={100}
+            style={{ width: 'auto', height: 'auto' }}
+            priority
+            className="object-contain"
+          />
+        </button>
       </div>
 
       {isFeedbackModalOpen && activeMessageIndex !== null && (
@@ -688,10 +741,10 @@ const MemoizedMessage = memo(
                 </ReactMarkdown>
               </div>
             </div>
-            {showFeedbackControls && 
-              msg.text.trim() !== '' && 
-              !msg.text.startsWith("Error:") && 
-              !msg.text.startsWith("No response received") && 
+            {showFeedbackControls &&
+              msg.text.trim() !== '' &&
+              !msg.text.startsWith("Error:") &&
+              !msg.text.startsWith("No response received") &&
               !msg.text.startsWith("Request cancelled") && (
               <div className="flex items-center justify-end mt-2 gap-x-1">
                 <button
