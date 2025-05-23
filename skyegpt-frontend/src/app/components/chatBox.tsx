@@ -37,7 +37,6 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
   const [dynamicLoadingTexts, setDynamicLoadingTexts] = useState<string[]>([]);
   const [currentTextIndex, setCurrentTextIndex] = useState<number>(0);
 
-
   const [activeMessageIndex, setActiveMessageIndex] = useState<number | null>(null);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -49,7 +48,6 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
     const lowerText = text.toLowerCase();
     return !lowerText.includes('github flavored markdown') && !lowerText.includes('markdown fences');
   };
-
 
   const debouncedScrollToBottom = useMemo(() => debounce(() => {
     if (chatContainerRef.current) {
@@ -84,7 +82,8 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
       streamAbortControllerRef.current.abort();
     }
     setIsLoading(false);
-    setDynamicLoadingTexts([]);
+    setDynamicLoadingTexts([]); 
+    setCurrentTextIndex(0); 
 
     setMessages(prev => {
       const newMessages = [...prev];
@@ -92,7 +91,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
       if (
         lastIndex >= 0 &&
         newMessages[lastIndex].sender === 'bot' &&
-        newMessages[lastIndex].text === ''
+        newMessages[lastIndex].text === '' 
       ) {
         newMessages[lastIndex] = {
           ...createBotMessage("Request cancelled."),
@@ -109,6 +108,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
 
     setIsLoading(true);
     setDynamicLoadingTexts([]);
+    setCurrentTextIndex(0);
 
     if (streamAbortControllerRef.current) {
       streamAbortControllerRef.current.abort();
@@ -307,50 +307,28 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
   }, [textareaResize]);
 
   useEffect(() => {
-  console.log("ANIMATION EFFECT: isLoading:", isLoading, "dynamicTexts.length:", dynamicLoadingTexts.length, "EFFECT's currentTextIndex snapshot:", currentTextIndex);
-
-  if (!isLoading) {
-    if (currentTextIndex !== 0) {
-      setCurrentTextIndex(0);
+    if (!isLoading) {
+      setCurrentTextIndex(0); 
+      // setDynamicLoadingTexts([]);
+      return;
     }
-    if (dynamicLoadingTexts.length > 0) {
-      setDynamicLoadingTexts([]);
+
+  
+    const textsToAnimate = ["Analyzing...", ...dynamicLoadingTexts].filter(Boolean);
+
+    if (textsToAnimate.length === 0) {
+        
+        return;
     }
-    return;
-  }
+    
+    const intervalDuration = dynamicLoadingTexts.length > 0 ? 1500 : 2000;
 
-  const textsToAnimate = ["Analyzing...", ...dynamicLoadingTexts].filter(Boolean);
+    const interval = setInterval(() => {
+      setCurrentTextIndex((prevIndex) => (prevIndex + 1) % textsToAnimate.length);
+    }, intervalDuration);
 
-  if (textsToAnimate.length <= 1) {
-    console.log("ANIMATION EFFECT: Single or no item. textsToAnimate:", textsToAnimate, "EFFECT's currentTextIndex snapshot:", currentTextIndex);
-    if (textsToAnimate.length === 1 && currentTextIndex !== 0) {
-      setCurrentTextIndex(0);
-    }
-    return;
-  }
-
-  const intervalDuration = dynamicLoadingTexts.length > 0 ? 500 : 500;
-  console.log("ANIMATION EFFECT: Setting up interval. Duration:", intervalDuration, "Texts count:", textsToAnimate.length);
-
-  const intervalId = setInterval(() => {
- 
-    setCurrentTextIndex(prevIndex => {
-      const newIndex = (prevIndex + 1) % textsToAnimate.length;
-      console.log("ANIMATION TICK: prevIndex:", prevIndex, "newIndex:", newIndex, "mod length:", textsToAnimate.length);
-      return newIndex;
-    });
-  }, intervalDuration);
-
-  return () => {
-    console.log("ANIMATION EFFECT: Cleaning up interval", intervalId);
-    clearInterval(intervalId);
-  };
-}, [isLoading, dynamicLoadingTexts, setCurrentTextIndex, setDynamicLoadingTexts]);
-
-
-  const animatedLoadingTexts = useMemo(() => {
-    return ["Analyzing...", ...dynamicLoadingTexts].filter(Boolean);
-  }, [dynamicLoadingTexts]);
+    return () => clearInterval(interval);
+  }, [isLoading, dynamicLoadingTexts]);
 
 
   useLayoutEffect(() => {
@@ -468,6 +446,13 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
     }
   }, [activeMessageIndex, feedbackText, feedbackState, conversationId]);
 
+  const animatedLoadingTexts = useMemo(() => {
+    const baseTexts = ["Analyzing..."];
+    const validDynamicTexts = Array.isArray(dynamicLoadingTexts) ? dynamicLoadingTexts.filter(Boolean) : [];
+    return [...baseTexts, ...validDynamicTexts];
+  }, [dynamicLoadingTexts]);
+
+
   const handleConfirmationModalClose = useCallback(() => {
     setIsConfirmationModalOpen(false);
     setActiveMessageIndex(null);
@@ -517,15 +502,14 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
             onRate={(rating) => debouncedHandleRating(index, rating)}
             onPromptFeedback={() => handleFeedbackPromptClick(index)}
           />
-        ))}
-        {isLoading && messages.length > 0 &&
+        ))} {isLoading && messages.length > 0 &&
           (messages[messages.length - 1]?.sender === 'user' ||
            (messages[messages.length - 1]?.sender === 'bot' && messages[messages.length - 1]?.text === '')) && (
             <div className="self-start max-w-[90%] sm:max-w-[80%] flex flex-col">
               <div className="contents p-4 sm:p-5 md:p-6 rounded-[30px] bg-[#ececec] text-black rounded-tr-[30px] rounded-bl-[0] shadow-sm">
                 <div className="flex items-center space-x-2">
                   <span className="text-yellow-400 animate-pulse">✨</span>
-                  <div className="textWrapper"> 
+                  <div className="textWrapper">
                     {animatedLoadingTexts.map((text, idx) => (
                       <span
                         key={idx}
@@ -533,7 +517,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
                           idx === currentTextIndex
                             ? 'in'
                             : idx === (currentTextIndex - 1 + animatedLoadingTexts.length) % animatedLoadingTexts.length
-                            ? 'out' // CORRECTED
+                            ? 'out' 
                             : 'initial'
                         }`}
                       >
@@ -545,8 +529,9 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
               </div>
             </div>
         )}
+       
         {isLoading && messages.length === 0 && (
-          <div className="flex items-center justify-center h-full">
+          <div className="flex items-center justify-center h-full"> 
             <div className="flex items-center space-x-2">
               <span className="text-yellow-400 animate-pulse text-xl">✨</span>
               <div className="textWrapper"> 
