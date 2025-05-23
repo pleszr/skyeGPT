@@ -1,4 +1,4 @@
-from common import utils
+from common import utils, constants
 import pytest
 from tests import sample_objects, test_utils
 from datetime import datetime, timezone, timedelta
@@ -27,27 +27,17 @@ def test_convert_html_to_md_formatting_and_links():
     assert "*italic*" in md
     assert "[Link](/link)" in md
 
+
 def test_format_to_see_chunk():
     # setup static data
-    raw_stream = sample_objects.raw_stream()
+    input_text = "Chunk1"
+    event_type = constants.SseEventTypes.streamed_response
     # act
-    formatted_stream_output = list(utils.format_stream_to_sse(raw_stream))
+    actual = utils.format_str_to_sse(input_text, event_type)
     # assert result
-    expected = test_utils.convert_array_to_see(sample_objects.mock_chunks)
-    assert formatted_stream_output==expected
+    expected = "event: streamed_response\ndata: Chunk1\n\n"
+    assert expected == actual
 
-@pytest.mark.asyncio
-async def test_async_format_to_see_chunk():
-    # setup static data
-    raw_stream = sample_objects.async_raw_stream()
-    # act
-    actual = []
-    formatted_stream=utils.async_format_to_sse(raw_stream)
-    async for chunk in formatted_stream:
-        actual.append(chunk)
-    # assert result
-    expected = test_utils.convert_array_to_see(sample_objects.mock_chunks)
-    assert actual==expected
 
 def test_replace_placeholders():
     # setup static
@@ -62,7 +52,6 @@ def test_replace_placeholders():
 
 
 def test_folder_to_dict(tmp_path):
-
     # setup static data
     sub_dir = tmp_path / "sub"
     sub_dir.mkdir()

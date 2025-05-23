@@ -49,8 +49,8 @@ class AgentResponseStreamingService:
             ResponseGenerationError: Errors related generation the response
         """
         queue = asyncio.Queue()
-        await asyncio.create_task(self._produce_loading_texts(user_question, queue))
-        await asyncio.create_task(self._produce_response(user_question, conversation_id, queue))
+        loading_text_task = asyncio.create_task(self._produce_loading_texts(user_question, queue))
+        response_task = asyncio.create_task(self._produce_response(user_question, conversation_id, queue))
 
         done_streams = 0
         while done_streams < 2:
@@ -66,8 +66,12 @@ class AgentResponseStreamingService:
     async def _produce_loading_texts(user_question: str, queue: asyncio.Queue):
         logger.info("Asker service dynamic text generation started")
         dynamic_loading_text_service = DynamicLoadingTextService(prompts.loading_text_generator_v1)
-        dynamic_text = await dynamic_loading_text_service.generate_dynamic_loading_text(user_question)
-        await queue.put(utils.format_str_to_sse(json.dumps(dynamic_text), constants.SseEventTypes.dynamic_loading_text))
+        dynamic_text_list = await dynamic_loading_text_service.generate_dynamic_loading_text(user_question)
+        formatted_list = utils.format_str_to_sse(
+            json.dumps(dynamic_text_list),
+            constants.SseEventTypes.dynamic_loading_text
+        )
+        await queue.put(formatted_list)
         await queue.put(None)
 
     @staticmethod
