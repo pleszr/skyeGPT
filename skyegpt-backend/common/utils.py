@@ -16,7 +16,7 @@ def convert_html_to_md(html_content: str) -> str:
 
 def format_stream_to_sse(chunks: Generator[str, None, None], event_type: SseEventTypes) -> Generator[str, None, None]:
     """Takes a generator and formats a stream to match SSE standard.
-    Example: yield1, yield2 -> event: message\ndata: yield1\n\n, event: message\ndata: yield2\n\n
+    Example: yield1, yield2 -> event: event_type\ndata: yield1\n\n, event: event_type\ndata: yield2\n\n
     """
     for chunk in chunks:
         chunk = chunk.replace("\n", "\\n")

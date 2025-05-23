@@ -1,12 +1,29 @@
 from datetime import datetime, timezone
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, conlist
 from .models import MODELS
 from typing import Callable, List, Optional, Any
 from . import tools
-from common.constants import PromptUseCase
+from common.constants import PromptUseCase, DynamicLoadingTextResponseModel
 
 
 class PromptDefinition(BaseModel):
+    """
+    Defines a prompt configuration for an agent. It stores all information related to agent generation in one place.
+    The PromptDefinitions are part of the code and therefor version controlled.
+
+    Args:
+        name: Identifier for the prompt definition. Is only used to make it easier for humans to identify.
+        use_case: defines where the agent will be used. Valid options are defined in PromptUseCase enum.
+        version: Version tag of the prompt definition.
+        model: Underlying model to be used. Is only used to make it easier for humans to identify.
+        created_at: Timestamp when the prompt was created.
+        temperature: Defines the temperature for the agent.
+        output_type: Defines if the agent has a defined structured output type.
+        instructions: Instructions for the agent. Read more at https://ai.pydantic.dev/agents/#system-prompts
+        system_prompt: System-level prompt to prepend. Read more at https://ai.pydantic.dev/agents/#system-prompts
+        prompt_template: In case the user question is not directly set, it can be inserted into a template
+        tools: External tools the agent may invoke.
+    """
     name: str
     use_case: PromptUseCase
     version: str
@@ -17,7 +34,7 @@ class PromptDefinition(BaseModel):
     instructions: Optional[str] = Field(default=None)
     system_prompt: Optional[str] = Field(default=None)
     prompt_template: Optional[str] = Field(default=None)
-    tools: List[Callable] = Field(default=[])
+    tools: List[Callable] = Field(default=None)
 
 
 responder_openai_v1 = PromptDefinition(
@@ -109,6 +126,8 @@ loading_text_generator_v1 = PromptDefinition(
     system_prompt="""
     Suggest 5 next-step prompts as a JSON array. They will be used as texts in the loading animation. 
     Your job is NOT to answer the question but to respond with 5 steps that you would take. 
+    You are part of support so there is no point reaching out to them.
+    Take a funny, but professional tone. Aim to inform but slightly entertain.
     Available tools: search in Innoveo Skye's documentation, search or Innoveo Partner Hub confluence. 
     
     Example:
@@ -117,7 +136,9 @@ loading_text_generator_v1 = PromptDefinition(
         "Filtering out non relevant results. User meant multibrick not brickmulti...", 
         "Looking for examples on multibrick operations on Innoveo Partner Hub confluence...", 
         "Verifying output quality, cross checking possible hallucinations...", 
-        "Now I know everything about multibricks. Time to answer!"
+        "Maybe I should stand up from the computer and ask Roland Lukacs personally"
         ]
     """,
+    prompt_template="""Suggest 5 next-step prompts as a JSON array for the following question '{{user_question}}'. 
+    Send the 5 prompts back in one a JSON array. Generating less then 5 response is fatal failure"""
 )

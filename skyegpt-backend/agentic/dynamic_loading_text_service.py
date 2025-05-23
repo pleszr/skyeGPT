@@ -18,8 +18,7 @@ class DynamicLoadingTextService:
 
     async def generate_dynamic_loading_text(self, user_question: str) -> List[str]:
         """tbd """
-        print(f'cicastruction: {self.agent.instructions()}')
-        result = await self.agent.run(user_prompt=user_question)
+        result = await self.agent.run(user_prompt=self._construct_user_prompt(user_question))
         print(result.output)
         return result.output
 

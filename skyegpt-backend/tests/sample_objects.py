@@ -5,6 +5,7 @@ import uuid
 from agentic.prompts import PromptDefinition
 from agentic.models import MODELS
 from typing import List, Dict
+from common import constants
 
 
 sample_uuid = uuid.UUID("db5008a7-432f-4b4e-985d-bdb07cdcc65e")
@@ -113,6 +114,7 @@ def mock_search_in_skye_documentation(query: str) -> List[Dict]:
 
 sample_prompt = PromptDefinition(
     name="skyegpt-responder-agent",
+    use_case=constants.PromptUseCase.response_generator,
     model=MODELS.OPENAI_GPT_4_1.value,
     version="v1",
     temperature=0.0,

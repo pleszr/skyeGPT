@@ -3,13 +3,13 @@ from ..prompts import PromptDefinition
 
 
 def create_agent_from_prompt_version(prompt_version: PromptDefinition) -> Agent:
+    """Creates a Pydantic agent from a PromptDefinition. If an optional field is none, it is not passed to the agent"""
     agent_kwargs = {
         "model": prompt_version.model,
         "instrument": True,
         "instructions": prompt_version.instructions,
         "model_settings": {'temperature': prompt_version.temperature},
         "output_type": prompt_version.output_type,
-        "tools": prompt_version.tools,
     }
 
     optional_fields = {

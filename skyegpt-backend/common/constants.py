@@ -1,5 +1,6 @@
 from typing import Literal, TypeAlias
 from enum import Enum
+from pydantic import BaseModel, conlist
 
 # API
 MEDIA_TYPE_SSE = "text/event-stream"
@@ -32,3 +33,7 @@ class PromptUseCase(str, Enum):
 class SseEventTypes(str, Enum):
     dynamic_loading_text = "dynamic_loading_text"
     streamed_response = "streamed_response"
+
+
+class DynamicLoadingTextResponseModel(BaseModel):
+    result: conlist(str, min_length=5, max_length=5)
