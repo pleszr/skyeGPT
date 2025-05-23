@@ -34,7 +34,6 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
   const [submitError, setSubmitError] = useState<string>('');
   const [ratingError, setRatingError] = useState<{ [key: number]: string }>({});
   const [feedbackState, setFeedbackState] = useState<{ [key: number]: 'thumbs-up' | 'thumbs-down' | null }>({});
-  const [wasStopped, setWasStopped] = useState(false);
 
   const [activeMessageIndex, setActiveMessageIndex] = useState<number | null>(null);
 
@@ -95,7 +94,6 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
   }, [setMessages]);
 
   const sendMessage = useCallback(async () => {
-    setWasStopped(false);
     const trimmedInput = input.trim();
     if (!trimmedInput || isLoading) return;
 
@@ -363,7 +361,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
 
     if (!conversationId) {
       console.error("Cannot submit feedback: conversation_id is missing.");
-      setSubmitError('Session ID missing. Cannot submit feedback.');
+      setSubmitError('conversation_id ID missing. Cannot submit feedback.');
       return;
     }
 
