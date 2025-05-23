@@ -14,3 +14,9 @@ export const createBotMessage = (text: string): Message => {
 export const createUserMessage = (text: string): Message => {
   return { sender: 'user', text };
 };
+
+export interface Message {
+  sender: 'user' | 'bot';
+  text: string;
+  stopped?: boolean;
+}
