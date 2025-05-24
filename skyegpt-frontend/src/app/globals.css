@@ -1,21 +1,37 @@
 @import "tailwindcss";
 
-@keyframes analyzing-shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
+.animated-text-container {
+  position: relative;
+  height: 1.5em;
+  line-height: 1.5em; 
 }
-.analyzing-shimmer {
-  background: linear-gradient(90deg, #818181 0%, #C3C3C3 100%);
-  background-size: 200% 100%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: analyzing-shimmer 2s linear infinite;
+
+.animated-text {
+  position: absolute; 
+  left: 0;
+  top: 0;
+  width: 100%;
+  white-space: nowrap; 
+  transition: all 0.6s ease-in-out;
+  color: #374151; 
+                  
 }
+
+.animated-text.out {
+  transform: translateY(-100%);
+  opacity: 0;
+}
+
+.animated-text.in {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.animated-text.initial {
+  transform: translateY(100%);
+  opacity: 0;
+}
+
 
 
 :root {
