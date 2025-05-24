@@ -4,6 +4,7 @@ from fastapi.responses import StreamingResponse
 from common import logger, message_bundle, constants
 from common.exceptions import StoreManagementException, ResponseGenerationError, UsageLimitExceededError
 import json
+from asyncio import Queue
 from typing import AsyncGenerator
 
 
@@ -73,6 +74,22 @@ def handle_unknown_errors(func):
             logger.exception("Uncaught Exception")
             raise HTTPException(status_code=500, detail=message_bundle.INTERNAL_ERROR) from e
     return wrapper
+
+
+def handle_asyncio_producer_task_errors(queue_arg: int = -1, swallow: bool = False):
+    def decorator(func):
+        @wraps(func)
+        async def wrapper(*args, **kwargs):
+            queue: Queue = args[queue_arg]
+            try:
+                return await func(*args, **kwargs)
+            except Exception:
+                logger.exception(f"{func.__name__} failed")
+                await queue.put(None)
+                if not swallow:
+                    raise
+        return wrapper
+    return decorator
 
 
 def handle_store_errors(func):

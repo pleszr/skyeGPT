@@ -34,12 +34,20 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
   const [submitError, setSubmitError] = useState<string>('');
   const [ratingError, setRatingError] = useState<{ [key: number]: string }>({});
   const [feedbackState, setFeedbackState] = useState<{ [key: number]: 'thumbs-up' | 'thumbs-down' | null }>({});
+  const [dynamicLoadingTexts, setDynamicLoadingTexts] = useState<string[]>([]);
+  const [currentTextIndex, setCurrentTextIndex] = useState<number>(0);
+
   const [activeMessageIndex, setActiveMessageIndex] = useState<number | null>(null);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const wasNearBottomRef = useRef<boolean>(true);
   const streamAbortControllerRef = useRef<AbortController | null>(null);
+
+  const filterDynamicLoadingText = (text: string): boolean => {
+    const lowerText = text.toLowerCase();
+    return !lowerText.includes('github flavored markdown') && !lowerText.includes('markdown fences');
+  };
 
   const debouncedScrollToBottom = useMemo(() => debounce(() => {
     if (chatContainerRef.current) {
@@ -69,11 +77,36 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
     }
   }, []);
 
+  const handleStopStreaming = useCallback(() => {
+    if (streamAbortControllerRef.current) {
+      streamAbortControllerRef.current.abort();
+    }
+    setIsLoading(false);
+    setDynamicLoadingTexts([]);
+
+    setMessages(prev => {
+      const newMessages = [...prev];
+      const lastIndex = newMessages.length - 1;
+      if (
+        lastIndex >= 0 &&
+        newMessages[lastIndex].sender === 'bot' &&
+        newMessages[lastIndex].text === ''
+      ) {
+        newMessages[lastIndex] = {
+          ...createBotMessage("Request cancelled."),
+          stopped: true,
+        };
+      }
+      return newMessages;
+    });
+  }, [setMessages]);
+
   const sendMessage = useCallback(async () => {
     const trimmedInput = input.trim();
     if (!trimmedInput || isLoading) return;
 
     setIsLoading(true);
+    setDynamicLoadingTexts([]);
 
     if (streamAbortControllerRef.current) {
       streamAbortControllerRef.current.abort();
@@ -129,16 +162,18 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
                 }
                 return newMessages;
               });
+              setDynamicLoadingTexts([]);
               return false;
             }
             setMessages((prevMsgs) => {
               const newMsgs = [...prevMsgs];
               const lastMsgIndex = newMsgs.length - 1;
-              if (lastMsgIndex >=0 && newMsgs[lastMsgIndex].sender === 'bot' && newMsgs[lastMsgIndex].text !== fullMessageTextForCurrentResponse) {
+              if (lastMsgIndex >= 0 && newMsgs[lastMsgIndex].sender === 'bot' && newMsgs[lastMsgIndex].text !== fullMessageTextForCurrentResponse) {
                 newMsgs[lastMsgIndex] = createBotMessage(fullMessageTextForCurrentResponse);
               }
               return newMsgs;
             });
+            setDynamicLoadingTexts([]);
             return true;
           }
 
@@ -157,41 +192,65 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
                 } catch {
                   parsedChunk = dataStr.trim() ? { text: dataStr } : null;
                 }
-                const chunkText = getChunkTextFromSSE(parsedChunk);
-                if (chunkText) {
-                  fullMessageTextForCurrentResponse += chunkText;
-                  setMessages((prevMsgs) => {
-                    const newMsgs = [...prevMsgs];
-                    const lastMsgIndex = newMsgs.length - 1;
-                    if (lastMsgIndex >=0 && newMsgs[lastMsgIndex].sender === 'bot') {
-                      newMsgs[lastMsgIndex] = createBotMessage(fullMessageTextForCurrentResponse);
+                if (parsedChunk && Array.isArray(parsedChunk)) {
+                  const filteredTexts = parsedChunk.filter(filterDynamicLoadingText);
+                  if (filteredTexts.length > 0) {
+                    setDynamicLoadingTexts(filteredTexts);
+                  }
+                } else if (parsedChunk && typeof parsedChunk === 'object' && 'dynamic_loading_text' in parsedChunk) {
+                  const texts = parsedChunk.dynamic_loading_text;
+                  if (Array.isArray(texts)) {
+                    const filteredTexts = texts.filter(filterDynamicLoadingText);
+                    if (filteredTexts.length > 0) {
+                      setDynamicLoadingTexts(filteredTexts);
                     }
-                    return newMsgs;
-                  });
+                  } else if (typeof texts === 'string' && filterDynamicLoadingText(texts)) {
+                    setDynamicLoadingTexts([texts]);
+                  }
+                } else {
+                  const chunkText = getChunkTextFromSSE(parsedChunk);
+                  if (chunkText) {
+                    fullMessageTextForCurrentResponse += chunkText;
+                    setMessages((prevMsgs) => {
+                      const newMsgs = [...prevMsgs];
+                      const lastMsgIndex = newMsgs.length - 1;
+                      if (lastMsgIndex >= 0 && newMsgs[lastMsgIndex].sender === 'bot') {
+                        newMsgs[lastMsgIndex] = createBotMessage(fullMessageTextForCurrentResponse);
+                      }
+                      return newMsgs;
+                    });
+                  }
                 }
               } catch (e) {
                 console.warn('Invalid SSE chunk processing error:', e, 'Original line:', line);
               }
             }
           }
-          if (streamAbortControllerRef.current?.signal.aborted) break;
         }
       } catch (error: unknown) {
         if (
           typeof error === 'object' &&
           error !== null &&
-          (('name' in error && (error as {name: string}).name === 'AbortError') || ('message' in error && (error as {message: string}).message === "Stream aborted"))
+          (('name' in error && (error as { name: string }).name === 'AbortError') || ('message' in error && (error as { message: string }).message === "Stream aborted"))
         ) {
           console.log("Stream fetch aborted by user action.");
           setMessages(prev => {
             const newMessages = [...prev];
             const lastMessageIndex = newMessages.length - 1;
-            if (lastMessageIndex >=0 && newMessages[lastMessageIndex].sender === 'bot' && newMessages[lastMessageIndex].text === '') {
-                 newMessages[lastMessageIndex] = createBotMessage("Request cancelled.");
+            if (
+              lastMessageIndex >= 0 &&
+              newMessages[lastMessageIndex].sender === 'bot'
+            ) {
+              newMessages[lastMessageIndex] = {
+                ...newMessages[lastMessageIndex],
+                text: "Request cancelled.",
+                stopped: true,
+              };
             }
             return newMessages;
           });
-          return false; 
+          setDynamicLoadingTexts([]);
+          return false;
         }
 
         console.error('Error fetching stream:', error);
@@ -200,18 +259,18 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
         setMessages((prev) => {
           const newMessages = [...prev];
           const lastMessageIndex = newMessages.length - 1;
-          if (lastMessageIndex >=0 && newMessages[lastMessageIndex]?.sender === 'bot') {
+          if (lastMessageIndex >= 0 && newMessages[lastMessageIndex]?.sender === 'bot') {
             newMessages[lastMessageIndex] = createBotMessage(`Error: ${errorMessage}`);
           } else {
-             addMessage(newMessages, createBotMessage(`Error: ${errorMessage}`));
+            addMessage(newMessages, createBotMessage(`Error: ${errorMessage}`));
           }
           return newMessages;
         });
+        setDynamicLoadingTexts([]);
         return false;
       }
-      return false;
     };
-    
+
     await fetchStreamSingleAttempt();
     setIsLoading(false);
   }, [input, isLoading, setMessages, sendTechnicalMessage, textareaResize, conversationId]);
@@ -241,8 +300,22 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
       if (streamAbortControllerRef.current) {
         streamAbortControllerRef.current.abort();
       }
+      setDynamicLoadingTexts([]);
     };
   }, [textareaResize]);
+
+  useEffect(() => {
+    if (!isLoading || dynamicLoadingTexts.length === 0) {
+      setCurrentTextIndex(0);
+      return;
+    }
+
+    const interval = setInterval(() => {
+      setCurrentTextIndex((prev) => (prev + 1) % dynamicLoadingTexts.length);
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [isLoading, dynamicLoadingTexts]);
 
   useLayoutEffect(() => {
     scrollToBottom();
@@ -330,7 +403,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
 
     if (!conversationId) {
       console.error("Cannot submit feedback: conversation_id is missing.");
-      setSubmitError('Session ID missing. Cannot submit feedback.');
+      setSubmitError('conversation_id ID missing. Cannot submit feedback.');
       return;
     }
 
@@ -387,7 +460,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
   return (
     <div className={`flex flex-col h-full ${className || ''}`}>
       <div
-        className="chatMessages flex flex-col gap-6 p-4 sm:p-6 md:p-8 overflow-y-auto scroll-smooth bg-white flex-shrink-0 rounded-[20px] h-[60vh] max-h-[90vh] min-h-0"
+        className="chatMessages flex flex-col gap-6 p-4 sm:p-6 md:p-8 overflow-y-auto scroll-smooth bg-white flex-shrink-0 rounded-[30px] h-[60vh] max-h-[90vh] min-h-0"
         ref={chatContainerRef}
       >
         {messages.map((msg, index) => (
@@ -398,7 +471,10 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
             isLoading={isLoading}
             showFeedbackControls={
               msg.sender === 'bot' &&
-              (index < messages.length - 1 || (index === messages.length - 1 && !isLoading))
+              msg.text.trim() !== "" &&
+              msg.text.trim() !== "Request cancelled." &&
+              !msg.stopped &&
+              !isLoading
             }
             feedbackType={feedbackState[index]}
             currentRatingError={ratingError[index]}
@@ -406,23 +482,37 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
             onPromptFeedback={() => handleFeedbackPromptClick(index)}
           />
         ))}
-        {isLoading && messages.length > 0 && messages[messages.length -1]?.sender === 'user' && (
-          <div className="self-start max-w-[90%] sm:max-w-[80%] flex flex-col">
-            <div className="p-4 sm:p-5 md:p-6 rounded-[30px] bg-[#ececec] text-black rounded-tr-[30px] rounded-bl-[0] shadow-sm">
-              <div className="animate-pulse flex space-x-2">
-                <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
-                <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
-                <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+        {isLoading && messages.length > 0 && (
+          (messages[messages.length - 1]?.sender === 'user' ||
+           (messages[messages.length - 1]?.sender === 'bot' && messages[messages.length - 1]?.text === ''))
+          && (
+            <div className="self-start max-w-[90%] sm:max-w-[80%] flex flex-col">
+              <div className="contents p-4 sm:p-5 md:p-6 rounded-[30px] bg-[#ececec] text-black rounded-tr-[30px] rounded-bl-[0] shadow-sm">
+                <div className="flex items-center space-x-2">
+                  <span className="text-yellow-400 animate-pulse">✨</span>
+                  {dynamicLoadingTexts.length > 0 ? (
+                    <span className="text-sm font-bold analyzing-shimmer">
+                      {dynamicLoadingTexts[currentTextIndex]}
+                    </span>
+                  ) : (
+                    <span className="text-sm font-bold analyzing-shimmer">Analyzing...</span>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
+          )
         )}
         {isLoading && messages.length === 0 && (
-          <div className="h-full flex items-center justify-center">
-            <div className="animate-pulse flex space-x-2">
-              <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
-              <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
-              <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+          <div className="flex items-center justify-center h-full">
+            <div className="flex items-center space-x-2">
+              <span className="text-yellow-400 animate-pulse text-xl">✨</span>
+              {dynamicLoadingTexts.length > 0 ? (
+                <span className="text-sm font-bold analyzing-shimmer">
+                  {dynamicLoadingTexts[currentTextIndex]}
+                </span>
+              ) : (
+                <span className="text-sm font-bold analyzing-shimmer">Analyzing...</span>
+              )}
             </div>
           </div>
         )}
@@ -448,18 +538,18 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
         </div>
         <button
           className="skgpt-btn sendBtn p-0 border-none bg-transparent cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center shrink-0 hover:opacity-80 transition-opacity"
-          onClick={sendMessage}
-          disabled={isLoading || !input.trim()}
-          title="Send"
-          aria-label="Send message"
+          onClick={isLoading ? handleStopStreaming : sendMessage}
+          disabled={!isLoading && !input.trim()}
+          title={isLoading ? "Stop" : "Send"}
+          aria-label={isLoading ? "Stop message" : "Send message"}
         >
           <Image
-            src="/button.png"
-            alt="Send"
+            src={isLoading ? "/stop.png" : "/button.png"}
+            alt={isLoading ? "Stop" : "Send"}
             width={120}
             height={120}
             quality={100}
-            style ={{ width: 'auto', height: 'auto' }}
+            style={{ width: 'auto', height: 'auto' }}
             priority
             className="object-contain"
           />
@@ -481,7 +571,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
                 className="text-gray-500 hover:text-gray-700 text-2xl leading-none"
                 aria-label="Close feedback modal"
               >
-                &times;
+                ×
               </button>
             </div>
             <div className="flex flex-col gap-2 flex-1">
@@ -545,7 +635,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
                 className="text-gray-500 hover:text-gray-700 text-2xl leading-none"
                 aria-label="Close confirmation"
               >
-                &times;
+                ×
               </button>
             </div>
             <svg
@@ -583,17 +673,7 @@ const MemoizedMessage = memo(
     const isUser = msg.sender === 'user';
 
     if (msg.sender === 'bot' && msg.text === '' && isLoading) {
-      return (
-        <div className="self-start flex flex-col w-auto max-w-[90%] sm:max-w-[80%]">
-          <div className="p-4 sm:p-5 md:p-6 rounded-[30px] bg-[#ececec] text-black rounded-bl-[0] shadow-sm">
-            <div className="animate-pulse flex space-x-2">
-              <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
-              <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
-              <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
-            </div>
-          </div>
-        </div>
-      );
+      return null;
     }
 
     const markdownContent = msg.text
@@ -661,8 +741,12 @@ const MemoizedMessage = memo(
                 </ReactMarkdown>
               </div>
             </div>
-            {showFeedbackControls && msg.text.trim() !== '' && !msg.text.startsWith("Error:") && !msg.text.startsWith("No response received") && !msg.text.startsWith("Request cancelled") && (
-              <div className="flex items-center justify-end mt-2">
+            {showFeedbackControls &&
+              msg.text.trim() !== '' &&
+              !msg.text.startsWith("Error:") &&
+              !msg.text.startsWith("No response received") &&
+              !msg.text.startsWith("Request cancelled") && (
+              <div className="flex items-center justify-end mt-2 gap-x-1">
                 <button
                   onClick={onPromptFeedback}
                   className="text-xs text-gray-600 hover:text-gray-900 hover:underline transition-colors duration-200"
@@ -671,28 +755,30 @@ const MemoizedMessage = memo(
                 >
                   GIVE FEEDBACK
                 </button>
-                {(['thumbs-up', 'thumbs-down'] as const).map((ratingType) => (
-                  <button
-                    key={ratingType}
-                    onClick={() => onRate(ratingType)}
-                    className={`transition-all duration-200 transform hover:scale-125 rounded-full p-1 ${feedbackType === ratingType ? 'opacity-100' : 'opacity-60 hover:opacity-90'}`}
-                    title={ratingType === 'thumbs-up' ? "Helpful" : "Not helpful"}
-                    aria-label={ratingType === 'thumbs-up' ? "Mark as helpful" : "Mark as not helpful"}
-                    aria-pressed={feedbackType === ratingType}
-                    aria-describedby={currentRatingError ? `rating-error-${index}` : undefined}
-                  >
-                    <Image
-                      src={ratingType === 'thumbs-up' ? "/tup.png" : "/tdown.png"}
-                      alt={ratingType === 'thumbs-up' ? "Thumbs Up" : "Thumbs Down"}
-                      width={16}
-                      height={16}
-                      style={{ width: 'auto', height: 'auto' }}
-                      priority
-                      quality={100}
-                      className={`object-contain ${feedbackType === ratingType && ratingType === 'thumbs-up' ? 'skgpt-tint-green-active' : ''} ${feedbackType === ratingType && ratingType === 'thumbs-down' ? 'skgpt-tint-red-active' : ''}`}
-                    />
-                  </button>
-                ))}
+                <div className="flex gap-x-1">
+                  {(['thumbs-up', 'thumbs-down'] as const).map((ratingType: 'thumbs-up' | 'thumbs-down') => (
+                    <button
+                      key={ratingType}
+                      onClick={() => onRate(ratingType)}
+                      className={`transition-all duration-200 transform hover:scale-125 rounded-full p-0 m-0 ${feedbackType === ratingType ? 'opacity-100' : 'opacity-60 hover:opacity-90'}`}
+                      title={ratingType === 'thumbs-up' ? "Helpful" : "Not helpful"}
+                      aria-label={ratingType === 'thumbs-up' ? "Mark as helpful" : "Mark as not helpful"}
+                      aria-pressed={feedbackType === ratingType}
+                      aria-describedby={currentRatingError ? `rating-error-${index}` : undefined}
+                    >
+                      <Image
+                        src={ratingType === 'thumbs-up' ? "/tup.png" : "/tdown.png"}
+                        alt={ratingType === 'thumbs-up' ? "Thumbs Up" : "Thumbs Down"}
+                        width={16}
+                        height={16}
+                        style={{ width: 'auto', height: 'auto' }}
+                        priority
+                        quality={100}
+                        className={`object-contain ${feedbackType === ratingType && ratingType === 'thumbs-up' ? 'skgpt-tint-green-active' : ''} ${feedbackType === ratingType && ratingType === 'thumbs-down' ? 'skgpt-tint-red-active' : ''}`}
+                      />
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
             {showFeedbackControls && currentRatingError && (

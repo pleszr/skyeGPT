@@ -121,7 +121,7 @@ def replace_one_by_id(collection: Collection, _id: uuid, document: Dict[str, Any
         an instance PyMongoError for operational errors
     """
     update_result = collection.replace_one({"_id": _id}, document, upsert=False)
-    if update_result.matched_count is 0:
+    if update_result.matched_count == 0:
         raise ObjectNotFoundError(f"Object with _id: {_id} was not found in collection: {collection.name}")
 
 

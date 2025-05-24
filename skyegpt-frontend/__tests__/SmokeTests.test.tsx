@@ -55,9 +55,17 @@ describe('Application Smoke Tests', () => {
     expect(screen.getByTitle('Send')).toBeInTheDocument();
   });
 
-  it('ChatBox send button becomes enabled on input and disabled during message sending', async () => {
-    mockedFetchChatResponseStreamAPI.mockImplementation(() => {
-      return new Promise(() => {});
+  it('Testing stop streaming', async () => {
+    let abortHandler: (() => void) | undefined;
+    mockedFetchChatResponseStreamAPI.mockImplementation((_payload, signal) => {
+      if (signal) {
+        signal.addEventListener?.('abort', () => {
+          abortHandler?.();
+        });
+      }
+      return new Promise((_resolve, _reject) => {
+        abortHandler = () => {};
+      });
     });
 
     render(<ChatBox {...getDefaultChatBoxProps()} />); 
@@ -72,9 +80,18 @@ describe('Application Smoke Tests', () => {
     await waitFor(() => expect(sendButton).not.toBeDisabled());
 
     await userEvent.click(sendButton);
+
     await waitFor(() => {
       expect(textarea).toBeDisabled();
-      expect(sendButton).toBeDisabled();
+      expect(screen.getByTitle('Stop')).toBeInTheDocument();
+    });
+
+    const stopButton = screen.getByTitle('Stop');
+    await userEvent.click(stopButton);
+
+    await waitFor(() => {
+      expect(textarea).not.toBeDisabled();
+      expect(screen.getByTitle('Send')).toBeInTheDocument();
     });
   });
 
