@@ -65,3 +65,5 @@ def calculate_utc_x_hours_ago(x_hours: int) -> datetime:
     """Return the UTC datetime representing *x_hours* ago from now."""
     now_utc = datetime.now(timezone.utc)
     return now_utc - timedelta(hours=x_hours)
+
+

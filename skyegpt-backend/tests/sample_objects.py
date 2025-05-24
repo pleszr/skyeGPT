@@ -78,20 +78,23 @@ sample_conversation = Conversation(
     contents=sample_conversation_content
 )
 
-mock_chunks = ["chunkA", "chunkB", "chunkC"]
-async def async_raw_stream(*args, **kwargs):
-    for chunk in mock_chunks:
+mock_raw_chunks = ["chunkA", "chunkB", "chunkC"]
+mock_sse_loading_text_chunks = ["Searching in Skye doc1", "Searching in Skye doc2"]
+mock_sse_response_chunks = ["data: chunk1\n\n", "data: chunk2\n\n"]
+async def sse_response_stream(*args, **kwargs):
+    for chunk in mock_sse_response_chunks:
         yield chunk
 
-def raw_stream(*args, **kwargs):
-    for chunk in mock_chunks:
+async def raw_response_stream(*args, **kwargs):
+    for chunk in mock_raw_chunks:
         yield chunk
 
-
-mock_sse_chunks = ["data: chunk1\n\n", "data: chunk2\n\n"]
-async def sse_stream(*args, **kwargs):
-    for chunk in mock_sse_chunks:
-        yield chunk
+expected_stream_outcome = [
+    'event: dynamic_loading_text\ndata: ["Searching in Skye doc1", "Searching in Skye doc2"]\n\n',
+    'event: streamed_response\ndata: chunkA\n\n',
+    'event: streamed_response\ndata: chunkB\n\n',
+    'event: streamed_response\ndata: chunkC\n\n',
+]
 
 sample_skye_document_search_result = {
     "document": "#Sample_search_result",
@@ -112,7 +115,7 @@ def mock_search_in_skye_documentation(query: str) -> List[Dict]:
     return [sample_skye_document_search_result]
 
 
-sample_prompt = PromptDefinition(
+sample_agent_service_prompt = PromptDefinition(
     name="skyegpt-responder-agent",
     use_case=constants.PromptUseCase.response_generator,
     model=MODELS.OPENAI_GPT_4_1.value,
@@ -122,4 +125,14 @@ sample_prompt = PromptDefinition(
                  "Aim to give a link of the relevant documentation.",
     prompt_template="Question:",
     tools=[mock_search_in_skye_documentation]
+)
+
+sample_loading_text_prompt = PromptDefinition(
+    name="skyegpt-dynamic_loading_text_generator_agent",
+    use_case=constants.PromptUseCase.dynamic_loading_text,
+    model=MODELS.OPENAI_GPT_3_5,
+    version="v1",
+    temperature=0.0,
+    output_type=List[str],
+    system_prompt="""Suggest 5 next-step prompts as a JSON array for the following question"""
 )
