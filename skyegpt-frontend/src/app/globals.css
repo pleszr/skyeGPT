@@ -1,5 +1,39 @@
 @import "tailwindcss";
 
+.animated-text-container {
+  position: relative;
+  height: 1.5em;
+  line-height: 1.5em; 
+}
+
+.animated-text {
+  position: absolute; 
+  left: 0;
+  top: 0;
+  width: 100%;
+  white-space: nowrap; 
+  transition: all 0.6s ease-in-out;
+  color: #374151; 
+                  
+}
+
+.animated-text.out {
+  transform: translateY(-100%);
+  opacity: 0;
+}
+
+.animated-text.in {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.animated-text.initial {
+  transform: translateY(100%);
+  opacity: 0;
+}
+
+
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
@@ -45,6 +79,9 @@ body {
     width: 80px !important; 
   }
 
+  .skgpt-version-selector{
+    left: 15px
+  }
 
   .skgpt-input-textarea {
     font-size: 0.875rem;
@@ -61,6 +98,9 @@ body {
   .custom-width {
     width: 100%;
     max-width: 100%;
+  }
+  .skgpt-version-selector{
+    top: 0px
   }
 }
 

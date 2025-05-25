@@ -19,8 +19,15 @@ asker_apis_router = APIRouter(prefix="/ask", tags=["Asker Endpoints"])
 @asker_apis_router.post(
     "/response/stream",
     status_code=200,
-    summary="Stream response for a query within a conversation",
-    description="Streams the agents response back in SSE format",
+    summary="Streams the agents response back in SSE format",
+    description="""Streams the response using Server-Sent Events (SSE) format with two distinct event types:
+
+- **dynamic_loading_text**: An array of loading messages displayed to users during processing. 
+  This event is sent as a single chunk containing all available loading texts.
+
+- **streamed_response**: The primary response content delivered incrementally in chunks. 
+  Content is formatted in Markdown and requires simple concatenation on the client side 
+  to reconstruct the complete response.""",
     response_class=StreamingResponse,
     responses={
         200: {
@@ -29,9 +36,12 @@ asker_apis_router = APIRouter(prefix="/ask", tags=["Asker Endpoints"])
                 "text/event-stream": {
                     "schema": {
                         "type": "string",
-                        "description": "A continuous SSE text stream."
+                        "description": "A continuous SSE text stream with two event types."
                     },
-                    "example": "event: message\ndata: {\"text\": \"Hello!\"}\n\n"
+                    "example": (
+                            "event: dynamic_loading_text\ndata: Searching for SOAP Api in Skye documentation…\n\n"
+                            "event: streamed_response\ndata: Skye,\n\n"
+                    )
                 }
             }
         },

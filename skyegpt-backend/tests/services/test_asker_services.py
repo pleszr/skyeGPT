@@ -8,26 +8,33 @@ from fastapi import HTTPException, status
 
 @pytest.mark.asyncio
 @patch('services.asker_services.store_manager')
-@patch('services.asker_services.utils.async_format_to_sse')
+@patch(
+    'services.asker_services.utils.format_str_to_sse',
+    side_effect=lambda s, e: f"event: {e.value}\ndata: {s}\n\n"
+)
 @patch('services.asker_services.AgentService')
+@patch('services.asker_services.DynamicLoadingTextService')
 async def test_agent_response_streaming_service_stream_agent_response_happy_path(
+        mock_dynamic_loading_text_class,
         mock_agent_service_class,
-        mock_async_format_to_sse,
+        mock_format_str_to_sse,
         mock_store_manager
 ):
     # setup static data
     service = AgentResponseStreamingService ()
     user_question = "What is Skye?"
+    expected_loading_texts = ["Searching in Skye doc1", "Searching in Skye doc2"]
     test_conversation_id = sample_objects.sample_uuid
 
-    # setup mocks
-    agent_service_instance = MagicMock()
-    mock_stream_response = MagicMock()
-    mock_agent_service_class.return_value = agent_service_instance
-    agent_service_instance.stream_agent_response = AsyncMock(return_value=mock_stream_response)
+    # setup DynamicLoadingText mocks mocks
+    mock_loading_text_instance = MagicMock()
+    mock_dynamic_loading_text_class.return_value = mock_loading_text_instance
+    mock_loading_text_instance.generate_dynamic_loading_text = AsyncMock(return_value=expected_loading_texts)
 
-    expected_sse_chunks = sample_objects.mock_sse_chunks
-    mock_async_format_to_sse.side_effect = sample_objects.sse_stream
+    # setup AgentService mocks
+    mock_agent_service_instance = MagicMock()
+    mock_agent_service_class.return_value = mock_agent_service_instance
+    mock_agent_service_instance.stream_agent_response = AsyncMock(side_effect=sample_objects.raw_response_stream)
 
     # act
     result_chunks = []
@@ -35,12 +42,16 @@ async def test_agent_response_streaming_service_stream_agent_response_happy_path
         result_chunks.append(chunk)
 
     # assert result
-    assert expected_sse_chunks == result_chunks
+    assert sample_objects.expected_stream_outcome == result_chunks
 
-    # assert calls
+    # assert agent_service calls
     mock_agent_service_class.assert_called_once_with(mock_store_manager, ANY)
-    mock_async_format_to_sse.assert_called_once_with(mock_stream_response)
-    agent_service_instance.stream_agent_response.assert_called_once_with(user_question, test_conversation_id)
+    mock_agent_service_instance.stream_agent_response.assert_called_once_with(user_question, test_conversation_id)
+    assert mock_format_str_to_sse.called
+
+    # assert dynamic loading text calls
+    mock_dynamic_loading_text_class.assert_called_once_with(ANY)
+    mock_loading_text_instance.generate_dynamic_loading_text.assert_called_once_with(user_question)
 
 
 @pytest.mark.asyncio
@@ -58,7 +69,7 @@ async def test_aggregated_agent_response_with_context_happy_path(
 
     # setup mocks
     agent_service_instance = MagicMock()
-    agent_service_instance.stream_agent_response = AsyncMock(side_effect=sample_objects.async_raw_stream)
+    agent_service_instance.stream_agent_response = AsyncMock(side_effect=sample_objects.raw_response_stream)
     mock_agent_service_class.return_value = agent_service_instance
 
     expected_context = [{"turn": 1, "text": "hello"}]
@@ -72,7 +83,7 @@ async def test_aggregated_agent_response_with_context_happy_path(
     )
 
     #assert results
-    assert result["generated_answer"] == "".join(sample_objects.mock_chunks)
+    assert result["generated_answer"] == "".join(sample_objects.mock_raw_chunks)
     assert result["curr_context"] == expected_context
 
     #assert calls

@@ -44,7 +44,7 @@ class AgentService:
         existing_conversation = await self.store_manager.get_conversation_by_id(conversation_id)
         return self._stream_agent_response_pydantic(user_prompt, conversation_id, existing_conversation.contents)
 
-    @decorators.handle_pydantic_response_errors
+    @decorators.handle_pydantic_stream_response_errors
     async def _stream_agent_response_pydantic(
             self,
             user_prompt: str,

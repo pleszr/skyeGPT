@@ -20,7 +20,7 @@ def setup_test_environment(monkeypatch):
 @pytest.fixture
 def agent_service_instance():
     """Create an agent service with mocked dependencies."""
-    sample_prompt_def = sample_objects.sample_prompt
+    sample_prompt_def = sample_objects.sample_agent_service_prompt
     mock_store_manager = AsyncMock()
     return AgentService(mock_store_manager, sample_prompt_def)
 
@@ -36,7 +36,7 @@ async def test_stream_agent_response_full_logic_happy_path(
     # setup static data
     test_conversation_id = sample_objects.sample_uuid
     test_question = "Does Skye support SOAP?"
-    sample_prompt_def = sample_objects.sample_prompt
+    sample_prompt_def = sample_objects.sample_agent_service_prompt
 
     # setup mocks
     mock_replace.return_value = test_question
