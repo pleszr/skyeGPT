@@ -94,3 +94,26 @@ jobs:
             rplesz/skyegpt-frontend:latest
             rplesz/skyegpt-frontend:${{ github.event.release.tag_name }}
 
+  push_release_notes_to_slack:
+    needs: 
+      - deploy_frontend_to_docker_repo
+      - deploy_backend_to_docker_repo
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+      - name: Send release notes to Slack
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL_SKYEGPTRELEASE }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          RELEASE_NOTES: ${{ github.event.release.body }}
+        run: |
+          PAYLOAD=$(jq -nc \
+            --arg t "*SkyeGPT ${RELEASE_TAG}* released!" \
+            --arg n "$RELEASE_NOTES" \
+            '{ text: "\($t)\n\n\($n)" }'
+          )
+          curl -X POST \
+              -H 'Content-type: application/json' \
+              --data "$PAYLOAD" \
+              $SLACK_WEBHOOK_URL
