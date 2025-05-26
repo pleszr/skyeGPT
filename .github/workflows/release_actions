@@ -1,4 +1,4 @@
-name: Release - push to repo
+name: Release activities
 
 on:
   release:
@@ -110,7 +110,7 @@ jobs:
         run: |
           PAYLOAD=$(jq -nc \
             --arg t "*SkyeGPT ${RELEASE_TAG}* released!" \
-            --arg n "$RELEASE_NOTES" \
+            --arg n "*Release notes:* $RELEASE_NOTES" \
             '{ text: "\($t)\n\n\($n)" }'
           )
           curl -X POST \
