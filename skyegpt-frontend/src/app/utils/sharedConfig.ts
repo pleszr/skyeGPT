@@ -1,1 +1,14 @@
-export const backendHost = process.env.NEXT_PUBLIC_SKYEGPT_BACKEND_HOST || 'http://localhost:8000';
+let backendHostCache: string | null = null;
+
+export async function getBackendHost(): Promise<string> {
+  if (backendHostCache) return backendHostCache;
+
+  const res = await fetch('/skyeconfig.json');
+  if (!res.ok) throw new Error('Failed to load skyeconfig.json');
+  const json = await res.json();
+  backendHostCache = json.backendHost;
+  if (!backendHostCache) {
+    throw new Error('backendHost is missing in skyeconfig.json');
+  }
+  return backendHostCache;
+}
