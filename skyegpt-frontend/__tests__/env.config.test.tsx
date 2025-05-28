@@ -8,7 +8,7 @@ describe('env.config.mjs', () => {
   const configPath = path.join(process.cwd(), 'public/skyeconfig.json');
   
   beforeEach(() => {
-    originalEnv = process.env.BACKEND_HOST_URL;
+    originalEnv = process.env.BACKEND_HOST;
     if (fs.existsSync(configPath)) {
       fs.unlinkSync(configPath);
     }
@@ -16,9 +16,9 @@ describe('env.config.mjs', () => {
   
   afterEach(() => {
     if (originalEnv) {
-      process.env.BACKEND_HOST_URL = originalEnv;
+      process.env.BACKEND_HOST = originalEnv;
     } else {
-      delete process.env.BACKEND_HOST_URL;
+      delete process.env.BACKEND_HOST;
     }
     if (fs.existsSync(configPath)) {
       fs.unlinkSync(configPath);
@@ -26,8 +26,8 @@ describe('env.config.mjs', () => {
   });
 
   it('should create config with custom backend host from env var', () => {
-    process.env.BACKEND_HOST_URL = 'http://custom-backend:9000';
-    console.log('Using custom backend host:', process.env.BACKEND_HOST_URL);
+    process.env.BACKEND_HOST = 'http://custom-backend:9000';
+    console.log('Using custom backend host:', process.env.BACKEND_HOST);
     
     execSync('node env.config.mjs', { encoding: 'utf8' });
     
@@ -38,7 +38,7 @@ describe('env.config.mjs', () => {
   });
 
   it('should create config with default backend host when no env var', () => {
-    delete process.env.BACKEND_HOST_URL;
+    delete process.env.BACKEND_HOST;
     
     execSync('node env.config.mjs', { encoding: 'utf8' });
     
