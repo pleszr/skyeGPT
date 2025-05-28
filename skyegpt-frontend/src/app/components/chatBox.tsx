@@ -161,31 +161,28 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
             return !(!fullMessageTextForCurrentResponse.trim());
           }
           buffer += new TextDecoder().decode(value);
-          const lines = buffer.split('\n');
-          buffer = lines.pop() || '';
-          for (const line of lines) {
-            if (streamAbortControllerRef.current?.signal.aborted) break;
-            if (line.startsWith('data: ')) {
-              try {
-                const dataStr = line.slice(6);
-                let parsedChunk;
-                try { parsedChunk = JSON.parse(dataStr); } catch { parsedChunk = dataStr.trim() ? { text: dataStr } : null; }
 
-                if (parsedChunk && Array.isArray(parsedChunk)) {
-                  const textsToSet = parsedChunk.map(String).filter(t => t.trim() !== "");
-                  if (textsToSet.length > 0) setDynamicLoadingTexts(textsToSet);
-                } else if (parsedChunk && typeof parsedChunk === 'object' && 'dynamic_loading_text' in parsedChunk) {
-                  const texts = (parsedChunk as { dynamic_loading_text: string | string[] }).dynamic_loading_text;
-                  if (Array.isArray(texts)) {
-                    const textsToSet = texts.map(String).filter(t => t.trim() !== "");
-                    if (textsToSet.length > 0) setDynamicLoadingTexts(textsToSet);
-                  } else if (typeof texts === 'string' && texts.trim() !== "") {
-                    setDynamicLoadingTexts([texts]);
-                  }
-                } else {
-                  const chunkText = getChunkTextFromSSE(parsedChunk);
-                  if (chunkText) {
-                    fullMessageTextForCurrentResponse += chunkText;
+          const newlineChunks = buffer.split('\n');
+          const lastChunk = newlineChunks.pop() || '';
+
+         
+          const completeLines = newlineChunks.filter(line => {
+            const trimmed = line.trim();
+            return line !== '' && trimmed !== '\r';
+          });
+
+          if (completeLines.length > 0) {
+            buffer = lastChunk;
+            for (const line of completeLines) {
+              if (streamAbortControllerRef.current?.signal.aborted) break;
+              
+              if (line.startsWith('data: ')) {
+                try {
+                  const dataStr = line.slice(6); 
+                  let parsedChunk;
+                  
+                  if (dataStr === '' || dataStr.trim() === '') {
+                    fullMessageTextForCurrentResponse += dataStr;
                     setMessages((prevMsgs) => {
                       const newMsgs = [...prevMsgs];
                       const lastMsgIndex = newMsgs.length - 1;
@@ -194,9 +191,90 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
                       }
                       return newMsgs;
                     });
+                    continue;
                   }
+                  
+                  try { 
+                    parsedChunk = JSON.parse(dataStr); 
+                  } catch { 
+                    parsedChunk = { text: dataStr };
+                  }
+
+                  if (parsedChunk && Array.isArray(parsedChunk)) {
+                    const textsToSet = parsedChunk.map(String).filter(t => t.trim() !== "");
+                    if (textsToSet.length > 0) setDynamicLoadingTexts(textsToSet);
+                  } else if (parsedChunk && typeof parsedChunk === 'object' && 'dynamic_loading_text' in parsedChunk) {
+                    const texts = (parsedChunk as { dynamic_loading_text: string | string[] }).dynamic_loading_text;
+                    if (Array.isArray(texts)) {
+                      const textsToSet = texts.map(String).filter(t => t.trim() !== "");
+                      if (textsToSet.length > 0) setDynamicLoadingTexts(textsToSet);
+                    } else if (typeof texts === 'string' && texts.trim() !== "") {
+                      setDynamicLoadingTexts([texts]);
+                    }
+                  } else {
+                    const chunkText = getChunkTextFromSSE(parsedChunk);
+                    if (chunkText !== null && chunkText !== undefined) { 
+                      fullMessageTextForCurrentResponse += chunkText;
+                      setMessages((prevMsgs) => {
+                        const newMsgs = [...prevMsgs];
+                        const lastMsgIndex = newMsgs.length - 1;
+                        if (lastMsgIndex >= 0 && newMsgs[lastMsgIndex].sender === 'bot') {
+                          newMsgs[lastMsgIndex] = createBotMessage(fullMessageTextForCurrentResponse);
+                        }
+                        return newMsgs;
+                      });
+                    }
+                  }
+                } catch (e) { 
+                  console.warn('Invalid SSE chunk processing error:', e, 'Original chunk:', line); 
                 }
-              } catch (e) { console.warn('Invalid SSE chunk processing error:', e, 'Original line:', line); }
+              }
+            }
+          } else {
+            
+            const spaceChunks = buffer.split(' ');
+            if (spaceChunks.length > 1) {
+              
+              buffer = spaceChunks.pop() || '';
+              for (const chunk of spaceChunks) {
+                if (streamAbortControllerRef.current?.signal.aborted) break;
+                if (chunk.startsWith('data:')) {
+                 
+                  try {
+                    const dataStr = chunk.slice(6);
+                    let parsedChunk;
+                    try { parsedChunk = JSON.parse(dataStr); } catch { parsedChunk = dataStr.trim() ? { text: dataStr } : null; }
+
+                    if (parsedChunk && Array.isArray(parsedChunk)) {
+                      const textsToSet = parsedChunk.map(String).filter(t => t.trim() !== "");
+                      if (textsToSet.length > 0) setDynamicLoadingTexts(textsToSet);
+                    } else if (parsedChunk && typeof parsedChunk === 'object' && 'dynamic_loading_text' in parsedChunk) {
+                      const texts = (parsedChunk as { dynamic_loading_text: string | string[] }).dynamic_loading_text;
+                      if (Array.isArray(texts)) {
+                        const textsToSet = texts.map(String).filter(t => t.trim() !== "");
+                        if (textsToSet.length > 0) setDynamicLoadingTexts(textsToSet);
+                      } else if (typeof texts === 'string' && texts.trim() !== "") {
+                        setDynamicLoadingTexts([texts]);
+                      }
+                    } else {
+                      const chunkText = getChunkTextFromSSE(parsedChunk);
+                      if (chunkText) {
+                        fullMessageTextForCurrentResponse += chunkText;
+                        setMessages((prevMsgs) => {
+                          const newMsgs = [...prevMsgs];
+                          const lastMsgIndex = newMsgs.length - 1;
+                          if (lastMsgIndex >= 0 && newMsgs[lastMsgIndex].sender === 'bot') {
+                            newMsgs[lastMsgIndex] = createBotMessage(fullMessageTextForCurrentResponse);
+                          }
+                          return newMsgs;
+                        });
+                      }
+                    }
+                  } catch (e) { console.warn('Invalid SSE chunk processing error:', e, 'Original line:', chunk); }
+                }
+              }
+            } else {
+              buffer = lastChunk;
             }
           }
         }
