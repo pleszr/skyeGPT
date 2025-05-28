@@ -1,12 +1,14 @@
 import { getBackendHost } from '@/app/utils/sharedConfig';
 
+const cachedBackendHostPromise = getBackendHost();
+
 // FETCH API FUNCTIONS
 export interface ConversationResponse {
   conversation_id: string;
 }
 
 export const createConversationAPI = async (): Promise<ConversationResponse> => {
-  const backendHost = await getBackendHost();
+  const backendHost = await cachedBackendHostPromise;
   const CREATE_CONVERSATION_URL = `${backendHost}/ask/conversation`;
 
   const response = await fetch(CREATE_CONVERSATION_URL, {
@@ -21,7 +23,7 @@ export const createConversationAPI = async (): Promise<ConversationResponse> => 
     const errorBody = await response.text().catch(() => 'Failed to read error body');
     throw new Error(`Could not create new conversation: ${response.status} - ${errorBody}`);
   }
-  return response.json() as Promise<ConversationResponse>;
+  return await response.json() as Promise<ConversationResponse>;
 };
 
 // SSE HELPERS
@@ -44,10 +46,9 @@ export const getChunkTextFromSSE = (
     if (chunk.text !== undefined) return String(chunk.text);
     return '';
   }
-  if (typeof chunk === 'number' || typeof chunk === 'boolean') {
+  if (typeof chunk === 'number' || true) {
     return String(chunk);
   }
-  return '';
 };
 
 // STREAMING API
@@ -60,7 +61,7 @@ export const fetchChatResponseStreamAPI = async (
   payload: AskStreamPayload,
   signal: AbortSignal
 ): Promise<Response> => {
-  const backendHost = await getBackendHost();
+  const backendHost = await cachedBackendHostPromise;
   const ASK_STREAM_URL = `${backendHost}/ask/response/stream`;
 
   const response = await fetch(ASK_STREAM_URL, {
@@ -95,7 +96,7 @@ export interface FeedbackPayload {
 
 // Helper to get feedback URL
 export const getConversationFeedbackUrl = async (conversationId: string): Promise<string> => {
-  const backendHost = await getBackendHost();
+  const backendHost = await cachedBackendHostPromise;
   return `${backendHost}/ask/${conversationId}/feedback`;
 };
 
