@@ -19,16 +19,18 @@ def _init_client():
     """Create the real client only once."""
     global _mongo_client
     if _mongo_client is None:
-        _mongo_client = MongoClient(CONNECTION_STRING, uuidRepresentation='standard')
+        _mongo_client = MongoClient(CONNECTION_STRING, uuidRepresentation="standard")
     return _mongo_client
 
 
 def ensure_client(func):
     """Lazy setup for client. Mainly to avoid side effect connections during testing."""
+
     @wraps(func)
     def wrapper(*args, **kwargs):
         _init_client()
         return func(*args, **kwargs)
+
     return wrapper
 
 
@@ -36,7 +38,7 @@ def ensure_client(func):
 def get_database(database_name: str):
     """
     Retrieves a database instance from the MongoDB client.
-    
+
     Returns:
         Database: A PyMongo Database object.
     Raises:
@@ -67,7 +69,7 @@ def add_to_collection(collection: Collection, document: Dict[str, Any]) -> None:
     Args:
         collection (Collection): The MongoDB collection.
         document (Dict[str, Any]): The document to insert.
-        
+
     Raises:
         an instance PyMongoError for operational errors
     """

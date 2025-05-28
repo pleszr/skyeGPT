@@ -5,6 +5,7 @@ from datetime import datetime, timezone, timedelta
 
 from unittest.mock import patch
 
+
 def test_convert_html_to_md_headings_and_paragraphs():
     # setup static data
     html = "<h1>Title</h1><p>First.</p><p>Second.</p>"
@@ -19,7 +20,7 @@ def test_convert_html_to_md_headings_and_paragraphs():
 
 def test_convert_html_to_md_formatting_and_links():
     # setup static data
-    html = "<strong>Bold</strong> and <em>italic</em> with <a href=\"/link\">Link</a>"
+    html = '<strong>Bold</strong> and <em>italic</em> with <a href="/link">Link</a>'
     # act
     md = utils.convert_html_to_md(html)
     # assert result
@@ -50,7 +51,6 @@ def test_replace_placeholders():
     assert expected_text == actual_text
 
 
-
 def test_folder_to_dict(tmp_path):
     # setup static data
     sub_dir = tmp_path / "sub"
@@ -76,7 +76,7 @@ def test_folder_to_dict(tmp_path):
             {"name": "root.txt", "type": "file"},
         ],
     }
-    #os.listdir doesn't have a guaranteed order. if you face issues with it sort the tree on both actual and expected
+    # os.listdir doesn't have a guaranteed order. if you face issues with it sort the tree on both actual and expected
     assert test_utils._sort_tree(actual_tree) == test_utils._sort_tree(expected_tree)
 
 
@@ -96,7 +96,7 @@ def test_generate_local_folder_path_from_skye_version(monkeypatch):
 def test_calculate_utc_x_hours_ago(mock_datetime):
     # setup static
     x_hours = 3
-    #setup mocks
+    # setup mocks
     fixed_now = datetime(2025, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
     mock_datetime.now.return_value = fixed_now
     mock_datetime.timezone = timezone  # ensure timezone attribute is available

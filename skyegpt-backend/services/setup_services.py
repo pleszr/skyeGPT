@@ -72,9 +72,7 @@ class IngestionService:
         try:
             skyedoc_folder_path = utils.generate_local_folder_path_from_skye_version(skye_major_version)
             markdown_2_vector_db.scan_and_import_markdowns_from_folder(
-                constants.SKYE_DOC_COLLECTION_NAME,
-                skyedoc_folder_path,
-                markdown_headers
+                constants.SKYE_DOC_COLLECTION_NAME, skyedoc_folder_path, markdown_headers
             )
             logger.info(f"Skyedoc for version {skye_major_version} successfully imported")
         except Exception as e:
@@ -92,9 +90,7 @@ class IngestionService:
         logger.info(f"IngestionService: Attempting to import IPH to lookup database")
         try:
             markdown_2_vector_db.scan_and_import_markdowns_from_folder(
-                constants.IPH_DOC_COLLECTION_NAME,
-                constants.IPH_LOCAL_FOLDER_LOCATION,
-                markdown_headers
+                constants.IPH_DOC_COLLECTION_NAME, constants.IPH_LOCAL_FOLDER_LOCATION, markdown_headers
             )
             logger.info(f"IPH successfully imported")
         except Exception as e:

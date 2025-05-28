@@ -20,9 +20,5 @@ def download_skye_documentation_from_s3(skye_major_version: str):
     """
     s3_folder_prefix = utils.replace_placeholders(S3_FOLDER_PREFIX_TEMPLATE, {"skye_major_version": skye_major_version})
     s3_local_folder = utils.generate_local_folder_path_from_skye_version(skye_major_version)
-    import_from_S3.download_files_from_s3_bucket(
-        S3_BUCKET,
-        s3_folder_prefix,
-        s3_local_folder
-    )
+    import_from_S3.download_files_from_s3_bucket(S3_BUCKET, s3_folder_prefix, s3_local_folder)
     return utils.folder_to_dict(s3_local_folder)

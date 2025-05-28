@@ -1,27 +1,25 @@
 from unittest.mock import patch, MagicMock, AsyncMock, ANY
-from services.asker_services import (AgentResponseStreamingService, AggregatedAgentResponseService,
-                                     ConversationRetrieverService, FeedbackManagerService)
+from services.asker_services import (
+    AgentResponseStreamingService,
+    AggregatedAgentResponseService,
+    ConversationRetrieverService,
+    FeedbackManagerService,
+)
 import pytest
 from tests import sample_objects
 from fastapi import HTTPException, status
 
 
 @pytest.mark.asyncio
-@patch('services.asker_services.store_manager')
-@patch(
-    'services.asker_services.utils.format_str_to_sse',
-    side_effect=lambda s, e: f"event: {e.value}\ndata: {s}\n\n"
-)
-@patch('services.asker_services.AgentService')
-@patch('services.asker_services.DynamicLoadingTextService')
+@patch("services.asker_services.store_manager")
+@patch("services.asker_services.utils.format_str_to_sse", side_effect=lambda s, e: f"event: {e.value}\ndata: {s}\n\n")
+@patch("services.asker_services.AgentService")
+@patch("services.asker_services.DynamicLoadingTextService")
 async def test_agent_response_streaming_service_stream_agent_response_happy_path(
-        mock_dynamic_loading_text_class,
-        mock_agent_service_class,
-        mock_format_str_to_sse,
-        mock_store_manager
+    mock_dynamic_loading_text_class, mock_agent_service_class, mock_format_str_to_sse, mock_store_manager
 ):
     # setup static data
-    service = AgentResponseStreamingService ()
+    service = AgentResponseStreamingService()
     user_question = "What is Skye?"
     expected_loading_texts = ["Searching in Skye doc1", "Searching in Skye doc2"]
     test_conversation_id = sample_objects.sample_uuid
@@ -55,12 +53,9 @@ async def test_agent_response_streaming_service_stream_agent_response_happy_path
 
 
 @pytest.mark.asyncio
-@patch('services.asker_services.store_manager')
-@patch('services.asker_services.AgentService')
-async def test_aggregated_agent_response_with_context_happy_path(
-        mock_agent_service_class,
-        mock_store_manager
-):
+@patch("services.asker_services.store_manager")
+@patch("services.asker_services.AgentService")
+async def test_aggregated_agent_response_with_context_happy_path(mock_agent_service_class, mock_store_manager):
     # setup static data
     service = AggregatedAgentResponseService()
     user_question = "What's the meaning of life?"
@@ -75,25 +70,23 @@ async def test_aggregated_agent_response_with_context_happy_path(
     expected_context = [{"turn": 1, "text": "hello"}]
     mock_store_manager.get_conversation_context = AsyncMock(return_value=expected_context)
 
-    #act
+    # act
     result = await service.aggregated_agent_response(
-        question=user_question,
-        conversation_id=test_conversation_id,
-        with_context=test_with_context
+        question=user_question, conversation_id=test_conversation_id, with_context=test_with_context
     )
 
-    #assert results
+    # assert results
     assert result["generated_answer"] == "".join(sample_objects.mock_raw_chunks)
     assert result["curr_context"] == expected_context
 
-    #assert calls
-    mock_agent_service_class.assert_called_once_with(mock_store_manager,ANY)
+    # assert calls
+    mock_agent_service_class.assert_called_once_with(mock_store_manager, ANY)
     agent_service_instance.stream_agent_response.assert_called_once_with(user_question, test_conversation_id)
     mock_store_manager.get_conversation_context.assert_called_once_with(test_conversation_id)
 
 
 @pytest.mark.asyncio
-@patch('services.asker_services.documentdb_client')
+@patch("services.asker_services.documentdb_client")
 async def test_get_conversation_by_id_happy_path(mock_documentdb_client):
     # setup static data
     service = ConversationRetrieverService()
@@ -114,12 +107,9 @@ async def test_get_conversation_by_id_happy_path(mock_documentdb_client):
 
 
 @pytest.mark.asyncio
-@patch('services.asker_services.documentdb_client')
-@patch('services.asker_services.message_bundle')
-async def test_get_conversation_by_id_not_found_raises_http_exception(
-        mock_message_bundle,
-        mock_documentdb_client
-):
+@patch("services.asker_services.documentdb_client")
+@patch("services.asker_services.message_bundle")
+async def test_get_conversation_by_id_not_found_raises_http_exception(mock_message_bundle, mock_documentdb_client):
     # setup static data
     service = ConversationRetrieverService()
     test_conversation_id = sample_objects.sample_uuid
@@ -141,12 +131,9 @@ async def test_get_conversation_by_id_not_found_raises_http_exception(
 
 
 @pytest.mark.asyncio
-@patch('services.asker_services.utils.calculate_utc_x_hours_ago')
-@patch('services.asker_services.documentdb_client')
-async def test_find_conversations_by_feedback_created_since_happy_path(
-        mock_documentdb_client,
-        mock_calculate_utc
-):
+@patch("services.asker_services.utils.calculate_utc_x_hours_ago")
+@patch("services.asker_services.documentdb_client")
+async def test_find_conversations_by_feedback_created_since_happy_path(mock_documentdb_client, mock_calculate_utc):
     # setup static data
     service = ConversationRetrieverService()
     feedback_hours = 5
@@ -169,11 +156,10 @@ async def test_find_conversations_by_feedback_created_since_happy_path(
 
 
 @pytest.mark.asyncio
-@patch('services.asker_services.utils.calculate_utc_x_hours_ago')
-@patch('services.asker_services.documentdb_client')
+@patch("services.asker_services.utils.calculate_utc_x_hours_ago")
+@patch("services.asker_services.documentdb_client")
 async def test_find_conversations_by_feedback_created_since_returns_empty_list(
-        mock_documentdb_client,
-        mock_calculate_utc
+    mock_documentdb_client, mock_calculate_utc
 ):
     # setup static data
     service = ConversationRetrieverService()
@@ -194,16 +180,13 @@ async def test_find_conversations_by_feedback_created_since_returns_empty_list(
     mock_documentdb_client.find_conversations_by_created_since.assert_called_once_with(mock_time)
 
 
-@patch('services.asker_services._find_conversation')
-@patch('services.asker_services.documentdb_client')
-def test_create_feedback_happy_path(
-        mock_documentdb_client,
-        mock_find_conversation
-):
+@patch("services.asker_services._find_conversation")
+@patch("services.asker_services.documentdb_client")
+def test_create_feedback_happy_path(mock_documentdb_client, mock_find_conversation):
     # setup static data
     service = FeedbackManagerService()
     conversation_id = sample_objects.sample_uuid
-    vote = 'positive'
+    vote = "positive"
     comment = "Great answer"
 
     # setup mocks

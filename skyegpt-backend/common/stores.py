@@ -19,6 +19,7 @@ class StoreManager:
     once at the module level, creating a singleton instance that can be
     injected as a dependency into services requiring access to this shared state.
     """
+
     _instance = None
 
     def __new__(cls):
@@ -124,4 +125,4 @@ class StoreManager:
         Raises ValueError for invalid inputs or internal errors
         """
         if not key:
-            raise ValueError('Key can not be empty')
+            raise ValueError("Key can not be empty")

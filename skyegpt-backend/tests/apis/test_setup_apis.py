@@ -17,10 +17,7 @@ async def test_download_skye_documentation_happy_path():
     mock_ingestion_service = MagicMock()
     mock_ingestion_service.download_skye_documentation_to_server = MagicMock(return_value=expected_tree_structure)
 
-    response = await download_skye_documentation(
-        request=test_request,
-        ingestion_service=mock_ingestion_service
-    )
+    response = await download_skye_documentation(request=test_request, ingestion_service=mock_ingestion_service)
 
     mock_ingestion_service.download_skye_documentation_to_server.assert_called_once_with(test_skye_version)
     assert isinstance(response, DownloadResponse), "Response should be an instance of DownloadResponse"
@@ -38,10 +35,7 @@ async def test_download_skye_documentation_file_not_found():
     )
 
     with pytest.raises(HTTPException) as exc_info:
-        await download_skye_documentation(
-            request=test_request,
-            ingestion_service=mock_ingestion_service
-        )
+        await download_skye_documentation(request=test_request, ingestion_service=mock_ingestion_service)
 
     assert exc_info.value.status_code == 400
     assert exc_info.value.detail == message_bundle.VERSION_DOES_NOT_EXISTS
@@ -69,10 +63,7 @@ async def test_delete_collection_happy_path():
     mock_db_service = MagicMock()
     mock_db_service.delete_collection = MagicMock()
 
-    response = await delete_collection(
-        collection_name=test_collection_name,
-        db_service=mock_db_service
-    )
+    response = await delete_collection(collection_name=test_collection_name, db_service=mock_db_service)
 
     mock_db_service.delete_collection.assert_called_once_with(test_collection_name)
     assert response.status_code == 204
@@ -83,15 +74,10 @@ async def test_delete_collection_not_found():
     test_collection_name = "non_existent_collection"
 
     mock_db_service = MagicMock()
-    mock_db_service.delete_collection = MagicMock(
-        side_effect=CollectionNotFoundError("Mocked CollectionNotFoundError")
-    )
+    mock_db_service.delete_collection = MagicMock(side_effect=CollectionNotFoundError("Mocked CollectionNotFoundError"))
 
     with pytest.raises(HTTPException) as exc_info:
-        await delete_collection(
-            collection_name=test_collection_name,
-            db_service=mock_db_service
-        )
+        await delete_collection(collection_name=test_collection_name, db_service=mock_db_service)
 
     assert exc_info.value.status_code == 404
     assert exc_info.value.detail == message_bundle.COLLECTION_NOT_FOUND
@@ -127,9 +113,7 @@ async def test_import_to_database_skyedoc_only_happy_path():
     mock_database_service.number_of_documents_in_collection = MagicMock(return_value=expected_doc_count)
 
     response = await import_to_database(
-        request=test_request,
-        ingestion_service=mock_ingestion_service,
-        database_service=mock_database_service
+        request=test_request, ingestion_service=mock_ingestion_service, database_service=mock_database_service
     )
 
     mock_ingestion_service.import_skyedoc.assert_called_once_with(test_skye_version, test_markdown_split_headers)
@@ -167,9 +151,7 @@ async def test_import_to_database_iph_only_happy_path():
     mock_database_service.number_of_documents_in_collection = MagicMock(return_value=expected_doc_count)
 
     response = await import_to_database(
-        request=test_request,
-        ingestion_service=mock_ingestion_service,
-        database_service=mock_database_service
+        request=test_request, ingestion_service=mock_ingestion_service, database_service=mock_database_service
     )
 
     mock_ingestion_service.import_skyedoc.assert_not_called()
@@ -208,9 +190,7 @@ async def test_import_to_database_both_enabled_happy_path():
     mock_database_service.number_of_documents_in_collection = MagicMock(return_value=expected_doc_count)
 
     response = await import_to_database(
-        request=test_request,
-        ingestion_service=mock_ingestion_service,
-        database_service=mock_database_service
+        request=test_request, ingestion_service=mock_ingestion_service, database_service=mock_database_service
     )
 
     mock_ingestion_service.import_skyedoc.assert_called_once_with(test_skye_version, test_markdown_split_headers)
@@ -248,9 +228,7 @@ async def test_import_to_database_no_import_selected_error():
 
     with pytest.raises(HTTPException) as exc_info:
         await import_to_database(
-            request=test_request,
-            ingestion_service=mock_ingestion_service,
-            database_service=mock_database_service
+            request=test_request, ingestion_service=mock_ingestion_service, database_service=mock_database_service
         )
 
     assert exc_info.value.status_code == 422

@@ -1,6 +1,7 @@
 """
 Abstraction layer for managing Document database. Acts as an interface to hide the underlying Mongo database.
 """
+
 from .mongo_specific import mongo_client
 from functools import wraps
 from typing import Dict, Optional, List, Any
@@ -17,13 +18,15 @@ CONVERSATIONS_COLLECTION_NAME = constants.CONVERSATIONS_COLLECTION_NAME
 
 def _handle_mongo_errors(func):
     """Decorator to catch and raise DocumentDBError on PyMongo exceptions."""
+
     @wraps(func)
     def wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
         except PyMongoError as e:
-            logger.exception('Exception during Document DB operations')
+            logger.exception("Exception during Document DB operations")
             raise DocumentDBError(f"Database operation {func.__name__} failed") from e
+
     return wrapper
 
 
@@ -46,7 +49,7 @@ def upsert_conversation(conversation_id: uuid, conversation: Conversation) -> No
     Raises:
         DocumentDBError: for transactional errors
     """
-    logger.info(f'Upserting {conversation_id} to collection: {CONVERSATIONS_COLLECTION_NAME}')
+    logger.info(f"Upserting {conversation_id} to collection: {CONVERSATIONS_COLLECTION_NAME}")
     collection = create_or_get_collection(CONVERSATION_DB_NAME, CONVERSATIONS_COLLECTION_NAME)
     mongo_client.upsert_to_collection(collection, conversation_id, conversation.model_dump(by_alias=True))
 
@@ -59,7 +62,7 @@ def find_conversation_by_id(conversation_id: uuid) -> Optional[Conversation]:
     Raises:
         DocumentDBError: for transactional errors
     """
-    logger.info(f'Searching for {conversation_id} in collection: {CONVERSATIONS_COLLECTION_NAME}')
+    logger.info(f"Searching for {conversation_id} in collection: {CONVERSATIONS_COLLECTION_NAME}")
     collection = create_or_get_collection(CONVERSATION_DB_NAME, CONVERSATIONS_COLLECTION_NAME)
 
     search_result = mongo_client.find_one_by_id(collection, conversation_id)
@@ -78,16 +81,7 @@ def find_conversations_by_created_since(feedback_since: datetime) -> List[Conver
     """
     collection = create_or_get_collection(CONVERSATION_DB_NAME, CONVERSATIONS_COLLECTION_NAME)
     search_result: List[Dict] = mongo_client.find_many(
-        collection,
-        {
-            'feedbacks': {
-                '$elemMatch': {
-                    'created_at': {
-                        '$gte': feedback_since
-                    }
-                }
-            }
-        }
+        collection, {"feedbacks": {"$elemMatch": {"created_at": {"$gte": feedback_since}}}}
     )
     return _parse_raw_conversations(search_result)
 
@@ -108,6 +102,6 @@ def update_conversation(_id: uuid, conversation: Conversation) -> None:
         DocumentDBError: for transactional errors
         ObjectNotFoundError: the conversation wasn't found in the database
     """
-    logger.info(f'Updating {_id} in database: {CONVERSATION_DB_NAME}, collection: {CONVERSATIONS_COLLECTION_NAME}')
+    logger.info(f"Updating {_id} in database: {CONVERSATION_DB_NAME}, collection: {CONVERSATIONS_COLLECTION_NAME}")
     collection = create_or_get_collection(CONVERSATION_DB_NAME, CONVERSATIONS_COLLECTION_NAME)
     mongo_client.replace_one_by_id(collection, _id, conversation.model_dump(by_alias=True))

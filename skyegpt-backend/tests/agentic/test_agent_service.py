@@ -13,7 +13,7 @@ from common import message_bundle
 def setup_test_environment(monkeypatch):
     """Setup environment variables and global state for agent tests."""
     monkeypatch.setenv("OPENAI_API_KEY", "mock_openai_key")
-    monkeypatch.setattr('pydantic_ai.models.ALLOW_MODEL_REQUESTS', False)
+    monkeypatch.setattr("pydantic_ai.models.ALLOW_MODEL_REQUESTS", False)
     yield
 
 
@@ -26,11 +26,9 @@ def agent_service_instance():
 
 
 @pytest.mark.asyncio
-@patch('agentic.agent_service.utils.replace_placeholders')
+@patch("agentic.agent_service.utils.replace_placeholders")
 async def test_stream_agent_response_full_logic_happy_path(
-        mock_replace,
-        setup_test_environment,
-        agent_service_instance
+    mock_replace, setup_test_environment, agent_service_instance
 ):
 
     # setup static data
@@ -78,4 +76,3 @@ async def test_stream_agent_response_full_logic_happy_path(
     store = agent_service_instance.store_manager
     store.get_conversation_by_id.assert_called_once_with(test_conversation_id)
     store.extend_conversation_history.assert_called_once_with(test_conversation_id, ANY)
-

@@ -1,7 +1,7 @@
 from unittest.mock import patch, MagicMock, AsyncMock
 import pytest
 from apis.schemas.responses import CreateConversationIdResponse, ConversationResponse, ConversationListResponse
-from apis. schemas.requests import CreateFeedbackRequest
+from apis.schemas.requests import CreateFeedbackRequest
 from tests import test_constants, sample_objects
 from apis.asker_apis import create_conversation, get_conversation_by_id, get_conversations_by_filter, create_feedback
 from fastapi import HTTPException
@@ -9,7 +9,7 @@ from common import message_bundle
 
 
 @pytest.mark.asyncio
-@patch('apis.asker_apis.uuid.uuid4')
+@patch("apis.asker_apis.uuid.uuid4")
 async def test_create_conversation_happy_path(mock_uuid4):
     mocked_generated_uuid = test_constants.sample_uuid
     mock_uuid4.return_value = mocked_generated_uuid
@@ -35,8 +35,7 @@ async def test_get_conversation_by_id_happy_path():
 
     # act
     response = await get_conversation_by_id(
-        conversation_id=test_conv_id,
-        conversation_retriever_service=mock_retriever_service
+        conversation_id=test_conv_id, conversation_retriever_service=mock_retriever_service
     )
 
     # assert result
@@ -58,8 +57,7 @@ async def test_get_conversation_by_id_not_found():
 
     with pytest.raises(HTTPException) as exc_info:
         await get_conversation_by_id(
-            conversation_id=not_existing_conv_id,
-            conversation_retriever_service=mock_retriever_service
+            conversation_id=not_existing_conv_id, conversation_retriever_service=mock_retriever_service
         )
 
     assert exc_info.value.status_code == 404
@@ -73,16 +71,18 @@ async def test_get_conversations_by_filter_with_hours_happy_path():
     expected_conversations_list = [sample_objects.sample_conversation, sample_objects.sample_conversation]
 
     mock_retriever_service = MagicMock()
-    mock_retriever_service.find_conversations_by_feedback_created_since = MagicMock(return_value=expected_conversations_list)
+    mock_retriever_service.find_conversations_by_feedback_created_since = MagicMock(
+        return_value=expected_conversations_list
+    )
 
     response = await get_conversations_by_filter(
-        feedback_within_hours=test_feedback_hours,
-        conversation_retriever_service=mock_retriever_service
+        feedback_within_hours=test_feedback_hours, conversation_retriever_service=mock_retriever_service
     )
 
     mock_retriever_service.find_conversations_by_feedback_created_since.assert_called_once_with(test_feedback_hours)
     assert isinstance(response, ConversationListResponse), "Response should be an instance of ConversationListResponse"
     assert response.conversations == expected_conversations_list
+
 
 @pytest.mark.asyncio
 async def test_create_feedback_happy_path():
@@ -93,14 +93,10 @@ async def test_create_feedback_happy_path():
     mock_feedback_service.create_feedback = MagicMock()
 
     response = await create_feedback(
-        request=test_feedback_request,
-        conversation=test_conversation_id,
-        feedback_service=mock_feedback_service
+        request=test_feedback_request, conversation=test_conversation_id, feedback_service=mock_feedback_service
     )
 
     mock_feedback_service.create_feedback.assert_called_once_with(
-        test_conversation_id,
-        test_feedback_request.vote,
-        test_feedback_request.comment
+        test_conversation_id, test_feedback_request.vote, test_feedback_request.comment
     )
     assert response.status_code == 201

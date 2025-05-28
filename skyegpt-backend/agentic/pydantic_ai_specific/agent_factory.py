@@ -8,7 +8,7 @@ def create_agent_from_prompt_version(prompt_version: PromptDefinition) -> Agent:
         "model": prompt_version.model,
         "instrument": True,
         "instructions": prompt_version.instructions,
-        "model_settings": {'temperature': prompt_version.temperature},
+        "model_settings": {"temperature": prompt_version.temperature},
         "output_type": prompt_version.output_type,
     }
 

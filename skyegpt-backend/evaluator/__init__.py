@@ -8,5 +8,5 @@ PYTHONPATH=. deepeval test run evaluator/test_skyegpt.py
 
 """
 
-__version__ = '0.1.0'
-__author__ = 'Roland Plesz'
+__version__ = "0.1.0"
+__author__ = "Roland Plesz"

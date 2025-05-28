@@ -4,9 +4,14 @@ from fastapi import APIRouter, Depends, Path, status, Query
 from fastapi.responses import StreamingResponse, Response
 from .schemas.requests import ConversationQueryRequest, CreateFeedbackRequest
 from .schemas.responses import CreateConversationIdResponse, ConversationResponse, ConversationListResponse
-from services.dependencies import (AgentResponseStreamingService, get_agent_response_stream_service,
-                                   ConversationRetrieverService, get_conversation_retriever_service,
-                                   FeedbackManagerService, get_feedback_manager_service)
+from services.dependencies import (
+    AgentResponseStreamingService,
+    get_agent_response_stream_service,
+    ConversationRetrieverService,
+    get_conversation_retriever_service,
+    FeedbackManagerService,
+    get_feedback_manager_service,
+)
 from common import logger, message_bundle
 from common.decorators import handle_response_stream_errors, handle_unknown_errors
 
@@ -34,24 +39,21 @@ asker_apis_router = APIRouter(prefix="/ask", tags=["Asker Endpoints"])
             "description": "Streaming response initiated successfully.",
             "content": {
                 "text/event-stream": {
-                    "schema": {
-                        "type": "string",
-                        "description": "A continuous SSE text stream with two event types."
-                    },
+                    "schema": {"type": "string", "description": "A continuous SSE text stream with two event types."},
                     "example": (
-                            "event: dynamic_loading_text\ndata: Searching for SOAP Api in Skye documentation…\n\n"
-                            "event: streamed_response\ndata: Skye,\n\n"
-                    )
+                        "event: dynamic_loading_text\ndata: Searching for SOAP Api in Skye documentation…\n\n"
+                        "event: streamed_response\ndata: Skye,\n\n"
+                    ),
                 }
-            }
+            },
         },
         422: {"description": "Validation error in request body."},
-        500: {"description": "Internal server error during processing or streaming."}
+        500: {"description": "Internal server error during processing or streaming."},
     },
 )
 async def stream_agent_response(
-        request: ConversationQueryRequest,
-        streaming_service: AgentResponseStreamingService = Depends(get_agent_response_stream_service)
+    request: ConversationQueryRequest,
+    streaming_service: AgentResponseStreamingService = Depends(get_agent_response_stream_service),
 ) -> StreamingResponse:
     """
     Streams responses from the agents based on the provided query and conversation ID.
@@ -72,8 +74,8 @@ async def stream_agent_response(
     response_model=CreateConversationIdResponse,
     responses={
         200: {"description": "New conversation ID generated successfully."},
-        500: {"description": "Internal server error during ID generation."}
-    }
+        500: {"description": "Internal server error during ID generation."},
+    },
 )
 async def create_conversation() -> CreateConversationIdResponse:
     """
@@ -94,15 +96,12 @@ async def create_conversation() -> CreateConversationIdResponse:
     responses={
         200: {"description": "Conversation retrieved successfully."},
         404: {"description": "Conversation not found."},
-        500: {"description": message_bundle.INTERNAL_ERROR}
-    }
+        500: {"description": message_bundle.INTERNAL_ERROR},
+    },
 )
 async def get_conversation_by_id(
-        conversation_id: uuid.UUID = Path(
-            ...,
-            description="The unique identifier (UUID) of the conversation to retrieve."
-        ),
-        conversation_retriever_service: ConversationRetrieverService = Depends(get_conversation_retriever_service)
+    conversation_id: uuid.UUID = Path(..., description="The unique identifier (UUID) of the conversation to retrieve."),
+    conversation_retriever_service: ConversationRetrieverService = Depends(get_conversation_retriever_service),
 ) -> ConversationResponse:
     logger.info(f"Received request to get conversation with ID: {conversation_id}")
     conversation = await conversation_retriever_service.get_conversation_by_id(conversation_id)
@@ -117,16 +116,14 @@ async def get_conversation_by_id(
     response_model=ConversationListResponse,
     responses={
         200: {"description": "Conversation retrieved successfully."},
-        500: {"description": message_bundle.INTERNAL_ERROR}
-    }
+        500: {"description": message_bundle.INTERNAL_ERROR},
+    },
 )
 async def get_conversations_by_filter(
-        feedback_within_hours: Optional[int] = Query(
-            None,
-            description="If provided, only return the conversation if it has feedback in the last X hours.",
-            ge=1
-        ),
-        conversation_retriever_service: ConversationRetrieverService = Depends(get_conversation_retriever_service)
+    feedback_within_hours: Optional[int] = Query(
+        None, description="If provided, only return the conversation if it has feedback in the last X hours.", ge=1
+    ),
+    conversation_retriever_service: ConversationRetrieverService = Depends(get_conversation_retriever_service),
 ) -> ConversationListResponse:
     conversations = conversation_retriever_service.find_conversations_by_feedback_created_since(feedback_within_hours)
     return ConversationListResponse(conversations=conversations)
@@ -142,13 +139,13 @@ async def get_conversations_by_filter(
     responses={
         201: {"description": "Feedback created."},
         404: {"description": message_bundle.CONVERSATION_NOT_FOUND},
-        500: {"description": message_bundle.INTERNAL_ERROR}
-    }
+        500: {"description": message_bundle.INTERNAL_ERROR},
+    },
 )
 async def create_feedback(
-        request: CreateFeedbackRequest,
-        conversation: uuid.UUID = Path(..., description="The unique identifier of the conversation to retrieve."),
-        feedback_service: FeedbackManagerService = Depends(get_feedback_manager_service)
+    request: CreateFeedbackRequest,
+    conversation: uuid.UUID = Path(..., description="The unique identifier of the conversation to retrieve."),
+    feedback_service: FeedbackManagerService = Depends(get_feedback_manager_service),
 ) -> Response:
     """
     Saves the received feedback for the given conversation

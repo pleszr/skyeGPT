@@ -1,8 +1,10 @@
 from services.setup_services import IngestionService, DatabaseService
-from services.asker_services import (AgentResponseStreamingService,
-                                     AggregatedAgentResponseService,
-                                     ConversationRetrieverService,
-                                     FeedbackManagerService)
+from services.asker_services import (
+    AgentResponseStreamingService,
+    AggregatedAgentResponseService,
+    ConversationRetrieverService,
+    FeedbackManagerService,
+)
 
 
 def get_ingestion_service() -> IngestionService:

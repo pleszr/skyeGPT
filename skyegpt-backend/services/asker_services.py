@@ -68,8 +68,7 @@ class AgentResponseStreamingService:
         dynamic_loading_text_service = DynamicLoadingTextService(prompts.loading_text_generator_v1)
         dynamic_text_list = await dynamic_loading_text_service.generate_dynamic_loading_text(user_question)
         formatted_list = utils.format_str_to_sse(
-            json.dumps(dynamic_text_list),
-            constants.SseEventTypes.dynamic_loading_text
+            json.dumps(dynamic_text_list), constants.SseEventTypes.dynamic_loading_text
         )
         await queue.put(formatted_list)
         await queue.put(None)
@@ -91,11 +90,9 @@ class AggregatedAgentResponseService:
     Provides services to get the full, aggregated response from the underlying AI model.
     Optionally returns context too which is used for evaluation.
     """
+
     async def aggregated_agent_response(
-            self,
-            question: str,
-            conversation_id: uuid,
-            with_context: bool
+        self, question: str, conversation_id: uuid, with_context: bool
     ) -> dict[str, Any]:
         """
         Generate a full answer (and optional context) for a question.
@@ -125,10 +122,7 @@ class AggregatedAgentResponseService:
     # noinspection PyMethodMayBeStatic
     async def _aggregate_agent_response(self, question: str, conversation_id: uuid) -> dict[str, Any]:
         """Helper method to convert the streamed agent response to an aggregated string"""
-        agent_service_model = AgentService(
-            store_manager,
-            prompts.responder_openai_v4_openai_template
-        )
+        agent_service_model = AgentService(store_manager, prompts.responder_openai_v4_openai_template)
         parts: list[str] = []
         async for chunk in await agent_service_model.stream_agent_response(question, conversation_id):
             parts.append(chunk)
@@ -141,7 +135,7 @@ class AggregatedAgentResponseService:
 
 
 class ConversationRetrieverService:
-    """ Provides services for retrieving conversations """
+    """Provides services for retrieving conversations"""
 
     # noinspection PyMethodMayBeStatic
     async def get_conversation_by_id(self, conversation_id: uuid) -> Conversation:
@@ -168,6 +162,7 @@ class ConversationRetrieverService:
 
 class FeedbackManagerService:
     """Provides services to manage feedback."""
+
     # noinspection PyMethodMayBeStatic
     def create_feedback(self, conversation_id: uuid, vote: constants.VoteType, comment: str) -> None:
         """Creates Feedback object and attaches it to related conversation"""

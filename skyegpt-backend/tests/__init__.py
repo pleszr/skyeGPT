@@ -1,3 +1,3 @@
-""" run tests from skyegpt-backend with:
+"""run tests from skyegpt-backend with:
 PYTHONPATH=. pytest tests/
 """

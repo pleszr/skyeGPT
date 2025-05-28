@@ -6,7 +6,7 @@ from common.exceptions import VectorDBError, CollectionNotFoundError
 
 
 @pytest.mark.asyncio
-@patch('data_ingestion.scrapers.save_skye_documentation.download_skye_documentation_from_s3')
+@patch("data_ingestion.scrapers.save_skye_documentation.download_skye_documentation_from_s3")
 async def test_ingestion_service_download_skye_documentation_happy_path(mock_download_s3):
     service = IngestionService()
     test_version = "10.1"
@@ -21,7 +21,7 @@ async def test_ingestion_service_download_skye_documentation_happy_path(mock_dow
 
 
 @pytest.mark.asyncio
-@patch('data_ingestion.scrapers.save_skye_documentation.download_skye_documentation_from_s3')
+@patch("data_ingestion.scrapers.save_skye_documentation.download_skye_documentation_from_s3")
 async def test_ingestion_service_download_skye_documentation_file_not_found(mock_download_s3):
     service = IngestionService()
     test_version = "0.0"
@@ -36,7 +36,7 @@ async def test_ingestion_service_download_skye_documentation_file_not_found(mock
 
 
 @pytest.mark.asyncio
-@patch('data_ingestion.scrapers.save_skye_documentation.download_skye_documentation_from_s3')
+@patch("data_ingestion.scrapers.save_skye_documentation.download_skye_documentation_from_s3")
 async def test_ingestion_service_download_skye_documentation_generic_error(mock_download_s3):
     service = IngestionService()
     test_version = "1.0"
@@ -52,7 +52,7 @@ async def test_ingestion_service_download_skye_documentation_generic_error(mock_
 
 
 @pytest.mark.asyncio
-@patch('data_ingestion.scrapers.save_innoveo_partner_hub.download_innoveo_partner_hub')
+@patch("data_ingestion.scrapers.save_innoveo_partner_hub.download_innoveo_partner_hub")
 async def test_ingestion_service_download_iph_happy_path(mock_download_iph):
     service = IngestionService()
     expected_result_dict = {"name": "iph_root", "type": "folder", "children": [{"name": "index.md", "type": "file"}]}
@@ -66,7 +66,7 @@ async def test_ingestion_service_download_iph_happy_path(mock_download_iph):
 
 
 @pytest.mark.asyncio
-@patch('data_ingestion.scrapers.save_innoveo_partner_hub.download_innoveo_partner_hub')
+@patch("data_ingestion.scrapers.save_innoveo_partner_hub.download_innoveo_partner_hub")
 async def test_ingestion_service_download_iph_generic_error(mock_download_iph):
     service = IngestionService()
     error_message = "A sudden confluence connection error"
@@ -81,8 +81,8 @@ async def test_ingestion_service_download_iph_generic_error(mock_download_iph):
 
 
 @pytest.mark.asyncio
-@patch('common.utils.generate_local_folder_path_from_skye_version')
-@patch('data_ingestion.persister.markdown_2_vector_db.scan_and_import_markdowns_from_folder')
+@patch("common.utils.generate_local_folder_path_from_skye_version")
+@patch("data_ingestion.persister.markdown_2_vector_db.scan_and_import_markdowns_from_folder")
 async def test_ingestion_service_import_skyedoc_happy_path(mock_scan_and_import, mock_generate_path):
     service = IngestionService()
     test_skye_version = "12.1"
@@ -95,15 +95,13 @@ async def test_ingestion_service_import_skyedoc_happy_path(mock_scan_and_import,
 
     mock_generate_path.assert_called_once_with(test_skye_version)
     mock_scan_and_import.assert_called_once_with(
-        constants.SKYE_DOC_COLLECTION_NAME,
-        expected_folder_path,
-        test_markdown_headers
+        constants.SKYE_DOC_COLLECTION_NAME, expected_folder_path, test_markdown_headers
     )
 
 
 @pytest.mark.asyncio
-@patch('common.utils.generate_local_folder_path_from_skye_version')
-@patch('data_ingestion.persister.markdown_2_vector_db.scan_and_import_markdowns_from_folder')
+@patch("common.utils.generate_local_folder_path_from_skye_version")
+@patch("data_ingestion.persister.markdown_2_vector_db.scan_and_import_markdowns_from_folder")
 async def test_ingestion_service_import_skyedoc_generic_error(mock_scan_and_import, mock_generate_path):
     service = IngestionService()
     test_skye_version = "12.2"
@@ -120,14 +118,12 @@ async def test_ingestion_service_import_skyedoc_generic_error(mock_scan_and_impo
     assert error_message in str(exc_info.value)
     mock_generate_path.assert_called_once_with(test_skye_version)
     mock_scan_and_import.assert_called_once_with(
-        constants.SKYE_DOC_COLLECTION_NAME,
-        expected_folder_path,
-        test_markdown_headers
+        constants.SKYE_DOC_COLLECTION_NAME, expected_folder_path, test_markdown_headers
     )
 
 
 @pytest.mark.asyncio
-@patch('data_ingestion.persister.markdown_2_vector_db.scan_and_import_markdowns_from_folder')
+@patch("data_ingestion.persister.markdown_2_vector_db.scan_and_import_markdowns_from_folder")
 async def test_ingestion_service_import_iph_happy_path(mock_scan_and_import):
     service = IngestionService()
     test_markdown_headers = ["#", "##"]
@@ -135,14 +131,12 @@ async def test_ingestion_service_import_iph_happy_path(mock_scan_and_import):
     service.import_iph(test_markdown_headers)
 
     mock_scan_and_import.assert_called_once_with(
-        constants.IPH_DOC_COLLECTION_NAME,
-        constants.IPH_LOCAL_FOLDER_LOCATION,
-        test_markdown_headers
+        constants.IPH_DOC_COLLECTION_NAME, constants.IPH_LOCAL_FOLDER_LOCATION, test_markdown_headers
     )
 
 
 @pytest.mark.asyncio
-@patch('data_ingestion.persister.markdown_2_vector_db.scan_and_import_markdowns_from_folder')
+@patch("data_ingestion.persister.markdown_2_vector_db.scan_and_import_markdowns_from_folder")
 async def test_ingestion_service_import_iph_generic_error(mock_scan_and_import):
     service = IngestionService()
     test_markdown_headers = ["#"]
@@ -155,14 +149,12 @@ async def test_ingestion_service_import_iph_generic_error(mock_scan_and_import):
 
     assert error_message in str(exc_info.value)
     mock_scan_and_import.assert_called_once_with(
-        constants.IPH_DOC_COLLECTION_NAME,
-        constants.IPH_LOCAL_FOLDER_LOCATION,
-        test_markdown_headers
+        constants.IPH_DOC_COLLECTION_NAME, constants.IPH_LOCAL_FOLDER_LOCATION, test_markdown_headers
     )
 
 
 @pytest.mark.asyncio
-@patch('database.vectordb_client.delete_collection')
+@patch("database.vectordb_client.delete_collection")
 async def test_database_service_delete_collection_happy_path(mock_delete_collection_client):
     service = DatabaseService()
     test_collection_name = "my_test_collection"
@@ -173,7 +165,7 @@ async def test_database_service_delete_collection_happy_path(mock_delete_collect
 
 
 @pytest.mark.asyncio
-@patch('database.vectordb_client.delete_collection')
+@patch("database.vectordb_client.delete_collection")
 async def test_database_service_delete_collection_not_found_error(mock_delete_collection_client):
     service = DatabaseService()
     test_collection_name = "non_existent_collection"
@@ -188,7 +180,7 @@ async def test_database_service_delete_collection_not_found_error(mock_delete_co
 
 
 @pytest.mark.asyncio
-@patch('database.vectordb_client.delete_collection')
+@patch("database.vectordb_client.delete_collection")
 async def test_database_service_delete_collection_vector_db_error(mock_delete_collection_client):
     service = DatabaseService()
     test_collection_name = "another_collection"
@@ -203,7 +195,7 @@ async def test_database_service_delete_collection_vector_db_error(mock_delete_co
 
 
 @pytest.mark.asyncio
-@patch('database.vectordb_client.number_of_documents_in_collection')
+@patch("database.vectordb_client.number_of_documents_in_collection")
 async def test_database_service_number_of_documents_happy_path(mock_number_of_documents_client):
     service = DatabaseService()
     test_collection_name = "my_doc_collection"
@@ -218,7 +210,7 @@ async def test_database_service_number_of_documents_happy_path(mock_number_of_do
 
 
 @pytest.mark.asyncio
-@patch('database.vectordb_client.number_of_documents_in_collection')
+@patch("database.vectordb_client.number_of_documents_in_collection")
 async def test_database_service_number_of_documents_vector_db_error(mock_number_of_documents_client):
     service = DatabaseService()
     test_collection_name = "collection_with_db_error"
@@ -233,7 +225,7 @@ async def test_database_service_number_of_documents_vector_db_error(mock_number_
 
 
 @pytest.mark.asyncio
-@patch('database.vectordb_client.number_of_documents_in_collection')
+@patch("database.vectordb_client.number_of_documents_in_collection")
 async def test_database_service_number_of_documents_generic_exception(mock_number_of_documents_client):
     service = DatabaseService()
     test_collection_name = "collection_with_generic_error"

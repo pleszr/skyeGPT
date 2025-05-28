@@ -24,6 +24,7 @@ class PromptDefinition(BaseModel):
         prompt_template: In case the user question is not directly set, it can be inserted into a template
         tools: External tools the agent may invoke.
     """
+
     name: str
     use_case: PromptUseCase
     version: str
@@ -44,9 +45,9 @@ responder_openai_v1 = PromptDefinition(
     version="v1",
     temperature=0.0,
     instructions="Given the information the tools you have access to and not prior knowledge, answer the query. "
-                 "Aim to give a link of the relevant documentation.",
+    "Aim to give a link of the relevant documentation.",
     prompt_template="Question:",
-    tools=[]
+    tools=[],
 )
 
 responder_openai_v2 = PromptDefinition(
@@ -56,10 +57,10 @@ responder_openai_v2 = PromptDefinition(
     version="v2",
     temperature=0.0,
     instructions="You are a support person helping to resolve questions related to Innoveo Skye. "
-                 "Do NOT rely on your existing knowledge, ALWAYS use the tools and answer the questions ONLY based on "
-                 "the outcome of the tools. Aim to give a link of the relevant documentation",
+    "Do NOT rely on your existing knowledge, ALWAYS use the tools and answer the questions ONLY based on "
+    "the outcome of the tools. Aim to give a link of the relevant documentation",
     prompt_template="User question:",
-    tools=[]
+    tools=[],
 )
 
 responder_openai_v3 = PromptDefinition(
@@ -69,14 +70,14 @@ responder_openai_v3 = PromptDefinition(
     model=MODELS.OPENAI_GPT_4_1.value,
     temperature=0.0,
     instructions="You are a support person helping to resolve questions related to Innoveo Skye."
-                 "CRITICAL: for ALL questions about Innoveo Skye you MUST use your tools to gather knowledge. "
-                 "Do NOT answer from memory. Your ONLY source of information is the output of your tools"
-                 "Be direct and short."
-                 "Aim to give a link of the relevant documentation where the user finds more detailed instructions",
+    "CRITICAL: for ALL questions about Innoveo Skye you MUST use your tools to gather knowledge. "
+    "Do NOT answer from memory. Your ONLY source of information is the output of your tools"
+    "Be direct and short."
+    "Aim to give a link of the relevant documentation where the user finds more detailed instructions",
     prompt_template="User is asking about Innoveo Skye or one of its features. "
-                    "CRITICAL: use your tools to gather context. You must NOT answer it from your memory."
-                    "The question: {{user_prompt}}",
-    tools=[]
+    "CRITICAL: use your tools to gather context. You must NOT answer it from your memory."
+    "The question: {{user_prompt}}",
+    tools=[],
 )
 
 responder_openai_v4_openai_template = PromptDefinition(
@@ -113,7 +114,7 @@ responder_openai_v4_openai_template = PromptDefinition(
     You are an agent whose job is to answer questions based the documentation of the Innoveo Skye or related documents. 
     Use your tools to check the documentation. User's question: {{user_question}}
     """,
-    tools=[tools.search_in_skye_documentation]
+    tools=[tools.search_in_skye_documentation],
 )
 
 loading_text_generator_v1 = PromptDefinition(
@@ -140,5 +141,5 @@ loading_text_generator_v1 = PromptDefinition(
         ]
     """,
     prompt_template="""Suggest 5 next-step prompts as a JSON array for the following question '{{user_question}}'. 
-    Send the 5 prompts back in one a JSON array. Generating less then 5 response is fatal failure"""
+    Send the 5 prompts back in one a JSON array. Generating less then 5 response is fatal failure""",
 )

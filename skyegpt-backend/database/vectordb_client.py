@@ -12,12 +12,14 @@ def convert_chroma_error_to_vectordb_error(func):
     Raises:
         VectorDBError: Wrapping the original ChromaError.
     """
+
     @wraps(func)
     def wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
         except ChromaError as e:
             raise VectorDBError(e.message()) from e
+
     return wrapper
 
 
@@ -71,10 +73,10 @@ def delete_collection(collection_name: str) -> None:
 
 @convert_chroma_error_to_vectordb_error
 def add_to_collection(
-        collection_name: str,
-        documents: List[str],
-        metadatas: List[Mapping[str, Union[str, int, float, bool]]],
-        ids: List[str]
+    collection_name: str,
+    documents: List[str],
+    metadatas: List[Mapping[str, Union[str, int, float, bool]]],
+    ids: List[str],
 ) -> None:
     """Adds a document to the collection identified by name.
 
@@ -99,7 +101,7 @@ def find_related_documents_to_query(query: str):
     collection = chroma_client.get_collection_by_name(collection_name)
     number_of_results = constants.VECTOR_NUMBER_OF_RESULTS
 
-    result =  chroma_client.find_k_nearest_neighbour(collection, query, number_of_results)
+    result = chroma_client.find_k_nearest_neighbour(collection, query, number_of_results)
     return structure_result_as_pair(result)
 
 
@@ -110,25 +112,22 @@ def structure_result_as_pair(result: QueryResult):
     documents = _flatten_list(documents)
     metadatas = _flatten_list(metadatas)
 
-    paired_list =  _pair_document_with_metadata(documents, metadatas)
+    paired_list = _pair_document_with_metadata(documents, metadatas)
     return {"documents": paired_list}
+
 
 def _flatten_list(nested_list: list):
     if nested_list and isinstance(nested_list[0], list):
         return nested_list[0]
 
+
 def _pair_document_with_metadata(documents: list, metadatas: list):
-    return [
-        {"document": doc, "metadata": meta}
-        for doc, meta in zip(documents, metadatas)
-    ]
+    return [{"document": doc, "metadata": meta} for doc, meta in zip(documents, metadatas)]
 
 
 def _handle_value_error(collection_name: str, e: ValueError):
     """Chroma returns ValueError when a collection is not found. This helper method catches it
     and raises SkyeGPT-specific CollectionNotFoundError"""
-    error_message = f'Collection {collection_name} not found'
+    error_message = f"Collection {collection_name} not found"
     logger.error(error_message)
     raise CollectionNotFoundError(error_message) from e
-
-

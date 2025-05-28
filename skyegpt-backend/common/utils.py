@@ -1,4 +1,5 @@
 """Utility helpers for SkyeGPT."""
+
 from typing import Generator, AsyncGenerator
 from datetime import datetime, timezone, timedelta
 import os
@@ -29,10 +30,12 @@ def replace_placeholders(template: str, values: dict[str, str]) -> str:
         template: a text that contains placeholders within {{}}
         values: a dict that contains placeholder_key (without the {{}}) and the value it should be replaced to
     """
+
     def replacer(match):
         key = match.group(1).strip()
         return values.get(key, message_bundle.VALUE_NOT_FOUND)
-    return re.sub(r'{{(.*?)}}', replacer, template)
+
+    return re.sub(r"{{(.*?)}}", replacer, template)
 
 
 def folder_to_dict(path):
@@ -56,8 +59,7 @@ def folder_to_dict(path):
 def generate_local_folder_path_from_skye_version(skye_major_version: str) -> str:
     """Render the configured docs folder path for a given Skye major version."""
     return replace_placeholders(
-        constants.SKYE_DOC_LOCAL_FOLDER_LOCATION_TEMPLATE,
-        {"skye_major_version": skye_major_version}
+        constants.SKYE_DOC_LOCAL_FOLDER_LOCATION_TEMPLATE, {"skye_major_version": skye_major_version}
     )
 
 
@@ -65,5 +67,3 @@ def calculate_utc_x_hours_ago(x_hours: int) -> datetime:
     """Return the UTC datetime representing *x_hours* ago from now."""
     now_utc = datetime.now(timezone.utc)
     return now_utc - timedelta(hours=x_hours)
-
-

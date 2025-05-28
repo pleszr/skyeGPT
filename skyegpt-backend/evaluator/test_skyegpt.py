@@ -4,21 +4,16 @@ import json
 import deepeval
 from deepeval import assert_test
 from deepeval.test_case import LLMTestCase, LLMTestCaseParams
-from deepeval.metrics import (
-    GEval,
-    AnswerRelevancyMetric,
-    FaithfulnessMetric,
-    BaseMetric
-)
+from deepeval.metrics import GEval, AnswerRelevancyMetric, FaithfulnessMetric, BaseMetric
 from deepeval.dataset import EvaluationDataset
 from dotenv import load_dotenv
 from evaluator import evaluator_utils
 from evaluator.llm_wrapper import query_llm
 
-LLM_ENDPOINT: str = 'http://localhost:8000/test_askPydantic'
-DATA_DIRECTORY: str = 'evaluator/test_data'
-QUESTION_BANK_FILE: str = 'QuestionBank.csv'
-GPT_MODEL: str = 'gpt-4o'
+LLM_ENDPOINT: str = "http://localhost:8000/test_askPydantic"
+DATA_DIRECTORY: str = "evaluator/test_data"
+QUESTION_BANK_FILE: str = "QuestionBank.csv"
+GPT_MODEL: str = "gpt-4o"
 
 RELEVANCY_THRESHOLD: float = 0.5
 FAITHFULNESS_THRESHOLD: float = 0.7
@@ -48,10 +43,10 @@ def prepare_test_case_with_llm_response(test_case_data: Dict[str, str]) -> LLMTe
     api_response = query_llm(LLM_ENDPOINT, question)
     test_case = LLMTestCase(
         input=question,
-        context=test_case_data["reference_context"].split('§§'),
+        context=test_case_data["reference_context"].split("§§"),
         actual_output=api_response.get("generated_answer"),
         expected_output=expected_output,
-        retrieval_context=convert_context_to_list_str(api_response.get('curr_context'))
+        retrieval_context=convert_context_to_list_str(api_response.get("curr_context")),
     )
     return test_case
 
@@ -78,15 +73,8 @@ def convert_context_to_list_str(curr_context: dict) -> list[str]:
 
 def create_evaluation_metrics() -> List[BaseMetric]:
     return [
-        FaithfulnessMetric(
-            threshold=FAITHFULNESS_THRESHOLD,
-            model=GPT_MODEL,
-            include_reason=True
-        ),
-        AnswerRelevancyMetric(
-            threshold=RELEVANCY_THRESHOLD,
-            model=GPT_MODEL
-        ),
+        FaithfulnessMetric(threshold=FAITHFULNESS_THRESHOLD, model=GPT_MODEL, include_reason=True),
+        AnswerRelevancyMetric(threshold=RELEVANCY_THRESHOLD, model=GPT_MODEL),
         GEval(
             name="Context Relevancy",
             criteria=(
@@ -98,7 +86,7 @@ def create_evaluation_metrics() -> List[BaseMetric]:
             ),
             evaluation_params=[LLMTestCaseParams.CONTEXT, LLMTestCaseParams.RETRIEVAL_CONTEXT],
             threshold=CONTEXT_RELEVANCY_THRESHOLD,
-            model=GPT_MODEL
+            model=GPT_MODEL,
         ),
         GEval(
             name="Actual output/expected output quality",
@@ -109,8 +97,8 @@ def create_evaluation_metrics() -> List[BaseMetric]:
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT, LLMTestCaseParams.EXPECTED_OUTPUT],
             threshold=ACTUAL_EXPECTED_OUTPUT_QUALITY_THRESHOLD,
-            model=GPT_MODEL
-        )
+            model=GPT_MODEL,
+        ),
     ]
 
 

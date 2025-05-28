@@ -9,8 +9,8 @@ import os
 from common import constants
 import json
 
-CHROMA_HOST = os.getenv('CHROMA_HOST', 'chroma')
-CHROMA_PORT = os.getenv('CHROMA_PORT', 8000)
+CHROMA_HOST = os.getenv("CHROMA_HOST", "chroma")
+CHROMA_PORT = os.getenv("CHROMA_PORT", 8000)
 
 _chroma_client: Optional[chromadb.HttpClient] = None
 
@@ -25,21 +25,19 @@ def _init_client():
 
 def ensure_client(func):
     """Lazy setup for client. Mainly to avoid side effect connections during testing."""
+
     @wraps(func)
     def wrapper(*args, **kwargs):
         _init_client()
         return func(*args, **kwargs)
+
     return wrapper
 
 
 @ensure_client
 def create_collection_if_needed(collection_name: str) -> Collection:
     return _chroma_client.get_or_create_collection(
-        collection_name,
-        metadata={
-            "description": "ChromaDB for GPT purposes",
-            "created": str(datetime.now())
-        }
+        collection_name, metadata={"description": "ChromaDB for GPT purposes", "created": str(datetime.now())}
     )
 
 
@@ -65,11 +63,7 @@ def get_collection_by_name(collection_name: str):
 @ensure_client
 def create_collection(collection_name: str):
     return _chroma_client.create_collection(
-        name=collection_name,
-        metadata={
-            "description": "ChromaDB for GPT purposes",
-            "created": str(datetime.now())
-        }
+        name=collection_name, metadata={"description": "ChromaDB for GPT purposes", "created": str(datetime.now())}
     )
 
 
@@ -88,23 +82,12 @@ def find_k_nearest_neighbour(collection: Collection, query: str, k: int) -> Quer
 
 
 @ensure_client
-def add_to_collection(
-        collection,
-        documents,
-        metadatas,
-        ids
-):
-    collection.add(
-        documents=documents,
-        metadatas=metadatas,
-        ids=ids
-    )
+def add_to_collection(collection, documents, metadatas, ids):
+    collection.add(documents=documents, metadatas=metadatas, ids=ids)
 
 
 @ensure_client
-def verify_if_collection_exists(
-        collection_name: str
-) -> bool:
+def verify_if_collection_exists(collection_name: str) -> bool:
     if get_collection_by_name(collection_name):
         return True
     else:

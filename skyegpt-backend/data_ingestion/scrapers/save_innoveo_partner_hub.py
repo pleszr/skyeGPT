@@ -16,8 +16,6 @@ def download_innoveo_partner_hub() -> dict[str, Any]:
         folders and files, suitable for JSON serialization.
     """
     confluence_2_text.download_public_confluence_as_text(
-        CONFLUENCE_API_ENDPOINT,
-        CONFLUENCE_SPACE_KEY,
-        CONFLUENCE_SAVE_PATH
+        CONFLUENCE_API_ENDPOINT, CONFLUENCE_SPACE_KEY, CONFLUENCE_SAVE_PATH
     )
     return utils.folder_to_dict(CONFLUENCE_SAVE_PATH)

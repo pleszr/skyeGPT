@@ -12,6 +12,7 @@ class DynamicLoadingTextService:
     Args:
         prompt_version (prompts.PromptDefinition): The prompt definition version to use for generation.
     """
+
     def __init__(self, prompt_version: prompts.PromptDefinition):
         self.prompt_version = prompt_version
 

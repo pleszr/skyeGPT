@@ -11,7 +11,7 @@ from tests import sample_objects
 def setup_test_environment(monkeypatch):
     """Setup environment variables and global state for agent tests."""
     monkeypatch.setenv("OPENAI_API_KEY", "mock_openai_key")
-    monkeypatch.setattr('pydantic_ai.models.ALLOW_MODEL_REQUESTS', False)
+    monkeypatch.setattr("pydantic_ai.models.ALLOW_MODEL_REQUESTS", False)
     yield
 
 
@@ -23,11 +23,11 @@ def loading_text_service_instance():
 
 
 @pytest.mark.asyncio
-@patch('agentic.agent_service.utils.replace_placeholders')
+@patch("agentic.agent_service.utils.replace_placeholders")
 async def test_generate_dynamic_loading_text_happy_path(
-        mock_replace,
-        setup_test_environment,
-        loading_text_service_instance,
+    mock_replace,
+    setup_test_environment,
+    loading_text_service_instance,
 ):
     """Test successful generation of dynamic loading text."""
     # setup static data
@@ -41,8 +41,8 @@ async def test_generate_dynamic_loading_text_happy_path(
     with capture_run_messages() as messages:
         with loading_text_service_instance.agent.override(model=TestModel()):
             result = await loading_text_service_instance.generate_dynamic_loading_text(test_question)
-    print(f'messages: {messages}')
-    print(f'result: {result}')
+    print(f"messages: {messages}")
+    print(f"result: {result}")
 
     # assert
     assert isinstance(result, list)

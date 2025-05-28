@@ -11,11 +11,13 @@ import os
         logger.error("Failed to process request", request_id="xyz")
 """
 
-environment = os.environ.get('ENVIRONMENT', 'local')
+environment = os.environ.get("ENVIRONMENT", "local")
 logfire.configure(environment=environment)
+
 
 def trace(message: str, **kwargs):
     logfire.trace(message, **kwargs)
+
 
 def debug(message: str, **kwargs):
     logfire.debug(message, **kwargs)

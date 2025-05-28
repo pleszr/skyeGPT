@@ -6,6 +6,7 @@ from common import constants, message_bundle
 from agentic.feedback import Feedback
 from pydantic_ai.messages import ModelRequest
 
+
 def test_create_copy_generates_new_id_but_preserves_content_and_feedback():
     # setup static data
     original = sample_objects.sample_conversation
@@ -38,13 +39,12 @@ def test_extend_appends_content_and_updates_last_modified():
     original_content = list(sample_objects.sample_conversation.contents)
     ts_before = datetime(2025, 1, 1, tzinfo=timezone.utc)
 
-    base = sample_objects.sample_conversation.model_copy(update={
-        "contents": original_content,
-        "last_modified": ts_before
-    })
-    incoming = sample_objects.sample_conversation.model_copy(update={
-        "contents": list(sample_objects.sample_conversation.contents)
-    })
+    base = sample_objects.sample_conversation.model_copy(
+        update={"contents": original_content, "last_modified": ts_before}
+    )
+    incoming = sample_objects.sample_conversation.model_copy(
+        update={"contents": list(sample_objects.sample_conversation.contents)}
+    )
 
     # act
     len_before = len(base.contents)
@@ -61,14 +61,13 @@ def test_extend_trims_when_exceeding_max_length(monkeypatch):
     monkeypatch.setattr(constants, "MAX_CONVERSATION_LENGTH", 2)
     ts_before = datetime(2025, 1, 1, tzinfo=timezone.utc)
 
-    base = sample_objects.sample_conversation.model_copy(update={
-        "contents": list(sample_objects.sample_conversation.contents),
-        "last_modified": ts_before
-    })
+    base = sample_objects.sample_conversation.model_copy(
+        update={"contents": list(sample_objects.sample_conversation.contents), "last_modified": ts_before}
+    )
 
-    incoming = sample_objects.sample_conversation.model_copy(update={
-        "contents": list(sample_objects.sample_conversation.contents)
-    })
+    incoming = sample_objects.sample_conversation.model_copy(
+        update={"contents": list(sample_objects.sample_conversation.contents)}
+    )
 
     # act
     base.extend(incoming)
@@ -111,9 +110,3 @@ def test_trim_conversation_content_archives_tool_output():
     test_conversation.archive_tool_output()
     # assert result
     assert test_conversation.contents[2].parts[0].content == message_bundle.CONTENT_ARCHIVED_MESSAGE
-
-
-
-
-
-

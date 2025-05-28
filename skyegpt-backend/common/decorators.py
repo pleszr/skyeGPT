@@ -22,11 +22,12 @@ def handle_response_stream_errors(func):
         except Exception:
             logger.exception("Uncaught Exception")
             return _generate_sse_stream_from_error_message(message_bundle.INTERNAL_ERROR)
+
     return wrapper
 
 
 def _generate_sse_stream_from_error_message(
-        response_error_message: str = message_bundle.INTERNAL_ERROR
+    response_error_message: str = message_bundle.INTERNAL_ERROR,
 ) -> StreamingResponse:
     return StreamingResponse(
         _stream_error(response_error_message),
@@ -34,14 +35,12 @@ def _generate_sse_stream_from_error_message(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         headers={
             "Cache-Control": "no-cache",
-            "Connection":    "keep-alive",
-        }
+            "Connection": "keep-alive",
+        },
     )
 
 
-async def _stream_error(
-        error_message: str
-) -> AsyncGenerator[str, None]:
+async def _stream_error(error_message: str) -> AsyncGenerator[str, None]:
     error_data = {"detail": error_message}
     yield f"event: error\ndata: {json.dumps(error_data)}\n\n"
 
@@ -60,6 +59,7 @@ def handle_aggregated_response_errors(func):
         except Exception:
             logger.exception("Uncaught Exception")
             raise HTTPException(status_code=500, detail=message_bundle.INTERNAL_ERROR)
+
     return wrapper
 
 
@@ -73,6 +73,7 @@ def handle_unknown_errors(func):
         except Exception as e:
             logger.exception("Uncaught Exception")
             raise HTTPException(status_code=500, detail=message_bundle.INTERNAL_ERROR) from e
+
     return wrapper
 
 
@@ -88,7 +89,9 @@ def handle_asyncio_producer_task_errors(queue_arg: int = -1, swallow: bool = Fal
                 await queue.put(None)
                 if not swallow:
                     raise
+
         return wrapper
+
     return decorator
 
 
@@ -98,6 +101,7 @@ def handle_store_errors(func):
         try:
             return await func(*args, **kwargs)
         except (ValueError, TypeError, AttributeError, KeyError) as e:
-            logger.exception('Exception during Store Management')
+            logger.exception("Exception during Store Management")
             raise StoreManagementException from e
+
     return wrapper

@@ -20,12 +20,12 @@ evaluator_apis_router = APIRouter(prefix="/evaluate", tags=["Evaluator"])
     responses={
         status.HTTP_200_OK: {"description": "Answer generation successful, returning answer and context."},
         status.HTTP_422_UNPROCESSABLE_ENTITY: {"description": "Validation error in request body."},
-        status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "Internal server error during Pydantic AI processing."}
-    }
+        status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "Internal server error during Pydantic AI processing."},
+    },
 )
 async def generate_agent_response_with_context(
-        request: ConversationQueryRequest,
-        agent_response_service: AggregatedAgentResponseService = Depends(get_agent_response_service)
+    request: ConversationQueryRequest,
+    agent_response_service: AggregatedAgentResponseService = Depends(get_agent_response_service),
 ) -> AgentResponse:
     """
     Processes query to generate agent answer.
@@ -51,8 +51,8 @@ async def generate_agent_response_with_context(
     responses={
         status.HTTP_200_OK: {"description": "Playground evaluation successful, returning generated text."},
         status.HTTP_422_UNPROCESSABLE_ENTITY: {"description": "Validation error in request body."},
-        status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "Internal server error during Playground processing."}
-    }
+        status.HTTP_500_INTERNAL_SERVER_ERROR: {"description": "Internal server error during Playground processing."},
+    },
 )
 async def evaluate_playground(request: ConversationQueryRequest) -> PlaygroundResponse:
     """
