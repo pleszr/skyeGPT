@@ -22,7 +22,7 @@ services:
     container_name: skyegpt-frontend
     image: rplesz/skyegpt-frontend:latest
     environment: 
-      - NEXT_PUBLIC_SKYEGPT_BACKEND_HOST=http://backend:8000
+      - BACKEND_HOST_URL=http://backend:8000
     ports:
       - "5173:5173"
   
