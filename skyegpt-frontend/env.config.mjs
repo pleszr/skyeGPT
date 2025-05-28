@@ -7,7 +7,13 @@ const __dirname = path.dirname(__filename);
 
 // default backendHost is localhost:8000
 // but can be overridden by environment variable BACKEND_HOST_URL
-const backendHost = process.env.BACKEND_HOST_URL || "http://localhost:8000";
+const backendHost = process.env.BACKEND_HOST || "http://localhost:8000";
+
+
+# FOR DEBUGGING
+#console.log('DEBUG: BACKEND_HOST from env:', process.env.BACKEND_HOST);
+
+
 const config = { backendHost };
 
 function findProjectRoot(startDir) {
