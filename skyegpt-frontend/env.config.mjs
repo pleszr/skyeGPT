@@ -9,10 +9,8 @@ const __dirname = path.dirname(__filename);
 // but can be overridden by environment variable BACKEND_HOST_URL
 const backendHost = process.env.BACKEND_HOST || "http://localhost:8000";
 
-
-# FOR DEBUGGING
-#console.log('DEBUG: BACKEND_HOST from env:', process.env.BACKEND_HOST);
-
+// FOR DEBUGGING
+//console.log('DEBUG: BACKEND_HOST from env:', process.env.BACKEND_HOST);
 
 const config = { backendHost };
 
