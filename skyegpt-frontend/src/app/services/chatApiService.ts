@@ -1,13 +1,6 @@
-import { backendHost } from '@/app/utils/sharedConfig';
+import { getBackendHost } from '@/app/utils/sharedConfig';
 
-// BACKEND API URLS
-const API_BASE_URL = backendHost;
-const CREATE_CONVERSATION_URL = `${API_BASE_URL}/ask/conversation`;
-const ASK_STREAM_URL = `${API_BASE_URL}/ask/response/stream`;
-const getConversationFeedbackUrl = (conversationId: string): string => {
-  return `${API_BASE_URL}/ask/${conversationId}/feedback`;
-};
-
+const cachedBackendHostPromise = getBackendHost();
 
 // FETCH API FUNCTIONS
 export interface ConversationResponse {
@@ -15,6 +8,9 @@ export interface ConversationResponse {
 }
 
 export const createConversationAPI = async (): Promise<ConversationResponse> => {
+  const backendHost = await cachedBackendHostPromise;
+  const CREATE_CONVERSATION_URL = `${backendHost}/ask/conversation`;
+
   const response = await fetch(CREATE_CONVERSATION_URL, {
     method: 'POST',
     headers: {
@@ -27,11 +23,19 @@ export const createConversationAPI = async (): Promise<ConversationResponse> => 
     const errorBody = await response.text().catch(() => 'Failed to read error body');
     throw new Error(`Could not create new conversation: ${response.status} - ${errorBody}`);
   }
-  return response.json() as Promise<ConversationResponse>;
+  return await response.json() as Promise<ConversationResponse>;
 };
 
 // SSE HELPERS
-export const getChunkTextFromSSE = (chunk: string | number | boolean | { text?: unknown; message?: string; content?: string; response?: string; } | null | undefined): string =>  {
+export const getChunkTextFromSSE = (
+  chunk:
+    | string
+    | number
+    | boolean
+    | { text?: unknown; message?: string; content?: string; response?: string }
+    | null
+    | undefined
+): string => {
   if (chunk === null || chunk === undefined) return '';
   if (typeof chunk === 'string') return chunk;
   if (typeof chunk === 'object') {
@@ -42,12 +46,10 @@ export const getChunkTextFromSSE = (chunk: string | number | boolean | { text?: 
     if (chunk.text !== undefined) return String(chunk.text);
     return '';
   }
-  if (typeof chunk === 'number' || typeof chunk === 'boolean') {
+  if (typeof chunk === 'number' || true) {
     return String(chunk);
   }
-  return '';
 };
-
 
 // STREAMING API
 export interface AskStreamPayload {
@@ -58,7 +60,10 @@ export interface AskStreamPayload {
 export const fetchChatResponseStreamAPI = async (
   payload: AskStreamPayload,
   signal: AbortSignal
-): Promise<Response> => { 
+): Promise<Response> => {
+  const backendHost = await cachedBackendHostPromise;
+  const ASK_STREAM_URL = `${backendHost}/ask/response/stream`;
+
   const response = await fetch(ASK_STREAM_URL, {
     method: 'POST',
     headers: {
@@ -71,12 +76,14 @@ export const fetchChatResponseStreamAPI = async (
 
   if (!response.ok) {
     const errorBody = await response.text().catch(() => 'Failed to read error body');
-    throw new Error(`Server error for streaming: ${response.status} ${response.statusText} - ${errorBody}`);
+    throw new Error(
+      `Server error for streaming: ${response.status} ${response.statusText} - ${errorBody}`
+    );
   }
   if (!response.body) {
     throw new Error('Response body is null for streaming.');
   }
-  return response; 
+  return response;
 };
 
 // FEEDBACK API
@@ -87,11 +94,18 @@ export interface FeedbackPayload {
   comment: string;
 }
 
+// Helper to get feedback URL
+export const getConversationFeedbackUrl = async (conversationId: string): Promise<string> => {
+  const backendHost = await cachedBackendHostPromise;
+  return `${backendHost}/ask/${conversationId}/feedback`;
+};
+
 export const submitFeedbackAPI = async (
   conversationId: string,
   payload: FeedbackPayload
-): Promise<void> => { 
-  const actualEndpoint = getConversationFeedbackUrl(conversationId);
+): Promise<void> => {
+  const actualEndpoint = await getConversationFeedbackUrl(conversationId);
+
   const response = await fetch(actualEndpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -99,7 +113,11 @@ export const submitFeedbackAPI = async (
   });
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ message: 'Failed to parse error JSON.' }));
-    throw new Error(`Server error on feedback: ${response.status} - ${errorData.message || response.statusText}`);
+    const errorData = await response.json().catch(() => ({
+      message: 'Failed to parse error JSON.',
+    }));
+    throw new Error(
+      `Server error on feedback: ${response.status} - ${errorData.message || response.statusText}`
+    );
   }
 };

@@ -24,6 +24,8 @@ services:
     build:
       context: ./skyegpt-frontend
       dockerfile: Dockerfile
+    environment:
+      - BACKEND_HOST=http://skyegpt01.dev.innoveo.cloud/api
     ports:
       - "5173:5173"
   

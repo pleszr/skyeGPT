@@ -32,6 +32,5 @@ jobs:
           cache-dependency-path: skyegpt-frontend/package-lock.json 
       - name: Install dependencies and run tests
         run: cd skyegpt-frontend && npm ci && npm run build && npm run test
-        env:
-          NEXT_PUBLIC_SKYEGPT_BACKEND_HOST: 'http://localhost:8000'
+       
           

@@ -59,8 +59,7 @@ jobs:
           cache-dependency-path: skyegpt-frontend/package-lock.json 
       - name: Install dependencies and run tests
         run: cd skyegpt-frontend && npm ci && npm run build && npm run test
-        env:
-          NEXT_PUBLIC_SKYEGPT_BACKEND_HOST: 'http://localhost:8000'
+        
 
   deploy_frontend_to_docker_repo:
     needs: run_frontend_unit_tests
@@ -88,8 +87,6 @@ jobs:
           file: ./skyegpt-frontend/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
-          build-args: |
-            NEXT_PUBLIC_SKYEGPT_BACKEND_HOST=http://skyegpt01.dev.innoveo.cloud/api
           tags: |
             rplesz/skyegpt-frontend:latest
             rplesz/skyegpt-frontend:${{ github.event.release.tag_name }}
