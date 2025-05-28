@@ -6,7 +6,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // default backendHost is localhost:8000
-// but can be overridden by environment variable BACKEND_HOST_URL
+// but can be overridden by environment variable BACKEND_HOST
 const backendHost = process.env.BACKEND_HOST || "http://localhost:8000";
 
 // FOR DEBUGGING
