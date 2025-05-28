@@ -122,6 +122,60 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
     const queryToSendToBackend = `User query: ${trimmedInput}Format Instruction:${hiddenInstruction}`;
     let fullMessageTextForCurrentResponse = '';
 
+    const processDataChunk = (dataStr: string, allowEmptyChunks: boolean = true) => {
+      try {
+        if (dataStr === '' || dataStr.trim() === '') {
+          if (allowEmptyChunks) {
+            fullMessageTextForCurrentResponse += dataStr;
+            setMessages((prevMsgs) => {
+              const newMsgs = [...prevMsgs];
+              const lastMsgIndex = newMsgs.length - 1;
+              if (lastMsgIndex >= 0 && newMsgs[lastMsgIndex].sender === 'bot') {
+                newMsgs[lastMsgIndex] = createBotMessage(fullMessageTextForCurrentResponse);
+              }
+              return newMsgs;
+            });
+          }
+          return;
+        }
+
+        let parsedChunk;
+        try { 
+          parsedChunk = JSON.parse(dataStr); 
+        } catch { 
+          parsedChunk = { text: dataStr };
+        }
+
+        if (parsedChunk && Array.isArray(parsedChunk)) {
+          const textsToSet = parsedChunk.map(String).filter(t => t.trim() !== "");
+          if (textsToSet.length > 0) setDynamicLoadingTexts(textsToSet);
+        } else if (parsedChunk && typeof parsedChunk === 'object' && 'dynamic_loading_text' in parsedChunk) {
+          const texts = (parsedChunk as { dynamic_loading_text: string | string[] }).dynamic_loading_text;
+          if (Array.isArray(texts)) {
+            const textsToSet = texts.map(String).filter(t => t.trim() !== "");
+            if (textsToSet.length > 0) setDynamicLoadingTexts(textsToSet);
+          } else if (typeof texts === 'string' && texts.trim() !== "") {
+            setDynamicLoadingTexts([texts]);
+          }
+        } else {
+          const chunkText = getChunkTextFromSSE(parsedChunk);
+          if (chunkText !== null && chunkText !== undefined) { 
+            fullMessageTextForCurrentResponse += chunkText;
+            setMessages((prevMsgs) => {
+              const newMsgs = [...prevMsgs];
+              const lastMsgIndex = newMsgs.length - 1;
+              if (lastMsgIndex >= 0 && newMsgs[lastMsgIndex].sender === 'bot') {
+                newMsgs[lastMsgIndex] = createBotMessage(fullMessageTextForCurrentResponse);
+              }
+              return newMsgs;
+            });
+          }
+        }
+      } catch (e) { 
+        console.warn('Invalid SSE chunk processing error:', e, 'Original dataStr:', dataStr); 
+      }
+    };
+
     const fetchStreamSingleAttempt = async (): Promise<boolean> => {
       fullMessageTextForCurrentResponse = '';
       setMessages((prev) => addMessage(prev, createBotMessage('')));
@@ -161,63 +215,66 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
             return !(!fullMessageTextForCurrentResponse.trim());
           }
           buffer += new TextDecoder().decode(value);
-          const lines = buffer.split('\n');
-          buffer = lines.pop() || '';
-          for (const line of lines) {
-            if (streamAbortControllerRef.current?.signal.aborted) break;
-            if (line.startsWith('data: ')) {
-              try {
-                const dataStr = line.slice(6);
-                let parsedChunk;
-                try { parsedChunk = JSON.parse(dataStr); } catch { parsedChunk = dataStr.trim() ? { text: dataStr } : null; }
 
-                if (parsedChunk && Array.isArray(parsedChunk)) {
-                  const textsToSet = parsedChunk.map(String).filter(t => t.trim() !== "");
-                  if (textsToSet.length > 0) setDynamicLoadingTexts(textsToSet);
-                } else if (parsedChunk && typeof parsedChunk === 'object' && 'dynamic_loading_text' in parsedChunk) {
-                  const texts = (parsedChunk as { dynamic_loading_text: string | string[] }).dynamic_loading_text;
-                  if (Array.isArray(texts)) {
-                    const textsToSet = texts.map(String).filter(t => t.trim() !== "");
-                    if (textsToSet.length > 0) setDynamicLoadingTexts(textsToSet);
-                  } else if (typeof texts === 'string' && texts.trim() !== "") {
-                    setDynamicLoadingTexts([texts]);
-                  }
-                } else {
-                  const chunkText = getChunkTextFromSSE(parsedChunk);
-                  if (chunkText) {
-                    fullMessageTextForCurrentResponse += chunkText;
-                    setMessages((prevMsgs) => {
-                      const newMsgs = [...prevMsgs];
-                      const lastMsgIndex = newMsgs.length - 1;
-                      if (lastMsgIndex >= 0 && newMsgs[lastMsgIndex].sender === 'bot') {
-                        newMsgs[lastMsgIndex] = createBotMessage(fullMessageTextForCurrentResponse);
-                      }
-                      return newMsgs;
-                    });
-                  }
+          const newlineChunks = buffer.split('\n');
+          const lastChunk = newlineChunks.pop() || '';
+
+          const completeLines = newlineChunks.filter(line => {
+            const trimmed = line.trim();
+            return line !== '' && trimmed !== '\r';
+          });
+
+          if (completeLines.length > 0) {
+            buffer = lastChunk;
+            for (const line of completeLines) {
+              if (streamAbortControllerRef.current?.signal.aborted) break;
+              
+              if (line.startsWith('data: ')) {
+                const dataStr = line.slice(6);
+                processDataChunk(dataStr, true); 
+              }
+            }
+          } else {
+            const spaceChunks = buffer.split(' ');
+            if (spaceChunks.length > 1) {
+              buffer = spaceChunks.pop() || '';
+              for (const chunk of spaceChunks) {
+                if (streamAbortControllerRef.current?.signal.aborted) break;
+                if (chunk.startsWith('data:')) {
+                  const dataStr = chunk.slice(5); 
+                  processDataChunk(dataStr, false); 
                 }
-              } catch (e) { console.warn('Invalid SSE chunk processing error:', e, 'Original line:', line); }
+              }
+            } else {
+              buffer = lastChunk;
             }
           }
         }
       } catch (error: unknown) {
         if (typeof error === 'object' && error !== null && (('name' in error && (error as { name: string }).name === 'AbortError') || ('message' in error && (error as { message: string }).message === "Stream aborted"))) {
           setMessages(prev => {
-            const newMessages = [...prev]; const lastMessageIndex = newMessages.length - 1;
+            const newMessages = [...prev]; 
+            const lastMessageIndex = newMessages.length - 1;
             if (lastMessageIndex >= 0 && newMessages[lastMessageIndex].sender === 'bot') {
               newMessages[lastMessageIndex] = { ...newMessages[lastMessageIndex], text: "Request cancelled.", stopped: true };
-            } return newMessages;
+            } 
+            return newMessages;
           });
         } else {
           const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred. Please try again.";
           setMessages((prev) => {
-            const newMessages = [...prev]; const lastMessageIndex = newMessages.length - 1;
-            if (lastMessageIndex >= 0 && newMessages[lastMessageIndex]?.sender === 'bot') newMessages[lastMessageIndex] = createBotMessage(`Error: ${errorMessage}`);
-            else addMessage(newMessages, createBotMessage(`Error: ${errorMessage}`));
+            const newMessages = [...prev]; 
+            const lastMessageIndex = newMessages.length - 1;
+            if (lastMessageIndex >= 0 && newMessages[lastMessageIndex]?.sender === 'bot') {
+              newMessages[lastMessageIndex] = createBotMessage(`Error: ${errorMessage}`);
+            } else {
+              addMessage(newMessages, createBotMessage(`Error: ${errorMessage}`));
+            }
             return newMessages;
           });
         }
-        setDynamicLoadingTexts([]); return false;
+        setDynamicLoadingTexts([]); 
+        return false;
       }
     };
     await fetchStreamSingleAttempt();
@@ -247,7 +304,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({ messages, setMessages, className, con
     if (dynamicLoadingTexts.length === 0) { setCurrentTextIndex(0); return; }
     const interval = setInterval(() => {
       setCurrentTextIndex(prev => (prev + 1) % dynamicLoadingTexts.length);
-    }, 1000);
+    }, 2000);
     return () => clearInterval(interval);
   }, [isLoading, dynamicLoadingTexts]);
 
