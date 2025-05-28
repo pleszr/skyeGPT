@@ -6,4 +6,6 @@ RUN npm ci
 RUN npm run build
 EXPOSE 5173
 
-CMD ["npm", "run", "start"]
+
+CMD ["sh", "-c", "npm run set-env && npm run start"]
+
