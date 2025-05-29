@@ -33,9 +33,9 @@ def convert_array_to_see(chunks: List[str]):
 
 
 def _sort_tree(node: dict) -> dict:
-    """
-    Return a copy of *node* with its 'children' list recursively
-    sorted so that folders come first (A-Z) and files second (A-Z).
+    """Return a copy of *node* with its 'children' list recursively sorted.
+
+    Folders come first (A-Z) and files second (A-Z).
     """
     if node.get("type") == "folder":
         # sort each child, then sort the list itself

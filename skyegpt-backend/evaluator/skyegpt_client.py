@@ -1,8 +1,11 @@
+"""Client for querying the SkyEGPT API endpoint."""
+
 import requests
 import uuid
 
 
 def query_skyegpt(url: str, question: str, conversation_id: uuid) -> dict:
+    """Send a question to the SkyEGPT API and return the JSON response."""
     headers = {"Content-Type": "application/json"}
 
     request_body = {"question": question, "conversation_id": conversation_id}

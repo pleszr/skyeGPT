@@ -1,3 +1,5 @@
+"""Holds a service to download content from public confluence spaces."""
+
 from ..utils import confluence_2_text
 from common import utils, constants
 from typing import Any
@@ -8,8 +10,7 @@ CONFLUENCE_SAVE_PATH = constants.IPH_LOCAL_FOLDER_LOCATION
 
 
 def download_innoveo_partner_hub() -> dict[str, Any]:
-    """Downloads the content of IPH confluence space to a local folder and returns
-    the local folder structure as a dictionary.
+    """Downloads the content of IPH confluence space to a local folder.
 
     Returns:
         dict: A nested dictionary representing the local folder tree structure with

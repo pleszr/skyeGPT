@@ -1,3 +1,5 @@
+"""Defines the Feedback model used to store user feedback on conversations."""
+
 from datetime import datetime, timezone
 from pydantic import BaseModel, Field, ConfigDict
 import uuid
@@ -5,9 +7,7 @@ from common import constants
 
 
 class Feedback(BaseModel):
-    """
-    Represents a feedback given to a conversation
-    """
+    """Represents feedback given to a conversation."""
 
     id: uuid.UUID = Field(default_factory=lambda: uuid.uuid4(), alias="_id")
     vote: constants.VoteType = Field(default="not_specified")

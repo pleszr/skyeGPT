@@ -1,5 +1,4 @@
-"""
-evaluator: is a wrapper around DeepEval that makes it more usable without depending on confident-ai.com.
+"""evaluator: is a wrapper around DeepEval that makes it more usable without depending on confident-ai.com.
 
 Helps to manage question set in CSV files and structures the output file in a more readable format.
 

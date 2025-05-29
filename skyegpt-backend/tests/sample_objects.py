@@ -23,7 +23,10 @@ sample_conversation_content = [
     {
         "parts": [
             {
-                "content": "\n    You are an agent whose job is to answer questions based the documentation of the Innoveo Skye or related documents. \n    Use your tools to check the documentation. User's question: Does Skye support SOAP API?\n    ",
+                "content": """
+                    \n    You are an agent whose job is to answer questions based the documentation of the
+                    Innoveo Skye or related documents. \n    Use your tools to check the documentation.
+                    User's question: Does Skye support SOAP API?\n    """,
                 "timestamp": "2025-05-12T18:11:14.135000",
                 "part_kind": "user-prompt",
             }

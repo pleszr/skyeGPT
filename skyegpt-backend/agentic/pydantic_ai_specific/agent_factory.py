@@ -1,9 +1,11 @@
+"""Factory methods for creating Pydantic AI agents based on internal prompt definitions."""
+
 from pydantic_ai import Agent
 from ..prompts import PromptDefinition
 
 
 def create_agent_from_prompt_version(prompt_version: PromptDefinition) -> Agent:
-    """Creates a Pydantic agent from a PromptDefinition. If an optional field is none, it is not passed to the agent"""
+    """Creates a Pydantic agent from a PromptDefinition. If an optional field is none, it is not passed to the agent."""
     agent_kwargs = {
         "model": prompt_version.model,
         "instrument": True,

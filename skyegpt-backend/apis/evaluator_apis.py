@@ -1,3 +1,5 @@
+"""Defines FastAPI endpoints for evaluating agent responses and testing the Playground model."""
+
 from fastapi import APIRouter, Depends, status
 from .schemas.responses import AgentResponse, PlaygroundResponse
 from .schemas.requests import ConversationQueryRequest
@@ -27,9 +29,7 @@ async def generate_agent_response_with_context(
     request: ConversationQueryRequest,
     agent_response_service: AggregatedAgentResponseService = Depends(get_agent_response_service),
 ) -> AgentResponse:
-    """
-    Processes query to generate agent answer.
-    """
+    """Processes a query and returns the generated answer and context."""
     conversation_id = request.conversation_id
     query = request.query
     logger.info(f"Received request aggregated agent response: conversation_id='{conversation_id}'")
@@ -44,7 +44,7 @@ async def generate_agent_response_with_context(
 @evaluator_apis_router.post(
     "/playground",
     summary="Evaluate query using Playground model",
-    description="""Receives a query and conversation ID, processes it using the Playground's Pydantic AI model, 
+    description="""Receives a query and conversation ID, processes it using the Playground's Pydantic AI model,
     and returns the raw generated response string.""",
     response_model=PlaygroundResponse,
     status_code=status.HTTP_200_OK,
@@ -55,9 +55,7 @@ async def generate_agent_response_with_context(
     },
 )
 async def evaluate_playground(request: ConversationQueryRequest) -> PlaygroundResponse:
-    """
-    Used to test various features. Dev only.
-    """
+    """Returns the raw query string for Playground evaluation (dev only)."""
     response_text = request.query
     # conversation_id = request.conversation_id
     # query = request.query

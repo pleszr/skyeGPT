@@ -1,3 +1,5 @@
+"""Services for handling data ingestion and database operations."""
+
 from data_ingestion.scrapers import save_skye_documentation
 from data_ingestion.scrapers import save_innoveo_partner_hub
 from common import logger, utils, constants
@@ -7,21 +9,17 @@ from data_ingestion.persister import markdown_2_vector_db
 
 
 class IngestionService:
-    """
-    Service responsible for handling data-ingestion related operations.
-    """
+    """Service responsible for data ingestion operations."""
 
     # noinspection PyMethodMayBeStatic
     def download_skye_documentation_to_server(self, version: str) -> dict:
-        """
-        Orchestrates the downloading of Skye documentation to the server.
+        """Orchestrates the downloading of Skye documentation to the server.
 
         Args:
             version (str): The major version string (e.g., "10.0").
 
         Returns:
-            dict: The tree structure of the downloaded content as a proof that the download was successful.
-            Can be ignored.
+            dict: The tree structure of the downloaded content as proof of success.
 
         Raises:
             FileNotFoundError: If the specified version doesn't exist in S3.
@@ -44,29 +42,26 @@ class IngestionService:
         """Orchestrates the downloading of Innoveo Partner Hub to the server.
 
         Returns:
-            dict: The tree structure of the downloaded content as a proof that the download was successful.
-            Can be ignored.
+            dict: The tree structure of the downloaded content as proof of success.
 
         Raises:
-            TBD
-            Exception: For other potential download errors.
+            Exception: For potential download errors.
         """
-        logger.info(f"IngestionService: Attempting to download IPH")
+        logger.info("IngestionService: Attempting to download IPH")
         try:
             result = save_innoveo_partner_hub.download_innoveo_partner_hub()
-            logger.info(f"IngestionService: Download successful for IPH")
+            logger.info("IngestionService: Download successful for IPH")
             return result
         except Exception as e:
-            logger.exception(f"IngestionService: Unexpected error downloading IPH")
+            logger.exception("IngestionService: Unexpected error downloading IPH")
             raise e
 
     # noinspection PyMethodMayBeStatic
-    def import_skyedoc(self, skye_major_version: str, markdown_headers: list):
-        """Orchestrates the importing of Skyedoc to the retriever database from local storage.
+    def import_skyedoc(self, skye_major_version: str, markdown_headers: list) -> None:
+        """Orchestrates importing Skyedoc from local storage into the vector database.
 
         Raises:
-            TODO add more error handling
-            Exception: For yet unknown errors
+            Exception: For unexpected import errors.
         """
         logger.info(f"IngestionService: Attempting to import SkyeDoc version {skye_major_version}")
         try:
@@ -76,25 +71,24 @@ class IngestionService:
             )
             logger.info(f"Skyedoc for version {skye_major_version} successfully imported")
         except Exception as e:
-            logger.exception(f"IngestionService: Unexpected error importing SkyeDoc version ${skye_major_version}")
+            logger.exception("IngestionService: Unexpected error importing SkyeDoc version ${skye_major_version}")
             raise e
 
     # noinspection PyMethodMayBeStatic
     def import_iph(self, markdown_headers: list) -> None:
-        """Orchestrates the importing of Innoveo Partner Hub to the retriever database from local storage.
+        """Orchestrates importing Innoveo Partner Hub into the vector database.
 
         Raises:
-            TODO add more error handling
-            Exception: For yet unknown errors
+            Exception: For unexpected import errors.
         """
-        logger.info(f"IngestionService: Attempting to import IPH to lookup database")
+        logger.info("IngestionService: Attempting to import IPH to lookup database")
         try:
             markdown_2_vector_db.scan_and_import_markdowns_from_folder(
                 constants.IPH_DOC_COLLECTION_NAME, constants.IPH_LOCAL_FOLDER_LOCATION, markdown_headers
             )
-            logger.info(f"IPH successfully imported")
+            logger.info("IPH successfully imported")
         except Exception as e:
-            logger.exception(f"IngestionService: Unexpected error importing IPH")
+            logger.exception("IngestionService: Unexpected error importing IPH")
             raise e
 
 
@@ -102,16 +96,15 @@ class DatabaseService:
     """Service responsible for handling database collection operations."""
 
     # noinspection PyMethodMayBeStatic
-    def delete_collection(self, collection_name: str):
-        """
-        Orchestrates the deletion of a database collection.
+    def delete_collection(self, collection_name: str) -> None:
+        """Orchestrates the deletion of a database collection.
 
         Args:
             collection_name (str): The name of the collection to delete.
 
         Raises:
-            CollectionNotFoundError: If the collection does not exist (as raised by ChromaClient).
-            Exception: For other potential database errors.
+            CollectionNotFoundError: If the collection does not exist.
+            VectorDBError: For other database errors.
         """
         logger.info(f"DatabaseService: Attempting deletion of collection '{collection_name}'")
         try:
@@ -125,16 +118,17 @@ class DatabaseService:
             raise e
 
     # noinspection PyMethodMayBeStatic
-    def number_of_documents_in_collection(self, collection_name: str):
-        """
-        Returns the number of documents in a given collection
+    def number_of_documents_in_collection(self, collection_name: str) -> int:
+        """Returns the number of documents in a given collection.
 
         Args:
-            collection_name (str): The name of the collection to delete.
+            collection_name (str): The name of the collection.
+
+        Returns:
+            int: Number of documents in the collection.
 
         Raises:
-            CollectionNotFoundError: If the collection does not exist.
-            Exception: For other potential database errors.
+            VectorDBError: If the collection does not exist or on other errors.
         """
         logger.info(f"DatabaseService: Attempting to return number of documents of '{collection_name}'")
         try:

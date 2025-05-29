@@ -40,7 +40,6 @@ async def test_stream_agent_response_full_logic_happy_path(
     mock_replace.return_value = test_question
 
     # act
-    full_response = []
     with capture_run_messages() as messages:
         with agent_service_instance.agent.override(model=TestModel()):
             async for _ in await agent_service_instance.stream_agent_response(test_question, test_conversation_id):

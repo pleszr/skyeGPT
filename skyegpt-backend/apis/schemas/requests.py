@@ -1,3 +1,5 @@
+"""Schema definitions for API request models."""
+
 from pydantic import BaseModel, Field, model_validator, field_validator
 from typing import Optional, Literal, List
 import uuid
@@ -5,9 +7,7 @@ from common import constants
 
 
 class SkyeVersionRequest(BaseModel):
-    """
-    Request model for specifying the Skye major version.
-    """
+    """Request model for specifying the Skye major version."""
 
     skye_major_version: str = Field(
         ...,
@@ -21,10 +21,10 @@ class SkyeVersionRequest(BaseModel):
 
 
 class ConversationQueryRequest(BaseModel):
+    """Request model for submitting a user query to an existing conversation."""
+
     conversation_id: uuid.UUID = Field(
-        ...,
-        description="The unique identifier for the conversation thread.",
-        examples=[uuid.uuid4()],
+        ..., description="The unique identifier for the conversation thread.", examples=[uuid.uuid4()]
     )
     query: str = Field(
         ...,
@@ -35,11 +35,11 @@ class ConversationQueryRequest(BaseModel):
 
 
 class ImportRequest(BaseModel):
-    """
-    Request model for specifying what to import to the lookup database.
-    """
+    """Request model for specifying what to import to the lookup database."""
 
     class SkyedocConfig(BaseModel):
+        """Configuration for Skye documentation import."""
+
         enabled: bool
         skye_major_version: Optional[str] = Field(
             pattern=r"^\d+\.\d+$",
@@ -81,10 +81,10 @@ class ImportRequest(BaseModel):
 
 
 class CreateFeedbackRequest(BaseModel):
+    """Request model for submitting feedback about a conversation."""
+
     vote: constants.VoteType = Field(
-        ...,
-        description="The nature of the feedback",
-        examples=["positive", "negative", "not_specified"],
+        ..., description="The nature of the feedback", examples=["positive", "negative", "not_specified"]
     )
     comment: Optional[str] = Field(
         description="Comment about the conversation",
@@ -94,8 +94,7 @@ class CreateFeedbackRequest(BaseModel):
 
     @model_validator(mode="after")
     def only_accepted_not_specified_if_there_is_a_comment(self):
-        """Validator to ensure not specified is only allowed if there is a comment"""
-
+        """Validator to ensure 'not_specified' is only allowed if there is a comment."""
         if not self.comment and self.vote == "not_specified":
             raise ValueError("Vote can only be 'not_specified' if there is a comment")
         return self

@@ -1,3 +1,5 @@
+"""Integration tests for SkyEGPT agent using DeepEval framework."""
+
 from typing import List, Dict
 import pytest
 import json
@@ -22,6 +24,7 @@ CONTEXT_RELEVANCY_THRESHOLD: float = 0.5
 
 
 def create_dataset() -> EvaluationDataset:
+    """Create an EvaluationDataset by loading and preparing test cases."""
     load_dotenv()
 
     raw_test_cases = load_raw_dataset()
@@ -33,10 +36,12 @@ def create_dataset() -> EvaluationDataset:
 
 
 def load_raw_dataset() -> List[Dict[str, str]]:
+    """Load raw test cases from CSV into a list of dictionaries."""
     return evaluator_utils.create_dict_from_csv(DATA_DIRECTORY, QUESTION_BANK_FILE)
 
 
 def prepare_test_case_with_llm_response(test_case_data: Dict[str, str]) -> LLMTestCase:
+    """Prepare an LLMTestCase by querying the LLM with the test question."""
     question = test_case_data["question"]
     expected_output = test_case_data["reference_answer"]
 
@@ -52,6 +57,7 @@ def prepare_test_case_with_llm_response(test_case_data: Dict[str, str]) -> LLMTe
 
 
 def convert_context_to_list_str(curr_context: dict) -> list[str]:
+    """Convert the response context dict into a list of formatted strings."""
     if not curr_context or not isinstance(curr_context, dict):
         print("Warning: convert_context_to_list_str received None or invalid input.")
         return []
@@ -72,6 +78,7 @@ def convert_context_to_list_str(curr_context: dict) -> list[str]:
 
 
 def create_evaluation_metrics() -> List[BaseMetric]:
+    """Construct evaluation metrics to be used in DeepEval tests."""
     return [
         FaithfulnessMetric(threshold=FAITHFULNESS_THRESHOLD, model=GPT_MODEL, include_reason=True),
         AnswerRelevancyMetric(threshold=RELEVANCY_THRESHOLD, model=GPT_MODEL),
@@ -108,11 +115,13 @@ evaluation_metrics = create_evaluation_metrics()
 
 @pytest.mark.parametrize("test_case", dataset)
 def test_customer_chatbot(test_case: LLMTestCase) -> None:
+    """Execute the DeepEval assert_test for a single LLMTestCase."""
     assert_test(test_case, evaluation_metrics)
 
 
 @deepeval.on_test_run_end
 def function_to_be_called_after_test_run() -> None:
+    """Callback to rename and aggregate DeepEval output after tests complete."""
     print("Test finished!")
     result_file = evaluator_utils.rename_deepeval_output_to_json()
     if result_file is not None:

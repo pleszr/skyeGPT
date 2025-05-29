@@ -1,10 +1,8 @@
-import pytest
 from agentic.conversation import Conversation
 from tests import sample_objects
 from datetime import datetime, timezone
 from common import constants, message_bundle
 from agentic.feedback import Feedback
-from pydantic_ai.messages import ModelRequest
 
 
 def test_create_copy_generates_new_id_but_preserves_content_and_feedback():

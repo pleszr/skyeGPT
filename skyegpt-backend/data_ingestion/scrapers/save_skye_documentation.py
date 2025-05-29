@@ -1,3 +1,5 @@
+"""Holds services to download files from s3 bucket to local storage."""
+
 from ..utils import import_from_S3
 from common import utils, constants
 
@@ -7,9 +9,7 @@ S3_LOCAL_FOLDER_TEMPLATE = constants.SKYE_DOC_LOCAL_FOLDER_LOCATION_TEMPLATE
 
 
 def download_skye_documentation_from_s3(skye_major_version: str):
-    """
-    Downloads Skye documentation files from the S3 bucket to a local folder and returns
-    the local folder structure as a dictionary.
+    """Downloads Skye documentation files from the S3 bucket to a local folder.
 
     Args:
         skye_major_version (str): The major version of Skye (format: "X.Y", e.g., "9.16")

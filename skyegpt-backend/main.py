@@ -1,3 +1,5 @@
+"""Launches SkyeGPT."""
+
 from fastapi import FastAPI
 from dotenv import load_dotenv
 
@@ -7,7 +9,6 @@ from apis import setup_apis_router  # noqa: E402
 from apis import evaluator_apis_router  # noqa: E402
 from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 import signal  # noqa: E402
-from database.mongo_specific import mongo_client
 
 
 app = FastAPI(
@@ -20,21 +21,17 @@ app.include_router(setup_apis_router)
 app.include_router(evaluator_apis_router)
 
 app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"]
 )
 
 
-def exit_gracefully(signum, _frame):
+def _exit_gracefully(signum, _frame):
     print(f"Received signal {signum}, saving settings before exit...")
     exit(0)
 
 
-signal.signal(signal.SIGTERM, exit_gracefully)
-signal.signal(signal.SIGINT, exit_gracefully)
+signal.signal(signal.SIGTERM, _exit_gracefully)
+signal.signal(signal.SIGINT, _exit_gracefully)
 
 if __name__ == "__main__":
     import uvicorn

@@ -1,6 +1,5 @@
 from common import utils, constants
-import pytest
-from tests import sample_objects, test_utils
+from tests import test_utils
 from datetime import datetime, timezone, timedelta
 
 from unittest.mock import patch
@@ -66,13 +65,7 @@ def test_folder_to_dict(tmp_path):
         "name": tmp_path.name,
         "type": "folder",
         "children": [
-            {
-                "name": "sub",
-                "type": "folder",
-                "children": [
-                    {"name": "inner.txt", "type": "file"},
-                ],
-            },
+            {"name": "sub", "type": "folder", "children": [{"name": "inner.txt", "type": "file"}]},
             {"name": "root.txt", "type": "file"},
         ],
     }

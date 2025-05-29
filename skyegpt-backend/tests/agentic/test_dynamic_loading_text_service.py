@@ -25,9 +25,7 @@ def loading_text_service_instance():
 @pytest.mark.asyncio
 @patch("agentic.agent_service.utils.replace_placeholders")
 async def test_generate_dynamic_loading_text_happy_path(
-    mock_replace,
-    setup_test_environment,
-    loading_text_service_instance,
+    mock_replace, setup_test_environment, loading_text_service_instance
 ):
     """Test successful generation of dynamic loading text."""
     # setup static data

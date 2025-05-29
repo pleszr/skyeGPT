@@ -1,3 +1,5 @@
+"""Holds a service that orchestrates finding files and saving them to vector db."""
+
 from langchain_text_splitters import MarkdownHeaderTextSplitter
 from pathlib import Path
 from typing import List
@@ -13,6 +15,7 @@ from ..utils import documentation_link_generator
 def scan_and_import_markdowns_from_folder(
     collection_name: str, folder_path: str, markdown_split_headers: List[str]
 ) -> None:
+    """Finds .md files in local storage and saves them vector database."""
     vectordb_client.create_collection_if_needed(collection_name)
 
     batch_size = int(os.getenv("RAG_BATCH_SIZE"))

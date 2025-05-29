@@ -1,6 +1,5 @@
 """Utility helpers for SkyeGPT."""
 
-from typing import Generator, AsyncGenerator
 from datetime import datetime, timezone, timedelta
 import os
 import re
@@ -16,14 +15,18 @@ def convert_html_to_md(html_content: str) -> str:
 
 
 def format_str_to_sse(input_string: str, event_type: SseEventTypes) -> str:
-    """Format a single string to SSE format.
-    Example: "event:dynamic_loading_text\ndata: yield1\n\n"."""
+    r"""Format a single string to SSE format.
+
+    Example:
+        "event:dynamic_loading_text\ndata: yield1\n\n"
+    """
     output_string = input_string.replace("\n", "\\n")
     return f"event: {event_type.value}\ndata: {output_string}\n\n"
 
 
 def replace_placeholders(template: str, values: dict[str, str]) -> str:
     """Replace {{placeholder}} tokens in *template* using values from *values*.
+
     Missing keys are substituted with the message bundle: 'VALUE_NOT_FOUND'
 
     Args:

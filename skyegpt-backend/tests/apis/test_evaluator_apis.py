@@ -1,8 +1,8 @@
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import MagicMock, AsyncMock
 import pytest
 from apis.schemas.responses import AgentResponse
 from apis.schemas.requests import ConversationQueryRequest
-from tests import test_constants, sample_objects
+from tests import sample_objects
 from apis.evaluator_apis import generate_agent_response_with_context
 
 

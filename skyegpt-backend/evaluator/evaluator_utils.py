@@ -1,3 +1,5 @@
+"""Utility functions for processing DeepEval and test result files."""
+
 import glob
 import csv
 import os
@@ -8,6 +10,7 @@ from datetime import datetime
 
 
 def rename_deepeval_output_to_json() -> str:
+    """Rename the latest DeepEval results file to a timestamped JSON file and return the new path."""
     results_dir = os.getenv("DEEPEVAL_RESULTS_FOLDER", "./evaluator/deepeval_results")
     latest_file = _find_latest_file_in_directory(results_dir)
     new_path = _generate_new_report_name(results_dir)
@@ -45,6 +48,7 @@ def _generate_new_report_name(directory: str) -> str:
 
 
 def create_dict_from_csv(folder_path: str, file_name: str) -> list[dict[str, str]]:
+    """Load a CSV file into a list of dictionaries, one per row."""
     file_path = os.path.join(folder_path, file_name)
     dict_from_csv = []
 
@@ -58,6 +62,7 @@ def create_dict_from_csv(folder_path: str, file_name: str) -> list[dict[str, str
 
 
 def aggregate_test_metrics(file_path: str) -> None:
+    """Aggregate test metrics from a JSON results file and overwrite it with aggregated data."""
     test_cases = _extract_test_results_from_file(file_path)
     aggregated_metrics = _prepare_aggregated_metrics(test_cases)
     _save_results_to_file(aggregated_metrics, file_path)
@@ -117,6 +122,7 @@ def _calculate_aggregated_metric_scores(metrics: dict) -> dict:
 
 
 def merge_results(overall_success_rate: dict, aggregated_metrics: dict) -> dict:
+    """Combine overall success rate with aggregated metric scores into a single result dictionary."""
     return {**overall_success_rate, **aggregated_metrics}
 
 
