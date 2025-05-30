@@ -41,7 +41,7 @@ export const useLoadingAnimation = (isLoading: boolean, dynamicLoadingTexts: str
     clearAllTimers();
 
     if (!isLoading) {
-      if (animatedLoadingElements.length > 0) setAnimatedLoadingElements([]);
+      setAnimatedLoadingElements([]);
       return;
     }
 
@@ -51,79 +51,60 @@ export const useLoadingAnimation = (isLoading: boolean, dynamicLoadingTexts: str
                                : 0;
     const targetTextContent = textsPool[actualCurrentIndex % textsPool.length];
 
-    let nextElements: AnimatedElement[] = [];
-    let targetElementId = '';
-    let needsSetState = false;
+    setAnimatedLoadingElements(prevElements => {
+      const nextElements: AnimatedElement[] = []; 
+      let targetElementId = '';
+      let newElementForTargetAdded = false;
 
-    const currentTargetElement = animatedLoadingElements.find(el => el.text === targetTextContent);
-    const otherElementsAreOutOrAbsent = animatedLoadingElements.every(el => 
-        el.text === targetTextContent || el.animClass === 'out'
-    );
+      const currentTargetElement = prevElements.find(el => el.text === targetTextContent);
+      const otherElementsAreOutOrAbsent = prevElements.every(el => 
+          el.text === targetTextContent || el.animClass === 'out'
+      );
 
-    if (currentTargetElement && currentTargetElement.animClass === 'in' && otherElementsAreOutOrAbsent) {
-        nextElements = [...animatedLoadingElements];
-    } else {
-        needsSetState = true; 
-        let newElementForTargetAdded = false;
+      if (currentTargetElement && currentTargetElement.animClass === 'in' && otherElementsAreOutOrAbsent) {
+          return prevElements; 
+      }
 
-        animatedLoadingElements.forEach(el => {
-            if (el.text !== targetTextContent) { 
-                if (el.animClass === 'in' || el.animClass === 'initial') {
-                    nextElements.push({ ...el, animClass: 'out' });
-                } else {
-                    nextElements.push(el); 
-                }
-            } else { 
-                targetElementId = el.id;
-                nextElements.push({ ...el, id: targetElementId, text: targetTextContent, animClass: 'initial' });
-                newElementForTargetAdded = true;
-            }
-        });
+      prevElements.forEach(el => {
+          if (el.text !== targetTextContent) { 
+              if (el.animClass === 'in' || el.animClass === 'initial') {
+                  nextElements.push({ ...el, animClass: 'out' });
+              } else {
+                  nextElements.push(el); 
+              }
+          } else { 
+              targetElementId = el.id;
+              nextElements.push({ ...el, id: targetElementId, text: targetTextContent, animClass: 'initial' });
+              newElementForTargetAdded = true;
+          }
+      });
 
-        if (!newElementForTargetAdded) {
-            targetElementId = `anim-text-${nextAnimIdRef.current}`;
-            nextElements.push({ id: targetElementId, text: targetTextContent, animClass: 'initial' });
-            nextAnimIdRef.current += 1;
-        }
-        
-        if (animatedLoadingElements.length === nextElements.length) {
-            const currentSig = animatedLoadingElements.map(e => `${e.id}-${e.animClass}`).join(',');
-            const nextSig = nextElements.map(e => `${e.id}-${e.animClass}`).join(',');
-            if (currentSig === nextSig) {
-                needsSetState = false;
-            }
-        }
-    }
-    
-    if (needsSetState) {
-        setAnimatedLoadingElements(nextElements);
-    }
+      if (!newElementForTargetAdded) {
+          targetElementId = `anim-text-${nextAnimIdRef.current}`;
+          nextElements.push({ id: targetElementId, text: targetTextContent, animClass: 'initial' });
+          nextAnimIdRef.current += 1;
+      }
 
-    const effectiveElements = needsSetState ? nextElements : animatedLoadingElements;
-    const elementToFadeIn = effectiveElements.find(el => el.text === targetTextContent && el.animClass === 'initial');
+      const elementToFadeIn = nextElements.find(el => el.text === targetTextContent && el.animClass === 'initial');
+      if (elementToFadeIn) {
+        activeTimersRef.current.fadeInTimer = setTimeout(() => {
+          setAnimatedLoadingElements(prev => 
+            prev.map(e => e.id === elementToFadeIn.id ? { ...e, animClass: 'in' } : e)
+          );
+        }, 50);
+      }
 
-    if (elementToFadeIn) {
-      activeTimersRef.current.fadeInTimer = setTimeout(() => {
-        setAnimatedLoadingElements(prev => {
-          const updated = prev.map(e => e.id === elementToFadeIn.id ? { ...e, animClass: 'in' } : e);
-          animatedLoadingElementsRef.current = updated;
-          return updated;
-        });
-      }, 50);
-    }
+      if (nextElements.some(el => el.animClass === 'out')) {
+        activeTimersRef.current.cleanupTimer = setTimeout(() => {
+          setAnimatedLoadingElements(prev => prev.filter(e => e.animClass !== 'out'));
+        }, 600);
+      }
 
-    if (effectiveElements.some(el => el.animClass === 'out')) {
-      activeTimersRef.current.cleanupTimer = setTimeout(() => {
-        setAnimatedLoadingElements(prev => {
-          const updated = prev.filter(e => e.animClass !== 'out');
-          animatedLoadingElementsRef.current = updated;
-          return updated;
-        });
-      }, 600); 
-    }
+      return nextElements;
+    });
 
     return clearAllTimers;
-  }, [isLoading, currentTextIndex, dynamicLoadingTexts]);
+  }, [isLoading, currentTextIndex, dynamicLoadingTexts]); 
 
   return {
     animatedLoadingElements
