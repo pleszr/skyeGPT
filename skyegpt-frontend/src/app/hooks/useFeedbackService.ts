@@ -45,22 +45,22 @@ export const useFeedbackService = (conversationId: string | null) => {
 
   const modalHeader = useMemo(() => {
     if (activeMessageIndex === null) return 'Share Your Feedback';
-    return feedbackStateRef.current[activeMessageIndex] === 'thumbs-down' ? 'Report an Issue' : 'Share Your Feedback';
-  }, [activeMessageIndex]);
+    return feedbackState[activeMessageIndex] === 'thumbs-down' ? 'Report an Issue' : 'Share Your Feedback';
+  }, [activeMessageIndex, feedbackState]);
 
   const textareaPlaceholder = useMemo(() => {
     if (activeMessageIndex === null) return 'Write your feedback here...';
-    return feedbackStateRef.current[activeMessageIndex] === 'thumbs-down'
+    return feedbackState[activeMessageIndex] === 'thumbs-down'
       ? 'Describe the issue or why this response is problematic...'
       : 'What did you like or what could be improved?';
-  }, [activeMessageIndex]);
+  }, [activeMessageIndex, feedbackState]); 
 
   const confirmationMessage = useMemo(() => {
     if (activeMessageIndex === null) return 'Feedback Sent!';
-    const currentRating = feedbackStateRef.current[activeMessageIndex!];
+    const currentRating = feedbackState[activeMessageIndex!];
     if (currentRating === 'thumbs-down') return 'Issue Report Sent!';
     return 'Feedback Sent!';
-  }, [activeMessageIndex]);
+  }, [activeMessageIndex, feedbackState]);
 
   const handleFeedbackSubmit = useCallback(async () => {
     if (activeMessageIndex === null) {
@@ -76,12 +76,12 @@ export const useFeedbackService = (conversationId: string | null) => {
     setSubmitError('');
     
     if (!conversationId) {
-      setSubmitError('conversation ID missing. Cannot submit feedback.');
+      setSubmitError('Conversation ID missing. Cannot submit rating.');
       return;
     }
     
     let vote: FeedbackVotePayload = 'not_specified';
-    const currentRating = feedbackStateRef.current[activeMessageIndex];
+    const currentRating = feedbackStateRef.current[activeMessageIndex]; 
     if (currentRating === 'thumbs-up') vote = 'positive';
     else if (currentRating === 'thumbs-down') vote = 'negative';
     
