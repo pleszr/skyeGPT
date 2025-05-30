@@ -117,7 +117,7 @@ export const useStreamingChat = (
     }
 
     const hiddenInstruction = "Output:GitHubFlavoredMarkdown. No ```markdown``` fences. standard GFM for all elements, no screenshots, use `##` for headings Use `\\n` for line breaks.";
-    const queryToSendToBackend = `User query: ${trimmedInput}Format Instruction:${hiddenInstruction}`;
+    const queryToSendToBackend = `User query: ${trimmedInput}\nFormat Instruction: ${hiddenInstruction}`; 
     const fullMessageTextRef = { current: '' };
 
     const fetchStreamSingleAttempt = async (): Promise<boolean> => {

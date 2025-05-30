@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 import { debounce } from 'lodash';
 import { submitFeedbackAPI, FeedbackVotePayload } from '@/app/services/chatApiService';
 
@@ -11,17 +11,20 @@ export const useFeedbackService = (conversationId: string | null) => {
   const [ratingError, setRatingError] = useState<{ [key: number]: string }>({});
   const [feedbackState, setFeedbackState] = useState<{ [key: number]: 'thumbs-up' | 'thumbs-down' | null }>({});
   const [activeMessageIndex, setActiveMessageIndex] = useState<number | null>(null);
+  
+  const feedbackStateRef = useRef(feedbackState);
+  feedbackStateRef.current = feedbackState;
 
   const debouncedHandleRating = useMemo(() => debounce(async (messageIndex: number, rating: 'thumbs-up' | 'thumbs-down') => {
-    const currentLocalRating = feedbackState[messageIndex];
+    const currentLocalRating = feedbackStateRef.current[messageIndex]; 
     const newLocalRating = currentLocalRating === rating ? null : rating;
-    const previousLocalRatingState = feedbackState[messageIndex];
+    const previousLocalRatingState = feedbackStateRef.current[messageIndex];
     
     setFeedbackState((prev) => ({ ...prev, [messageIndex]: newLocalRating }));
     setRatingError((prev) => ({ ...prev, [messageIndex]: '' }));
     
     if (!conversationId) {
-      setRatingError((prev) => ({ ...prev, [messageIndex]: 'conversation_id missing. Cannot submit rating.' }));
+      setRatingError((prev) => ({ ...prev, [messageIndex]: 'Conversation ID missing. Cannot submit rating.' }));
       setFeedbackState((prev) => ({ ...prev, [messageIndex]: previousLocalRatingState })); 
       return;
     }
@@ -38,21 +41,26 @@ export const useFeedbackService = (conversationId: string | null) => {
         : (error instanceof Error ? error.message : 'Error submitting rating.');
       setRatingError((prev) => ({ ...prev, [messageIndex]: errorMessage }));
     }
-  }, 300), [feedbackState, conversationId]);
+  }, 300), [conversationId]); 
 
-  const handleFeedbackPromptClick = useCallback((messageIndex: number) => {
-    setActiveMessageIndex(messageIndex);
-    setFeedbackText('');
-    setFeedbackError('');
-    setSubmitError('');
-    setIsFeedbackModalOpen(true);
-  }, []);
+  const modalHeader = useMemo(() => {
+    if (activeMessageIndex === null) return 'Share Your Feedback';
+    return feedbackStateRef.current[activeMessageIndex] === 'thumbs-down' ? 'Report an Issue' : 'Share Your Feedback';
+  }, [activeMessageIndex]);
 
-  const handleFeedbackModalClose = useCallback(() => {
-    setIsFeedbackModalOpen(false);
-    setFeedbackError('');
-    setSubmitError('');
-  }, []);
+  const textareaPlaceholder = useMemo(() => {
+    if (activeMessageIndex === null) return 'Write your feedback here...';
+    return feedbackStateRef.current[activeMessageIndex] === 'thumbs-down'
+      ? 'Describe the issue or why this response is problematic...'
+      : 'What did you like or what could be improved?';
+  }, [activeMessageIndex]);
+
+  const confirmationMessage = useMemo(() => {
+    if (activeMessageIndex === null) return 'Feedback Sent!';
+    const currentRating = feedbackStateRef.current[activeMessageIndex!];
+    if (currentRating === 'thumbs-down') return 'Issue Report Sent!';
+    return 'Feedback Sent!';
+  }, [activeMessageIndex]);
 
   const handleFeedbackSubmit = useCallback(async () => {
     if (activeMessageIndex === null) {
@@ -73,7 +81,7 @@ export const useFeedbackService = (conversationId: string | null) => {
     }
     
     let vote: FeedbackVotePayload = 'not_specified';
-    const currentRating = feedbackState[activeMessageIndex];
+    const currentRating = feedbackStateRef.current[activeMessageIndex];
     if (currentRating === 'thumbs-up') vote = 'positive';
     else if (currentRating === 'thumbs-down') vote = 'negative';
     
@@ -87,32 +95,27 @@ export const useFeedbackService = (conversationId: string | null) => {
         : (error instanceof Error ? error.message : 'Error submitting feedback.');
       setSubmitError(errorMessage);
     }
-  }, [activeMessageIndex, feedbackText, feedbackState, conversationId]);
+  }, [activeMessageIndex, feedbackText, conversationId]); 
+
+  const handleFeedbackPromptClick = useCallback((messageIndex: number) => {
+    setActiveMessageIndex(messageIndex);
+    setFeedbackText('');
+    setFeedbackError('');
+    setSubmitError('');
+    setIsFeedbackModalOpen(true);
+  }, []);
+
+  const handleFeedbackModalClose = useCallback(() => {
+    setIsFeedbackModalOpen(false);
+    setFeedbackError('');
+    setSubmitError('');
+  }, []);
 
   const handleConfirmationModalClose = useCallback(() => {
     setIsConfirmationModalOpen(false);
     setActiveMessageIndex(null);
     setFeedbackText('');
   }, []);
-
-  const modalHeader = useMemo(() => {
-    if (activeMessageIndex === null) return 'Share Your Feedback';
-    return feedbackState[activeMessageIndex] === 'thumbs-down' ? 'Report an Issue' : 'Share Your Feedback';
-  }, [activeMessageIndex, feedbackState]);
-
-  const textareaPlaceholder = useMemo(() => {
-    if (activeMessageIndex === null) return 'Write your feedback here...';
-    return feedbackState[activeMessageIndex] === 'thumbs-down'
-      ? 'Describe the issue or why this response is problematic...'
-      : 'What did you like or what could be improved?';
-  }, [activeMessageIndex, feedbackState]);
-
-  const confirmationMessage = useMemo(() => {
-    if (activeMessageIndex === null) return 'Feedback Sent!';
-    const currentRating = feedbackState[activeMessageIndex!];
-    if (currentRating === 'thumbs-down') return 'Issue Report Sent!';
-    return 'Feedback Sent!';
-  }, [activeMessageIndex, feedbackState]);
 
   return {
     feedbackState,

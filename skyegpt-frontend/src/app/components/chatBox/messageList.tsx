@@ -73,59 +73,68 @@ const MessageList: React.FC<MessageListProps> = ({
         />
       ))}
       
-
       {isLoading && messages.length > 0 &&
         (messages[messages.length - 1]?.sender === 'user' || 
          (messages[messages.length - 1]?.sender === 'bot' && messages[messages.length - 1]?.text === '')) && (
-          <LoadingIndicator animatedLoadingElements={animatedLoadingElements} isLoading={isLoading} />
+          <LoadingIndicator 
+            animatedLoadingElements={animatedLoadingElements} 
+            isLoading={isLoading} 
+            variant="message" 
+          />
       )}
       
-
       {isLoading && messages.length === 0 && (
-        <div className="flex items-center justify-center h-full">
-          <div className="flex items-center space-x-2">
-            <span className="text-yellow-400 animate-pulse text-xl">✨</span>
-            <div className="animated-text-container flex-1">
-              {animatedLoadingElements.map(item => (
-                <span key={item.id} className={`animated-text ${item.animClass} text-sm font-bold`}>
-                  {item.text}
-                </span>
-              ))}
-              {isLoading && animatedLoadingElements.length === 0 && (
-                <span className="animated-text in text-sm font-bold">Analyzing...</span>
-              )}
-            </div>
-          </div>
-        </div>
+        <LoadingIndicator 
+          animatedLoadingElements={animatedLoadingElements} 
+          isLoading={isLoading} 
+          variant="centered" 
+        />
       )}
     </div>
   );
 };
 
-
 const LoadingIndicator: React.FC<{
   animatedLoadingElements: Array<{ id: string, text: string, animClass: string }>;
   isLoading: boolean;
-}> = ({ animatedLoadingElements, isLoading }) => (
-  <div className="self-start max-w-[90%] sm:max-w-[80%] flex flex-col">
-    <div className="contents p-4 sm:p-5 md:p-6 rounded-[30px] bg-[#ececec] text-black rounded-tr-[30px] rounded-bl-[0] shadow-sm">
-      <div className="flex items-center space-x-2">
-        <span className="text-yellow-400 animate-pulse">✨</span>
-        <div className="animated-text-container flex-1">
-          {animatedLoadingElements.map(item => (
-            <span key={item.id} className={`animated-text ${item.animClass} text-sm font-bold`}>
-              {item.text}
-            </span>
-          ))}
-          {isLoading && animatedLoadingElements.length === 0 && (
-            <span className="animated-text in text-sm font-bold">Analyzing...</span>
-          )}
+  variant?: 'message' | 'centered';
+}> = ({ animatedLoadingElements, isLoading, variant = 'message' }) => {
+  const loadingContent = (
+    <>
+      <span className="text-yellow-400 animate-pulse text-xl">✨</span>
+      <div className="animated-text-container flex-1">
+        {animatedLoadingElements.map(item => (
+          <span key={item.id} className={`animated-text ${item.animClass} text-sm font-bold`}>
+            {item.text}
+          </span>
+        ))}
+        {isLoading && animatedLoadingElements.length === 0 && (
+          <span className="animated-text in text-sm font-bold">Analyzing...</span>
+        )}
+      </div>
+    </>
+  );
+
+  if (variant === 'centered') {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="flex items-center space-x-2">
+          {loadingContent}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="self-start max-w-[90%] sm:max-w-[80%] flex flex-col">
+      <div className="contents p-4 sm:p-5 md:p-6 rounded-[30px] bg-[#ececec] text-black rounded-tr-[30px] rounded-bl-[0] shadow-sm">
+        <div className="flex items-center space-x-2">
+          {loadingContent}
         </div>
       </div>
     </div>
-  </div>
-);
-
+  );
+};
 
 interface MemoizedMessageProps {
   msg: Message;

@@ -11,8 +11,8 @@ export const useLoadingAnimation = (isLoading: boolean, dynamicLoadingTexts: str
   const [animatedLoadingElements, setAnimatedLoadingElements] = useState<AnimatedElement[]>([]);
   const nextAnimIdRef = useRef(0);
   const activeTimersRef = useRef<{ 
-    fadeInTimer: NodeJS.Timeout | null; 
-    cleanupTimer: NodeJS.Timeout | null 
+    fadeInTimer: ReturnType<typeof setTimeout> | null; 
+    cleanupTimer: ReturnType<typeof setTimeout> | null 
   }>({ fadeInTimer: null, cleanupTimer: null });
 
   useEffect(() => {
