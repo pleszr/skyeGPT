@@ -74,7 +74,6 @@ const ChatInput: React.FC<ChatInputProps> = ({
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          onPaste={textareaResize}
           onInput={textareaResize}
           placeholder="Write your question here..."
           disabled={isLoading}
