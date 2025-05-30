@@ -37,7 +37,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install black==25.1.0
       - name: Run Black in check mode
-        run: black --check .
+        run: black --check --diff .
   
   run_backend_unit_tests:
     runs-on: ubuntu-latest
