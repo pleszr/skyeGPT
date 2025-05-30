@@ -1,3 +1,5 @@
+"""Exception-handling decorators for Pydantic AI-related agent responses."""
+
 from pydantic_ai import UserError, AgentRunError, UsageLimitExceeded as PY_UsageLimitExceeded
 from functools import wraps
 from common.exceptions import ResponseGenerationError, UsageLimitExceededError
@@ -5,10 +7,12 @@ from common import logger
 
 
 def handle_pydantic_stream_response_errors(func):
-    """
+    """Handles Pydantic AI exceptions during streaming.
+
     Decorator for async generator functions to handle specific Pydantic AI exceptions,
     log them, and map them to application-specific exceptions.
     """
+
     @wraps(func)
     async def wrapper(*args, **kwargs):
         try:
@@ -20,4 +24,5 @@ def handle_pydantic_stream_response_errors(func):
         except (AgentRunError, UserError) as e:
             logger.exception(e.message)
             raise ResponseGenerationError(e.message) from e
+
     return wrapper

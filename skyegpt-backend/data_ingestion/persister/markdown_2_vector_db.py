@@ -1,3 +1,5 @@
+"""Holds a service that orchestrates finding files and saving them to vector db."""
+
 from langchain_text_splitters import MarkdownHeaderTextSplitter
 from pathlib import Path
 from typing import List
@@ -11,26 +13,19 @@ from ..utils import documentation_link_generator
 
 
 def scan_and_import_markdowns_from_folder(
-        collection_name: str,
-        folder_path: str,
-        markdown_split_headers: List[str]
+    collection_name: str, folder_path: str, markdown_split_headers: List[str]
 ) -> None:
+    """Finds .md files in local storage and saves them vector database."""
     vectordb_client.create_collection_if_needed(collection_name)
 
     batch_size = int(os.getenv("RAG_BATCH_SIZE"))
     queue = mp.Queue()
 
-    producer_process = create_process(target=_chroma_import_producer, args=(
-        folder_path,
-        markdown_split_headers,
-        batch_size,
-        queue
-    ))
+    producer_process = create_process(
+        target=_chroma_import_producer, args=(folder_path, markdown_split_headers, batch_size, queue)
+    )
 
-    consumer_process = create_process(target=_chroma_import_consumer, args=(
-        collection_name,
-        queue
-    ))
+    consumer_process = create_process(target=_chroma_import_consumer, args=(collection_name, queue))
 
     start_time = time.time()
     start_process(producer_process)
@@ -45,36 +40,19 @@ def scan_and_import_markdowns_from_folder(
     print(f"Elapsed seconds: {time.time()-start_time:.0f} Record count: {number_of_documents}")
 
 
-def _chroma_import_producer(
-        folder_path: str,
-        markdown_split_headers: List[str],
-        batch_size: int,
-        queue
-):
+def _chroma_import_producer(folder_path: str, markdown_split_headers: List[str], batch_size: int, queue):
     folder = Path(folder_path)
     for file in folder.rglob("*.md"):
         with open(file, "r", encoding="utf-8") as opened_file:
             documentation_source = documentation_link_generator.select_doc_source_by_folder_path(file)
 
             file_content = opened_file.read()
-            texts = _split_markdown_by_headers(
-                file_content,
-                markdown_split_headers
-            )
+            texts = _split_markdown_by_headers(file_content, markdown_split_headers)
 
-            _add_text_to_queue(
-                texts,
-                Path(file.name).stem,
-                documentation_source,
-                batch_size,
-                queue
-            )
+            _add_text_to_queue(texts, Path(file.name).stem, documentation_source, batch_size, queue)
 
 
-def _split_markdown_by_headers(
-        file_content: str,
-        markdown_split_headers: List[str]
-):
+def _split_markdown_by_headers(file_content: str, markdown_split_headers: List[str]):
 
     split_levels_list = []
     if "#" in markdown_split_headers:
@@ -91,52 +69,31 @@ def _split_markdown_by_headers(
 
 
 def _add_text_to_queue(
-        content_text_array: List[str],
-        file_name: str,
-        documentation_source: str,
-        batch_size: int,
-        queue
+    content_text_array: List[str], file_name: str, documentation_source: str, batch_size: int, queue
 ):
     documents = []
     metadatas = []
     ids = []
 
     for text in content_text_array:
-        documentation_link = documentation_link_generator.link_generator(
-            file_name,
-            documentation_source
-        )
-        metadata = {
-            "file_name": file_name,
-            "documentation_link": documentation_link
-        }
+        documentation_link = documentation_link_generator.link_generator(file_name, documentation_source)
+        metadata = {"file_name": file_name, "documentation_link": documentation_link}
 
         ids.append(str(uuid.uuid4()))
         documents.append(text)
         metadatas.append(metadata)
 
         if len(ids) >= batch_size:
-            queue.put({
-                "documents": documents,
-                "metadatas": metadatas,
-                "ids": ids
-                })
+            queue.put({"documents": documents, "metadatas": metadatas, "ids": ids})
             documents = []
             metadatas = []
             ids = []
 
     if len(ids) > 0:
-        queue.put({
-            "documents": documents,
-            "metadatas": metadatas,
-            "ids": ids
-        })
+        queue.put({"documents": documents, "metadatas": metadatas, "ids": ids})
 
 
-def _chroma_import_consumer(
-        collection_name,
-        queue
-):
+def _chroma_import_consumer(collection_name, queue):
     batch_number = 0
     while True:
         batch_number += 1
@@ -149,8 +106,5 @@ def _chroma_import_consumer(
         ids = batch["ids"]
         print(f"Saving batch: {batch_number} with {len(ids)} documents")
         vectordb_client.add_to_collection(
-            collection_name=collection_name,
-            documents=documents,
-            metadatas=metadatas,
-            ids=ids
+            collection_name=collection_name, documents=documents, metadatas=metadatas, ids=ids
         )

@@ -1,1 +1,1 @@
-from .logger import debug, info, warning, error, critical, exception
+"""Shared functions to be used the other application."""

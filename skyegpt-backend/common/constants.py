@@ -1,3 +1,5 @@
+"""Global constants and enumerations used across the SkyeGPT application."""
+
 from typing import Literal, TypeAlias
 from enum import Enum
 from pydantic import BaseModel, conlist
@@ -19,21 +21,27 @@ VECTOR_NUMBER_OF_RESULTS = 10
 
 # Document DB
 DOCUMENT_DB_NAME = "skyegpt"
-CONVERSATIONS_COLLECTION_NAME = 'conversations'
+CONVERSATIONS_COLLECTION_NAME = "conversations"
 
 # Type Alias
 VoteType: TypeAlias = Literal["positive", "negative", "not_specified"]
 
 
 class PromptUseCase(str, Enum):
+    """Enumerates the different prompt use cases supported by the agent."""
+
     dynamic_loading_text = "dynamic_loading_text"
     response_generator = "response_generator"
 
 
 class SseEventTypes(str, Enum):
+    """Enumerates server-sent event (SSE) types used in streaming responses."""
+
     dynamic_loading_text = "dynamic_loading_text"
     streamed_response = "streamed_response"
 
 
 class DynamicLoadingTextResponseModel(BaseModel):
+    """Schema for validating exactly five dynamic loading text responses."""
+
     result: conlist(str, min_length=5, max_length=5)

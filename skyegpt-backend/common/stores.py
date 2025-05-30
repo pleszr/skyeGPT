@@ -1,3 +1,8 @@
+"""StoreManager module.
+
+Provides a singleton class to manage in-memory context and persistent conversation storage.
+"""
+
 import asyncio
 import uuid
 
@@ -11,19 +16,18 @@ MAX_CONVERSATION_LENGTH = constants.MAX_CONVERSATION_LENGTH
 
 
 class StoreManager:
-    """
-    Manages shared in-memory stores for conversation history and context.
+    """Manages shared in-memory stores for conversation history and context.
 
     This class provides thread/task-safe access to dictionaries storing
     conversation data using asyncio locks. It is designed to be instantiated
     once at the module level, creating a singleton instance that can be
     injected as a dependency into services requiring access to this shared state.
     """
+
     _instance = None
 
     def __new__(cls):
-        """
-        Ensures only one instance of StoreManager exists.
+        """Ensures only one instance of StoreManager exists.
 
         Returns:
             The singleton instance of StoreManager.
@@ -34,10 +38,7 @@ class StoreManager:
         return cls._instance
 
     def __init__(self):
-        """
-        Initializes the StoreManager instance. This will only run once
-        for the singleton instance.
-        """
+        """Initializes the StoreManager instance. This runs once for the singleton instance."""
         if self._initialized:
             return
         self._conversation_context_store: Dict[str, List[Dict[str, Any]]] = {}
@@ -47,7 +48,8 @@ class StoreManager:
 
     @handle_store_errors
     async def get_conversation_by_id(self, conversation_id: uuid) -> Conversation:
-        """
+        """Retrieves or creates a conversation from the document database.
+
         Retrieves the conversation by conversation_id from document database
         OR creates a new, empty one with conversation_id.
 
@@ -68,8 +70,7 @@ class StoreManager:
 
     @handle_store_errors
     async def extend_conversation_history(self, original_conversation_id: uuid, new_conversation: Conversation):
-        """
-        Extends new messages to a conversation's history and trims it if necessary.
+        """Extends new messages to a conversation's history and trims it if necessary.
 
         Args:
             original_conversation_id: The unique identifier for the conversation.
@@ -85,8 +86,7 @@ class StoreManager:
 
     @handle_store_errors
     async def get_conversation_context(self, conversation_id) -> List[Dict[str, Any]]:
-        """
-        Retrieves the conversation context for a specific conversation ID.
+        """Retrieves the conversation context for a specific conversation ID.
 
         Args:
             conversation_id: The unique identifier for the conversation.
@@ -104,8 +104,8 @@ class StoreManager:
 
     @handle_store_errors
     async def append_conversation_context(self, conversation_id: uuid, context: Dict[str, Any]):
-        """
-        Appends a new context dictionary to the context list for a conversation. Thread safe.
+        """Appends a new context dictionary to the context list for a conversation. Thread safe.
+
         Args:
             conversation_id: The unique identifier for the conversation.
             context: The new context dictionary to add to the list.
@@ -118,10 +118,9 @@ class StoreManager:
             self._conversation_context_store.setdefault(conversation_id, []).append(context)
 
     def _handle_empty_key(self, key: str):
-        """
-        Checks of the key is empty.
+        """Checks if the key is empty.
 
         Raises ValueError for invalid inputs or internal errors
         """
         if not key:
-            raise ValueError('Key can not be empty')
+            raise ValueError("Key can not be empty")
