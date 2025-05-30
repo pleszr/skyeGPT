@@ -104,18 +104,26 @@ export const useLoadingAnimation = (isLoading: boolean, dynamicLoadingTexts: str
 
     if (elementToFadeIn) {
       activeTimersRef.current.fadeInTimer = setTimeout(() => {
-        setAnimatedLoadingElements(prev => prev.map(e => e.id === elementToFadeIn.id ? { ...e, animClass: 'in' } : e));
+        setAnimatedLoadingElements(prev => {
+          const updated = prev.map(e => e.id === elementToFadeIn.id ? { ...e, animClass: 'in' } : e);
+          animatedLoadingElementsRef.current = updated;
+          return updated;
+        });
       }, 50);
     }
 
     if (effectiveElements.some(el => el.animClass === 'out')) {
       activeTimersRef.current.cleanupTimer = setTimeout(() => {
-        setAnimatedLoadingElements(prev => prev.filter(e => e.animClass !== 'out'));
+        setAnimatedLoadingElements(prev => {
+          const updated = prev.filter(e => e.animClass !== 'out');
+          animatedLoadingElementsRef.current = updated;
+          return updated;
+        });
       }, 600); 
     }
 
     return clearAllTimers;
-  }, [isLoading, currentTextIndex, dynamicLoadingTexts, animatedLoadingElements]);
+  }, [isLoading, currentTextIndex, dynamicLoadingTexts]);
 
   return {
     animatedLoadingElements
