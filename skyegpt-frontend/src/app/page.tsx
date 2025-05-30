@@ -27,7 +27,7 @@ const HomePage = () => {
   }, []);
 
   // PLACEHOLDER
-  const versions = ['10.0', '9.0', '8.0'];
+  const versions = ['10.0'];
 
   return (
     <div className="w-screen min-h-screen max-w-full flex flex-col overflow-hidden bg-gray-50">
