@@ -187,8 +187,8 @@ export const useStreamingChat = (
               buffer = spaceChunks.pop() || '';
               for (const chunk of spaceChunks) {
                 if (streamAbortControllerRef.current?.signal.aborted) break;
-                if (chunk.startsWith('data:')) {
-                  const dataStr = chunk.slice(5);
+                if (chunk.startsWith('data: ')) {
+                  const dataStr = chunk.slice(6);
                   processDataChunk(dataStr, false, fullMessageTextRef);
                 }
               }
