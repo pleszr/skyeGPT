@@ -3,14 +3,12 @@
 import Image from 'next/image';
 import React, { useState, useEffect } from 'react';
 import ChatBox from '@/app/components/chatBox';
-import { Message, createWelcomeMessage } from '@/app/utils/messageManager';
+import { Message, createErrorMessage, createWelcomeMessage } from '@/app/utils/messageManager';
 import { createConversationAPI, ConversationResponse } from '@/app/services/chatApiService';
 import { generateWelcomeMessage } from '@/app/utils/welcomeUtils';
 
 const HomePage = () => {
-  const [messages, setMessages] = useState<Message[]>([
-    createWelcomeMessage(generateWelcomeMessage())
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [selectedVersion, setSelectedVersion] = useState<string>('10.0');
 
@@ -19,9 +17,11 @@ const HomePage = () => {
       const data: ConversationResponse = await createConversationAPI();
       setCurrentConversationId(data.conversation_id);
       console.log("New conversation created", data.conversation_id);
+      
+      setMessages([createWelcomeMessage(generateWelcomeMessage())]);
     } catch (error) {
       console.error('Failed to initialize conversation:', error);
-      alert(`Failed to start a new chat session. Please try refreshing the page. Error: ${error instanceof Error ? error.message : String(error)}`);
+      setMessages([createErrorMessage('Failed to initialize conversation. Please try again later. Error message: ' +  (error instanceof Error ? error.message : 'Unknown error'))]);
     }
   };
 
