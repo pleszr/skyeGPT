@@ -11,6 +11,7 @@ export const addMessage = (prevMessages: Message[], newMessage: Message): Messag
   return [...prevMessages, newMessage];
 };
 
+// added unique ID generation for messages (for frontend only)
 export const createBotMessage = (text: string, noFeedback?: boolean): Message => {
   return { 
     id: crypto.randomUUID(), 
