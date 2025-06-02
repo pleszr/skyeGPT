@@ -3,11 +3,14 @@
 import Image from 'next/image';
 import React, { useState, useEffect } from 'react';
 import ChatBox from '@/app/components/chatBox';
-import { Message } from '@/app/utils/messageManager';
+import { Message, createWelcomeMessage } from '@/app/utils/messageManager';
 import { createConversationAPI, ConversationResponse } from '@/app/services/chatApiService';
+import { generateWelcomeMessage } from '@/app/utils/welcomeUtils';
 
 const HomePage = () => {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>([
+    createWelcomeMessage(generateWelcomeMessage())
+  ]);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [selectedVersion, setSelectedVersion] = useState<string>('10.0');
 
@@ -119,10 +122,10 @@ const HomePage = () => {
                 </div>
               </div>
             </div>
-          </div>
-          <footer className="text-center text-xs sm:text-sm text-gray-600 py-3 sm:py-4 shrink-0">
+            <footer className="text-center text-xs sm:text-sm text-gray-600 py-3 sm:py-4 shrink-0">
             SkyeGPT can make mistakes. If you find the answer strange, verify the results and give feedback!
           </footer>
+          </div>
         </div>
       </div>
     </div>
