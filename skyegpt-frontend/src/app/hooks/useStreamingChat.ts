@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import { addMessage, createUserMessage, createBotMessage, Message } from '@/app/utils/messageManager';
+import { addMessage, createUserMessage, createBotMessage, removeWelcomeMessage, Message } from '@/app/utils/messageManager';
 import {
   fetchChatResponseStreamAPI,
   getChunkTextFromSSE,
@@ -107,7 +107,10 @@ export const useStreamingChat = (
     if (streamAbortControllerRef.current) streamAbortControllerRef.current.abort();
     streamAbortControllerRef.current = new AbortController();
 
-    setMessages((prev) => addMessage(prev, createUserMessage(trimmedInput)));
+    setMessages((prev) => {
+      const messagesWithoutWelcome = removeWelcomeMessage(prev);
+      return addMessage(messagesWithoutWelcome, createUserMessage(trimmedInput));
+    });
     setInput('');
 
     if (!conversationId) {
@@ -117,7 +120,7 @@ export const useStreamingChat = (
     }
 
     const hiddenInstruction = "Output:GitHubFlavoredMarkdown. No ```markdown``` fences. standard GFM for all elements, no screenshots, use `##` for headings Use `\\n` for line breaks.";
-    const queryToSendToBackend = `User query: ${trimmedInput}\nFormat Instruction: ${hiddenInstruction}`; 
+    const queryToSendToBackend = `User query: ${trimmedInput}\nFormat Instruction: ${hiddenInstruction}`;
     const fullMessageTextRef = { current: '' };
 
     const fetchStreamSingleAttempt = async (): Promise<boolean> => {

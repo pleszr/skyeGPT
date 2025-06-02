@@ -3,8 +3,9 @@
 import Image from 'next/image';
 import React, { useState, useEffect } from 'react';
 import ChatBox from '@/app/components/chatBox';
-import { Message } from '@/app/utils/messageManager';
+import { Message, createErrorMessage, createWelcomeMessage } from '@/app/utils/messageManager';
 import { createConversationAPI, ConversationResponse } from '@/app/services/chatApiService';
+import { generateWelcomeMessage } from '@/app/utils/welcomeUtils';
 
 const HomePage = () => {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -16,9 +17,11 @@ const HomePage = () => {
       const data: ConversationResponse = await createConversationAPI();
       setCurrentConversationId(data.conversation_id);
       console.log("New conversation created", data.conversation_id);
+      
+      setMessages([createWelcomeMessage(generateWelcomeMessage())]);
     } catch (error) {
       console.error('Failed to initialize conversation:', error);
-      alert(`Failed to start a new chat session. Please try refreshing the page. Error: ${error instanceof Error ? error.message : String(error)}`);
+      setMessages([createErrorMessage('Failed to initialize conversation. Please try again later. Error message: ' +  (error instanceof Error ? error.message : 'Unknown error'))]);
     }
   };
 
@@ -119,10 +122,10 @@ const HomePage = () => {
                 </div>
               </div>
             </div>
-          </div>
-          <footer className="text-center text-xs sm:text-sm text-gray-600 py-3 sm:py-4 shrink-0">
+            <footer className="text-center text-xs sm:text-sm text-gray-600 py-3 sm:py-4 shrink-0">
             SkyeGPT can make mistakes. If you find the answer strange, verify the results and give feedback!
           </footer>
+          </div>
         </div>
       </div>
     </div>

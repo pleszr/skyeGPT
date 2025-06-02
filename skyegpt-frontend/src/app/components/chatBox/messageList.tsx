@@ -63,6 +63,7 @@ const MessageList: React.FC<MessageListProps> = ({
             msg.sender === 'bot' && 
             msg.text.trim() !== "" && 
             msg.text.trim() !== "Request cancelled." && 
+            !msg.noFeedback &&
             !msg.stopped && 
             !isLoading
           }
