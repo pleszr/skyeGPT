@@ -5,11 +5,13 @@ import React, { useState, useEffect } from 'react';
 import ChatBox from '@/app/components/chatBox';
 import { Message } from '@/app/utils/messageManager';
 import { createConversationAPI, ConversationResponse } from '@/app/services/chatApiService';
+import { getVersion } from '@/app/utils/sharedConfig';
 
 const HomePage = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [selectedVersion, setSelectedVersion] = useState<string>('10.0');
+  const [appVersion, setAppVersion] = useState<string>('');
 
   const initializeConversation = async () => {
     try {
@@ -22,8 +24,19 @@ const HomePage = () => {
     }
   };
 
+  const loadVersion = async () => {
+    try {
+      const version = await getVersion();
+      setAppVersion(version ?? '');
+      console.log("App version loaded:", version); 
+    } catch (error) {
+      console.error('Failed to load app version:', error);
+    }
+  };
+
   useEffect(() => {
     initializeConversation();
+    loadVersion();
   }, []);
 
   // PLACEHOLDER
@@ -120,6 +133,11 @@ const HomePage = () => {
               </div>
             </div>
           </div>
+          {appVersion && (
+            <div className="text-center text-xs text-gray-500 py-2 shrink-0">
+              v{appVersion}
+            </div>
+          )}
           <footer className="text-center text-xs sm:text-sm text-gray-600 py-3 sm:py-4 shrink-0">
             SkyeGPT can make mistakes. If you find the answer strange, verify the results and give feedback!
           </footer>

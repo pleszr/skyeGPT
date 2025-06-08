@@ -5,14 +5,8 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// default backendHost is localhost:8000
-// but can be overridden by environment variable BACKEND_HOST
+
 const backendHost = process.env.BACKEND_HOST || "http://localhost:8000";
-
-// FOR DEBUGGING
-//console.log('DEBUG: BACKEND_HOST from env:', process.env.BACKEND_HOST);
-
-const config = { backendHost };
 
 function findProjectRoot(startDir) {
   let currentDir = startDir;
@@ -28,7 +22,16 @@ function findProjectRoot(startDir) {
 const projectRoot = findProjectRoot(__dirname);
 const configPath = path.join(projectRoot, "public/skyeconfig.json");
 
+let config = {};
+if (fs.existsSync(configPath)) {
+  try {
+    config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+  } catch (error) {
+    console.log('Invalid JSON in skyeconfig.json, starting fresh');
+  }
+}
+
+config.backendHost = backendHost;
 
 fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
 console.log(`Wrote backendHost=${backendHost} to ${configPath}`);
-
