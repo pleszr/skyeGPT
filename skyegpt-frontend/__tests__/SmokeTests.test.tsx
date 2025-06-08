@@ -13,6 +13,15 @@ vi.mock('@/app/services/chatApiService', () => ({
   getChunkTextFromSSE: vi.fn(chunk => (typeof chunk === 'string' ? chunk : (chunk as any)?.text || '')),
 }));
 
+vi.mock('@/app/utils/sharedConfig', () => ({
+  getConfig: vi.fn().mockResolvedValue({
+    backendHost: 'http://localhost:8000',
+    version: '0.0.0' // FOR TESTING PURPOSES
+  }),
+  getBackendHost: vi.fn().mockResolvedValue('http://localhost:8000'),
+  getVersion: vi.fn().mockResolvedValue('0.0.0') // FOR TESTING PURPOSES
+}));
+
 const mockedCreateConversationAPI = chatApiService.createConversationAPI as MockedFunction<typeof chatApiService.createConversationAPI>;
 const mockedFetchChatResponseStreamAPI = chatApiService.fetchChatResponseStreamAPI as MockedFunction<typeof chatApiService.fetchChatResponseStreamAPI>;
 
