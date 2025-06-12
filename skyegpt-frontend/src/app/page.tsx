@@ -30,6 +30,7 @@ const HomePage = () => {
   }, []);
 
   // PLACEHOLDER
+
   const versions = ['10.0'];
 
   return (
@@ -51,18 +52,19 @@ const HomePage = () => {
               ))}
             </select>
             <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center">
-              <svg
-                width="13"
-                height="9"
-                viewBox="0 0 13 9"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M5.54239 8.37933L0.44398 3.28093C0.09159 2.92854 0.09159 2.35871 0.44398 2.01007L1.29122 1.16284C1.6436 0.810447 2.21343 0.810447 2.56207 1.16284L6.17969 4.77296L9.79356 1.15909C10.1459 0.806698 10.7158 0.806698 11.0644 1.15909L11.9154 2.00632C12.2678 2.35871 12.2678 2.92854 11.9154 3.27718L6.81699 8.37558C6.4646 8.73172 5.89478 8.73172 5.54239 8.37933Z"
-                  fill="#24272A"
-                />
-              </svg>
+
+
+              <Image
+                  src="/versionselector.png"
+                  alt="Version selector dropdown icon"
+                  width={32}
+                  height={32}
+                  priority
+                  quality={100}
+                  className="object-contain max-w-[32px] max-h-[32px] w-auto h-auto"
+              />
+
+
             </div>
           </div>
         </div>
@@ -74,6 +76,8 @@ const HomePage = () => {
               alt="SkyeGPT logo"
               width={191}
               height={149}
+              priority
+              quality={100}
               className="object-contain w-auto h-full max-w-[60%] sm:max-w-[50%] md:max-w-[291px] max-h-[15vh]"
             />
           </div>
@@ -83,6 +87,8 @@ const HomePage = () => {
               alt="Gears"
               width={267}
               height={380}
+              priority
+              quality={100}
               className="object-contain w-auto h-full max-w-[50%] sm:max-w-[40%] md:max-w-[200px] max-h-[30vh]"
             />
           </div>
@@ -93,6 +99,7 @@ const HomePage = () => {
                 width={300}
                 height={300}
                 priority
+                quality={100}
                 className="object-contain w-auto h-full max-w-[100%] md:max-w-[120%] max-h-[70vh] md:max-h-[80vh] relative -mr-4 md:-mr-15"
             />
           </div>
@@ -105,6 +112,8 @@ const HomePage = () => {
             alt="SkyeGPT mobile logo"
             width={191}
             height={149}
+            priority
+            quality={100}
             className="w-auto h-auto max-w-[150px] max-h-[100px] sm:max-h-[120px]"
           />
         </div>
