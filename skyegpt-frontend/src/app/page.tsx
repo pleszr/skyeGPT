@@ -88,14 +88,15 @@ const HomePage = () => {
           </div>
           <div className="w-full flex justify-center flex-shrink-0 min-h-0 items-end px-4">
             <Image
-              src="/robot.png"
-              alt="Robot"
-              width={300}
-              height={300}
-              priority
-              className="object-contain w-auto h-full max-w-[90%] md:max-w-full max-h-[35vh] md:max-h-[40vh] relative -mr-4 md:-mr-19"
+                src="/robot.png"
+                alt="Robot"
+                width={300}
+                height={300}
+                priority
+                className="object-contain w-auto h-full max-w-[100%] md:max-w-[120%] max-h-[70vh] md:max-h-[80vh] relative -mr-4 md:-mr-15"
             />
           </div>
+
         </div>
 
         <div className="flex md:hidden justify-center py-6 sm:py-8 shrink-0">
