@@ -102,7 +102,19 @@ const LoadingIndicator: React.FC<{
 }> = ({ animatedLoadingElements, isLoading, variant = 'message' }) => {
   const loadingContent = (
     <>
-      <span className="text-yellow-400 animate-pulse text-xl">✨</span>
+      <span className="text-yellow-400 animate-pulse text-xl">
+
+        <Image
+            src="/analyzeicon.png"
+            alt="Analyzing loading animation"
+            width={64}
+            height={64}
+            priority
+            quality={100}
+            className="object-contain max-w-[64px] max-h-[64px] w-auto h-auto"
+        />
+
+      </span>
       <div className="animated-text-container flex-1">
         {animatedLoadingElements.map(item => (
           <span key={item.id} className={`animated-text ${item.animClass} text-sm font-bold`}>
