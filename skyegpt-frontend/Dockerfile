@@ -17,5 +17,5 @@ RUN rm -rf .git
 
 EXPOSE 5173
 
-CMD ["sh", "-c", "npm run set-env && npm run start"]
+CMD ["sh", "-c", "npm run preset:set-env && npm run start"]
 
