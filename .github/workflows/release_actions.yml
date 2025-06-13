@@ -42,7 +42,7 @@ jobs:
       - name: Build and push multi-platform backend image
         uses: docker/build-push-action@v5
         with:
-          context: ./skyegpt-backend
+          context: .
           file: ./skyegpt-backend/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
