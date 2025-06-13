@@ -1,6 +1,6 @@
 {
   "name": "skyegpt-frontend",
-  "version": "9.9.9.9",
+  "version": "0.3.7-2",
   "private": true,
   "type": "module",
   "scripts": {
@@ -15,6 +15,7 @@
     "prebuild": "npm run preset"
   },
   "dependencies": {
+    "dotenv": "^16.5.0",
     "lodash": "^4.17.21",
     "next": "15.3.1",
     "react": "^19.0.0",

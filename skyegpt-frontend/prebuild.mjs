@@ -2,12 +2,12 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { execSync } from 'child_process';
+import { config as loadEnv } from 'dotenv';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // CONFIG
-const backendHost = process.env.BACKEND_HOST || "http://localhost:8000";
 const devMode = process.env.DEV_MODE === 'true' || process.argv.includes('--dev');
 const setEnvOnly = process.argv.includes('--setenv-only');
 
@@ -22,19 +22,21 @@ function findProjectRoot(startDir) {
     throw new Error('Could not find project root (package.json not found)');
 }
 
+const DEV_VERSION = '9.9.9.9';
+
 function getVersion() {
     if (devMode) {
         console.log('Dev mode enabled - using dev version');
-        return '9.9.9.9';
+        return DEV_VERSION;
     }
 
     try {
         const result = execSync('git tag --sort=-version:refname', { encoding: 'utf8', stdio: 'pipe' });
         const tags = result.trim().split('\n').filter(tag => tag.trim());
-        return tags.length > 0 ? tags[0].trim() : '9.9.9.9';
+        return tags.length > 0 ? tags[0].trim() : DEV_VERSION;
     } catch {
         console.log('Could not get git tags, using dev mode - please check YOUR GIT CONFIG');
-        return '9.9.9.9';
+        return DEV_VERSION;
     }
 }
 
@@ -57,6 +59,18 @@ try {
     const projectRoot = findProjectRoot(__dirname);
     const configPath = path.join(projectRoot, "public/skyeconfig.json");
 
+    if (devMode) {
+        const envPath = path.join(projectRoot, '.env');
+        if (fs.existsSync(envPath)) {
+            loadEnv({ path: envPath });
+            console.log('Dev mode: Loaded .env file');
+        } else {
+            console.log('Dev mode: No .env file found, using environment variables');
+        }
+    }
+
+    const backendHost = process.env.BACKEND_HOST || "http://localhost:8000";
+
     let config = {};
     if (fs.existsSync(configPath)) {
         try {
@@ -68,27 +82,26 @@ try {
 
     if (setEnvOnly) {
         if (process.env.BACKEND_HOST) {
-            config.backendHost = backendHost;
+            config.backendHost = process.env.BACKEND_HOST;
             fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
 
-
-            console.log(`backendHost: ${backendHost}`);
+            console.log('SetEnv-Only mode: Updated backend host from environment variable');
+            console.log(`backendHost: ${process.env.BACKEND_HOST}`);
             console.log(`Updated ${configPath}`);
         } else {
-            console.log('BACKEND_HOST environment variable found, no changes made');
+            console.log('SetEnv-Only mode: No BACKEND_HOST environment variable found, no changes made');
         }
     } else {
         const version = getVersion();
 
         config.backendHost = backendHost;
         config.version = version;
-
         fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
 
         const packageUpdated = updatePackageJson(version, projectRoot);
 
-        // LOGGING
-        console.log(`Config updated${devMode ? ' (DEV MODE)' : ''}:`);
+        const modeLabel = devMode ? 'Dev mode' : 'Config updated';
+        console.log(`${modeLabel}:`);
         console.log(`backendHost: ${backendHost}`);
         console.log(`version: ${version}`);
         if (packageUpdated) {
