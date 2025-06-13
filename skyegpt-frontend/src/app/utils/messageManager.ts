@@ -1,3 +1,5 @@
+import { v4 as uuidv4 } from 'uuid';
+
 export interface Message {
   id: string;
   text: string;
@@ -7,8 +9,8 @@ export interface Message {
   noFeedback?: boolean;
 }
 
-const WELCOME_MESSAGE_ID = crypto.randomUUID();
-const ERROR_MESSAGE_ID = crypto.randomUUID();
+const WELCOME_MESSAGE_ID = uuidv4();
+const ERROR_MESSAGE_ID = uuidv4();
 
 export const addMessage = (prevMessages: Message[], newMessage: Message): Message[] => {
   return [...prevMessages, newMessage];
@@ -16,23 +18,23 @@ export const addMessage = (prevMessages: Message[], newMessage: Message): Messag
 
 // added unique ID generation for messages (for frontend only)
 export const createBotMessage = (text: string, noFeedback?: boolean): Message => {
-  return { 
-    id: crypto.randomUUID(), 
-    sender: 'bot', 
-    text, 
-    timestamp: new Date(), 
+  return {
+    id: uuidv4(),
+    sender: 'bot',
+    text,
+    timestamp: new Date(),
     stopped: false,
-    noFeedback 
+    noFeedback
   };
 };
 
 export const createUserMessage = (text: string): Message => {
-  return { 
-    id: crypto.randomUUID(), 
-    sender: 'user', 
-    text, 
-    timestamp: new Date(), 
-    stopped: false 
+  return {
+    id: uuidv4(),
+    sender: 'user',
+    text,
+    timestamp: new Date(),
+    stopped: false
   };
 };
 
