@@ -85,11 +85,11 @@ try {
             config.backendHost = process.env.BACKEND_HOST;
             fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
 
-            console.log('SetEnv-Only mode: Updated backend host from environment variable');
+            console.log('Updated backend host from environment variable');
             console.log(`backendHost: ${process.env.BACKEND_HOST}`);
-            console.log(`Updated ${configPath}`);
+            console.log(`UPDATED ${configPath}`);
         } else {
-            console.log('SetEnv-Only mode: No BACKEND_HOST environment variable found, no changes made');
+            console.log('No BACKEND_HOST environment variable found, no changes made');
         }
     } else {
         const version = getVersion();
@@ -100,17 +100,16 @@ try {
 
         const packageUpdated = updatePackageJson(version, projectRoot);
 
-        const modeLabel = devMode ? 'Dev mode' : 'Config updated';
+        const modeLabel = devMode ? 'Dev mode' : 'Config UPDATED';
         console.log(`${modeLabel}:`);
         console.log(`backendHost: ${backendHost}`);
         console.log(`version: ${version}`);
         if (packageUpdated) {
-            console.log(`Updated package.json`);
+            console.log(`UPDATED package.json`);
         }
-        console.log(`Updated ${configPath}`);
+        console.log(`UPDATED ${configPath}`);
     }
 
 } catch (error) {
-    console.error('Error during setup:', error.message);
-    console.log('Continuing with build...');
+    console.error('ERROR during setup:', error.message);
 }
