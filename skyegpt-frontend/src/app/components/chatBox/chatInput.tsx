@@ -15,12 +15,12 @@ interface ChatInputProps {
 }
 
 const ChatInput: React.FC<ChatInputProps> = ({
-  input,
-  setInput,
-  isLoading,
-  onSend,
-  onStop
-}) => {
+                                               input,
+                                               setInput,
+                                               isLoading,
+                                               onSend,
+                                               onStop
+                                             }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const textareaResize = useCallback(() => {
@@ -64,41 +64,44 @@ const ChatInput: React.FC<ChatInputProps> = ({
   }, [isLoading]);
 
   return (
-    <div className="flex items-center p-2 sm:p-3 gap-2 sm:gap-3 border-t border-gray-200 bg-white shrink-0">
-      <div className="flex-1 bg-gray-100 rounded-[20px] transition-all duration-200 shadow-sm flex items-end">
+      <div className="flex items-center p-2 sm:p-3 gap-2 sm:gap-3 border-t border-gray-200 bg-white shrink-0">
+        <div className="flex-1 bg-gray-100 rounded-[20px] transition-all duration-200 shadow-sm flex items-end">
         <textarea
-          ref={textareaRef}
-          rows={1}
-          className="border-none text-sm sm:text-base text-black resize-none bg-transparent w-full py-2 px-3 font-[Poppins] placeholder:text-gray-500 focus:outline-none"
-          style={{ minHeight: INITIAL_TEXTAREA_CONTENT_HEIGHT_PX_STR }}
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          onInput={textareaResize}
-          placeholder="Write your question here..."
-          disabled={isLoading}
-          aria-label="Chat input"
+            ref={textareaRef}
+            rows={1}
+            className="border-none text-base text-black resize-none bg-transparent w-full py-2 px-3 font-[Poppins] placeholder:text-gray-500 focus:outline-none"
+            style={{
+              minHeight: INITIAL_TEXTAREA_CONTENT_HEIGHT_PX_STR,
+              fontSize: '16px'
+            }}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            onInput={textareaResize}
+            placeholder="Write your question here..."
+            disabled={isLoading}
+            aria-label="Chat input"
         />
+        </div>
+        <button
+            className="skgpt-btn sendBtn p-0 border-none bg-transparent cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center shrink-0 hover:opacity-80 transition-opacity"
+            onClick={isLoading ? onStop : onSend}
+            disabled={!isLoading && !input.trim()}
+            title={isLoading ? "Stop" : "Send"}
+            aria-label={isLoading ? "Stop message" : "Send message"}
+        >
+          <Image
+              src={isLoading ? "/stop.png" : "/button.png"}
+              alt={isLoading ? "Stop" : "Send"}
+              width={120}
+              height={120}
+              quality={100}
+              style={{ width: 'auto', height: 'auto' }}
+              priority
+              className="object-contain"
+          />
+        </button>
       </div>
-      <button
-        className="skgpt-btn sendBtn p-0 border-none bg-transparent cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center shrink-0 hover:opacity-80 transition-opacity"
-        onClick={isLoading ? onStop : onSend}
-        disabled={!isLoading && !input.trim()}
-        title={isLoading ? "Stop" : "Send"}
-        aria-label={isLoading ? "Stop message" : "Send message"}
-      >
-        <Image
-          src={isLoading ? "/stop.png" : "/button.png"}
-          alt={isLoading ? "Stop" : "Send"}
-          width={120}
-          height={120}
-          quality={100}
-          style={{ width: 'auto', height: 'auto' }}
-          priority
-          className="object-contain"
-        />
-      </button>
-    </div>
   );
 };
 
