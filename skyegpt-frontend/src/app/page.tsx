@@ -49,8 +49,8 @@ const HomePage = () => {
 
   return (
       <div className="w-screen min-h-screen max-w-full flex flex-col overflow-hidden bg-gray-50">
-        <div className="flex-1 lg:items-center flex flex-col lg:flex-row mx-auto w-full max-w-[1530px] px-4 sm:px-8 lg:px-12 overflow-hidden relative">
-          <div className="skgpt-version-selector absolute sm:top-[170px] lg:top-6 right-6 flex items-center gap-2">
+        <div className="flex-1 lg:items-center flex flex-col lg:flex-row mx-auto w-full max-w-[1530px] px-4 sm:px-8 lg:px-12 overflow-hidden relative min-w-0">
+          <div className="skgpt-version-selector absolute sm:top-[170px] lg:top-6 right-6 flex items-center gap-2 z-10">
             <span className="text-base font-normal text-black">VERSION:</span>
             <div className="relative inline-block text-left">
               <select
@@ -79,7 +79,7 @@ const HomePage = () => {
             </div>
           </div>
 
-          <div className="hidden lg:flex flex-col items-center justify-start w-[200px] lg:w-[300px] py-4 lg:py-8 px-2 relative shrink-0 space-y-4 lg:space-y-6">
+          <div className="hidden lg:flex flex-col items-center justify-start w-[200px] lg:w-[300px] py-4 lg:py-8 px-2 relative shrink-0 space-y-4 lg:space-y-6 min-w-0">
             <div className="w-full flex justify-center flex-shrink-0 px-4">
               <Image
                   src="/logo.png"
@@ -127,11 +127,11 @@ const HomePage = () => {
             />
           </div>
 
-          <div className="flex-1 flex flex-col min-h-0 pb-4 lg:pb-0">
-            <div className="flex flex-col min-h-0 pt-0 sm:pt-2 lg:pt-15 pb-4 sm:pb-6 w-full h-full">
-              <div className="flex flex-col">
-                <div className="flex-1 bg-white shadow-lg rounded-[30px] sm:rounded-[40px] p-0 min-h-0 overflow-hidden">
-                  <div className="h-full">
+          <div className="flex-1 flex flex-col min-h-0 pb-4 lg:pb-0 min-w-0 overflow-hidden">
+            <div className="flex flex-col min-h-0 pt-0 sm:pt-2 lg:pt-15 pb-4 sm:pb-6 w-full h-full min-w-0">
+              <div className="flex flex-col min-w-0">
+                <div className="flex-1 bg-white shadow-lg rounded-[30px] sm:rounded-[40px] p-0 min-h-0 overflow-hidden min-w-0">
+                  <div className="h-full min-w-0 overflow-hidden">
                     <ChatBox
                         messages={messages}
                         setMessages={setMessages}
