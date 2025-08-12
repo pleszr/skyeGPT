@@ -21,13 +21,13 @@ The application has two major components:
 
 ## Workflow
 
-![Agentic RAG - SkyeGPT](https://raw.githubusercontent.com/pleszr/skyeGPT/docs/%2363-rewrite-documentation-for-agentic-setup/readme_resources/agentic_rag_skyegpt.png)
+![Agentic RAG - SkyeGPT](https://raw.githubusercontent.com/pleszr/skyeGPT/refs/heads/main/readme_resources/agentic_rag_skyegpt.png)
 
 For simplification, the workflow doesn't show but the conversations are stored and loaded from a document DB. The users can give feedback on the frontend which will be stored (and be queried) within the conversation documents
 
 ## Frontend
 
-![SkyeGPT Frontend](https://raw.githubusercontent.com/pleszr/skyeGPT/docs/%2363-rewrite-documentation-for-agentic-setup/readme_resources/skyegpt_frontend.png)
+![SkyeGPT Frontend]([https://raw.githubusercontent.com/pleszr/skyeGPT/docs/%2363-rewrite-documentation-for-agentic-setup/readme_resources/skyegpt_frontend.png](https://github.com/pleszr/skyeGPT/blob/main/readme_resources/agentic_rag_skyegpt.png))
 
 ## How to use
 
